@@ -1,0 +1,34 @@
+# import: the one-time migration from the legacy workbook into the new
+# event-log tabs. It RECONSTRUCTS the event stream (Buy / Vest / Sell / Split)
+# from the legacy `Stock Actions` and `Stock Sales` tabs, runs every reconstructed
+# event through the verified kernel validation (the same path `entry` uses), and
+# RECONCILES the replayed result against the legacy `Positions` numbers before
+# anything is committed (dry-run first).
+#
+# It is one-time tooling — integration-tested, with the reconciliation as its
+# correctness proof. It is NOT a verus!{} crate; the events it emits are validated
+# by the kernel, so the imported log is valid by construction. `cargo test` is the
+# gate. All money is integer pt_core::Cents / MicroShares; no float past the input
+# boundary (the legacy $/share parse is the input boundary).
+#
+# It writes THROUGH the already-built kernels + store: `ledger-core` (events,
+# validation), `tax` (historical Pay lifecycle), `config` (founding residency,
+# residency_on), and `store` (write discipline, empty-target, idempotency). ALL
+# tests use a SYNTHETIC in-memory legacy fixture plus the in-memory store fakes
+# (no network); the real legacy workbook is for a manual run, NOT in tests.
+[package]
+name = "import"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+
+[lib]
+name = "import"
+path = "src/lib.rs"
+
+[dependencies]
+pt-core = { workspace = true }
+ledger-core = { workspace = true }
+config = { workspace = true }
+tax = { workspace = true }
+store = { workspace = true }

@@ -1,0 +1,5 @@
+# Workspace-level cargo aliases. Convention only — no behaviour change.
+# Mirrors the prior verified project's layout. Aliases are added per segment as
+# binaries land (e.g. `summary`, `import`); none exist yet at scaffold time.
+
+[alias]

@@ -1,0 +1,100 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+# The single canonical gate is scripts/ci.sh — IDENTICAL local and CI. This
+# workflow is the thin CI host around it.
+#
+# STAGES (all driven by scripts/ci.sh):
+#   * fmt / clippy        — advisory (never gating; a blanket fmt would rewrite the
+#                           verus!{} cores).
+#   * build + test        — GATING, offline + deterministic; always runs (no secrets
+#                           / network needed — the verified kernels are pure).
+#   * Verus + Kani        — per verified crate (ledger-core, tax), GATING when the
+#                           toolchain is present, SKIP when absent. They run here
+#                           ONLY IF the job provisions them (see the two
+#                           commented-out provisioning steps below): the Verus
+#                           toolchain is .gitignored (tools/verus-arm64-macos, by
+#                           size) and Kani is `cargo install`/`cargo kani setup`.
+#                           Until a runner provisions them they SKIP — flip
+#                           PT_CI_REQUIRE_VERUS=1 / PT_CI_REQUIRE_KANI=1 once cached
+#                           to make their absence a hard failure.
+#   * @spec-coverage      — GATING: every behavioral EARS spec is cited by a test.
+#   * real-Sheets e2e     — GATING when enabled, SKIP otherwise. It authenticates +
+#                           hits Google Sheets, so it runs ONLY when the
+#                           GOOGLE_SHEETS_SA secret is configured AND PT_E2E=1; the
+#                           creds secret is materialized to a file and pointed at by
+#                           GOOGLE_APPLICATION_CREDENTIALS (see the e2e step). It is
+#                           idempotent + self-cleaning (dedicated pt_e2e_ tabs), so
+#                           a re-run is always safe.
+#
+# CI MUST PROVISION, to run the optional stages:
+#   - the Verus toolchain (tools/verus-arm64-macos) — see the provisioning step;
+#   - Kani (`cargo install --locked kani-verifier && cargo kani setup`);
+#   - the GOOGLE_SHEETS_SA repository secret (the service-account JSON) + the
+#     PT_WORKBOOK_ID repository secret (the dedicated test workbook's id) — to
+#     run the real-Sheets e2e.
+
+jobs:
+  gate:
+    # macOS arm64: the project targets a Mac Mini host and the Verus toolchain is
+    # arm64-macos (tools/verus-arm64-macos). The offline gate (fmt/clippy/build/
+    # test/@spec-coverage) is platform-agnostic; Verus/Kani run only when their
+    # toolchains are provisioned (scripts/ci.sh SKIPs them otherwise).
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show Rust toolchain
+        run: rustup show && rustc --version && cargo --version
+
+      - name: Install gtimeout (coreutils — the verification timeout guard)
+        run: brew install coreutils
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
+
+      # --- OPTIONAL: provision the Verus toolchain so the Verus stage GATES. ---
+      # The toolchain (tools/verus-arm64-macos) is .gitignored by size. Restore it
+      # from a cache / artifact / release here, then flip the require flag. Until
+      # this is wired, scripts/ci.sh SKIPs Verus (the build/test gate still runs).
+      #
+      # - name: Provision Verus toolchain
+      #   run: |
+      #     mkdir -p tools
+      #     # ... fetch + unpack the pinned verus-arm64-macos into tools/ ...
+      #   # then run the gate with: PT_CI_REQUIRE_VERUS=1
+
+      # --- OPTIONAL: provision Kani so the Kani stage GATES. ---
+      # - name: Provision Kani
+      #   run: |
+      #     cargo install --locked kani-verifier
+      #     cargo kani setup
+      #   # then run the gate with: PT_CI_REQUIRE_KANI=1
+
+      # --- OPTIONAL: materialize the Google service-account creds for the e2e. ---
+      # Configure the GOOGLE_SHEETS_SA repository secret (the service-account
+      # JSON) and the PT_WORKBOOK_ID repository secret (the dedicated test
+      # workbook's id). When both are present, this writes the creds to a file
+      # the e2e points at; when absent, the e2e SKIPs (the env vars below stay
+      # empty).
+      - name: Materialize Google creds (if the secrets are configured)
+        if: ${{ secrets.GOOGLE_SHEETS_SA != '' && secrets.PT_WORKBOOK_ID != '' }}
+        run: |
+          echo '${{ secrets.GOOGLE_SHEETS_SA }}' > "$RUNNER_TEMP/gsheets-sa.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/gsheets-sa.json" >> "$GITHUB_ENV"
+          echo "PT_E2E=1" >> "$GITHUB_ENV"
+          echo "PT_WORKBOOK_ID=${{ secrets.PT_WORKBOOK_ID }}" >> "$GITHUB_ENV"
+
+      # The single canonical gate. build/test always; Verus/Kani if provisioned
+      # above (else SKIP); @spec-coverage always; e2e if PT_E2E=1 + creds are set.
+      - name: CI gate (scripts/ci.sh)
+        run: bash scripts/ci.sh

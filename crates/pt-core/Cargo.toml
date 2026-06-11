@@ -1,0 +1,22 @@
+# pt-core: the shared money & quantity primitives for portfolio-tracker.
+#
+# Exact-integer newtypes (Cents, MicroShares, Date, Seq), the single
+# `SHARE_SCALE` rounding helper (`round_half_to_even`), and the `MONEY_CAP`
+# totality bound. These are the vocabulary the verified kernel (`ledger-core`)
+# and every downstream segment share. No serde, no I/O — that belongs to the
+# later `store` segment (HLD trust boundary).
+#
+# This crate is plain stable Rust; it is NOT a `verus!{}` crate itself, but its
+# types mirror the shapes the `ledger-core` verus module re-declares, exactly as
+# the prior project's Cents mirrors portfolio_engine_core::Cents.
+[package]
+name = "pt-core"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+
+[lib]
+name = "pt_core"
+path = "src/lib.rs"
+
+[dependencies]

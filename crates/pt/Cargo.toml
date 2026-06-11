@@ -1,0 +1,54 @@
+# pt: the portfolio-tracker BINARY — the one executable the owner runs.
+#
+# It is the thin argv -> subcommand dispatcher that wires the leaves together
+# THROUGH `runtime` (the shared host that owns the Sheets-access layer, the
+# advisory write-lock, and the replay -> project -> read-marks -> cache cycle):
+#
+#   pt              (no args)  launch the interactive TUI (ratatui + crossterm)
+#   pt summary      run the headless daily-summary (text, or --json)
+#   pt import       run the one-time legacy importer (dry-run by default)
+#
+# It is NOT a verus!{} crate: argv parsing + process wiring + the crossterm event
+# loop, all OUTSIDE the verified boundary (CLAUDE.md "Verify the money math; trust
+# the I/O"). The money math lives in the kernels it drives; no float crosses here.
+# `cargo test` is the gate. The pure dispatch seam (argv -> Command) is unit-tested;
+# the real terminal / live Sheets paths are confirmed by the env-gated e2e and by
+# the manual `pt` run, never in `cargo test`.
+[package]
+name = "pt"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "pt"
+path = "src/main.rs"
+
+[lib]
+name = "pt"
+path = "src/lib.rs"
+
+[dependencies]
+pt-core = { workspace = true }
+ledger-core = { workspace = true }
+config = { workspace = true }
+tax = { workspace = true }
+store = { workspace = true }
+sheets-view = { workspace = true }
+reports = { workspace = true }
+runtime = { workspace = true }
+summary = { workspace = true }
+tui = { workspace = true }
+import = { workspace = true }
+
+# Owner-inputs JSON for `pt import` (one-time migration facts; outside the
+# verified boundary — the parse fails loud, never defaults silently).
+serde_json = "1"
+
+# The interactive TUI's terminal event loop lives in the binary (the `tui` lib is
+# a pure Model-Update-View + render seam with a FAKE runtime for tests). ratatui
+# 0.28 re-exports crossterm 0.28 for the raw-mode / alt-screen / key-event plumbing.
+ratatui = "0.28"
+
+[dev-dependencies]
+runtime = { workspace = true }

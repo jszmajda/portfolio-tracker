@@ -1,0 +1,43 @@
+# reports: the PORTFOLIO-ANALYTICS segment for portfolio-tracker.
+#
+# Computes composition, value-over-time (the durable value History), and
+# realized-P&L history as pure functions over ledger-core's `Snapshot`, the
+# current marks (with their quote-epoch), tax's per-position unrealized estimate,
+# and a persisted value History. The TUI and `summary` render what it produces.
+# It does NOT own the quarterly/annual TAX reports — those are tax's
+# (TAX-REPORT-*); reports covers the non-tax analytics. See
+# docs/intent/reports/reports-design.md and -specs.md (prefix REPORT).
+#
+# The defining design fact: the value series is the one piece of derived data
+# that is NOT reconstructable (a past day's value depends on that day's marks,
+# and GOOGLEFINANCE only gives live prices). So reports splits its work by
+# reconstructability: composition + realized history are recomputed on demand
+# from the log; the value/unrealized History series is captured and durably
+# persisted (authoritative, workbook-backed — re-READ on cache divergence, never
+# recomputed).
+#
+# NOT a verus!{} crate: reports is aggregation, not money-conservation, so it is
+# unit-tested, not Verus-proven (CLAUDE.md "cargo test is the gate"). All money
+# is integer pt_core::Cents / MicroShares; no float past the input boundary.
+#
+# The low-level Sheets-access layer and the advisory write-lock are runtime's;
+# reports depends on a thin `HistoryClient` trait (modeled on store's
+# `SheetsClient`) and store's `Lock`, with in-memory / no-op fakes for ALL tests.
+# Runtime supplies the real impls later.
+[package]
+name = "reports"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+
+[lib]
+name = "reports"
+path = "src/lib.rs"
+
+[dependencies]
+pt-core = { workspace = true }
+ledger-core = { workspace = true }
+config = { workspace = true }
+tax = { workspace = true }
+store = { workspace = true }
+sheets-view = { workspace = true }

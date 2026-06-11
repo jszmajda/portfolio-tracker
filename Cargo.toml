@@ -1,0 +1,35 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/pt-core",
+    "crates/ledger-core",
+    "crates/config",
+    "crates/tax",
+    "crates/store",
+    "crates/sheets-view",
+    "crates/reports",
+    "crates/runtime",
+    "crates/summary",
+    "crates/tui",
+    "crates/import",
+    "crates/pt",
+]
+
+[workspace.package]
+edition = "2021"
+version = "0.1.0"
+license = "MIT"
+
+[workspace.dependencies]
+pt-core = { path = "crates/pt-core" }
+ledger-core = { path = "crates/ledger-core" }
+config = { path = "crates/config" }
+tax = { path = "crates/tax" }
+store = { path = "crates/store" }
+sheets-view = { path = "crates/sheets-view" }
+reports = { path = "crates/reports" }
+runtime = { path = "crates/runtime" }
+summary = { path = "crates/summary" }
+tui = { path = "crates/tui" }
+import = { path = "crates/import" }
+pt = { path = "crates/pt" }

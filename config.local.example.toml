@@ -1,0 +1,10 @@
+# Template for `config.local.toml` (gitignored — never commit the real file):
+# local, machine/secret runtime settings (points `pt` / the e2e at the workbook +
+# the service-account credentials). Copy to config.local.toml and fill in real
+# values. Env vars (PT_WORKBOOK_ID, GOOGLE_APPLICATION_CREDENTIALS, PT_CACHE_PATH,
+# PT_REPORTING_TZ) override these (the path CI + the e2e use).
+[settings]
+workbook_id = "REPLACE-WITH-THE-WORKBOOK-ID"
+credentials_path = "/path/to/gsheets-service-account.json"
+cache_path = "/path/to/portfolio-tracker/.pt-cache.sqlite"
+reporting_timezone = "US/Eastern"

@@ -1,0 +1,25 @@
+{
+  "_comment": "Template for `import.local.json` (gitignored — never commit the real file): the one-time legacy-migration owner inputs `pt import` reads (docs/intent/import/import-design.md → Run Mechanics; parsed by crates/pt/src/import_app.rs). Copy to import.local.json and fill in the real values. legacy_workbook_id is the Google Sheet id of the legacy hand-wired workbook (tabs: Stock Actions / Stock Sales / Positions). platform_prefixes maps a legacy tranche-id prefix to the platform the tranche lives on; per_symbol_platforms overrides by symbol; default_platform catches the rest. corporate_actions lists the known splits to reconstruct (num:den, e.g. AMZN 20:1 on 2022-06-06). split_row_remap maps a legacy split DELTA-row id to the ORIGINAL tranche its shares came from. post_split_framed_ids lists tranche ids retroactively recorded in post-split units despite a pre-split date. excluded_symbols are owner-declared exclusions (reported, never silent — e.g. unvested grants, non-security holdings). adjudicated_divergences maps a symbol to the owner's stated reason for a known-wrong legacy cell. closed_years are filing-closed, owner-confirmed-paid years (legacy_actual_cents = the actual tax paid, integer cents). residency is the historical residency timeline (needs at least the founding entry).",
+  "legacy_workbook_id": "REPLACE-WITH-THE-LEGACY-GOOGLE-SHEET-ID",
+  "default_platform": "Schwab",
+  "platform_prefixes": {
+    "eb-": "ExampleBroker"
+  },
+  "per_symbol_platforms": {},
+  "corporate_actions": [
+    { "symbol": "AMZN", "date": "2022-06-06", "num": 20, "den": 1 }
+  ],
+  "split_row_remap": { "31": "2" },
+  "post_split_framed_ids": ["RSU-GRANT1-a"],
+  "excluded_symbols": ["UNVESTEDCO", "NONSECURITY"],
+  "adjudicated_divergences": {
+    "GOOGL": "example: the legacy Profit cell double-subtracts the cost; the reconstruction is the correct gain"
+  },
+  "closed_years": [
+    { "jurisdiction": "federal", "tax_year": 2023, "legacy_actual_cents": 123456, "account_label": "Legacy combined" }
+  ],
+  "residency": [
+    { "effective_date": "1970-01-01", "state": "DC" }
+  ],
+  "founding_residency_asserted": false
+}

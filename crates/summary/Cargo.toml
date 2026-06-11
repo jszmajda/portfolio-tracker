@@ -1,0 +1,31 @@
+# summary: the headless daily-summary command for portfolio-tracker.
+#
+# Replaces the legacy portfolio-summary.sh scraper: a non-interactive run that captures
+# the day's value point (via reports' trading-day History), computes a point-to-point
+# day-over-day delta, and prints a terminal portfolio summary (text or versioned
+# --json) for the `dailies` framework. It is THIN orchestration + formatting — the
+# numbers come from `reports`, `tax`, and `ledger-core`; `summary` adds no analytics
+# of its own.
+#
+# It is NOT a verus!{} crate: orchestration + formatting, unit-tested (cargo test is
+# the gate). All money is integer pt_core::Cents; no float past the input boundary.
+# The capture seam is `reports::HistoryClient` + `store::Lock` (the runtime-supplied,
+# locked Sheets-access primitive); the advisory-lock held probe is a thin trait. ALL
+# tests use in-memory fakes (no network), mirroring reports' testkit discipline.
+[package]
+name = "summary"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+
+[lib]
+name = "summary"
+path = "src/lib.rs"
+
+[dependencies]
+pt-core = { workspace = true }
+ledger-core = { workspace = true }
+config = { workspace = true }
+tax = { workspace = true }
+reports = { workspace = true }
+store = { workspace = true }

@@ -1,0 +1,31 @@
+# config: the reference-data + validation segment for portfolio-tracker.
+#
+# Holds the mutable, versioned reference data the rest of the system reads but
+# the append-only event log does NOT produce: per-year tax-rule tables (filing
+# status, federal ordinary / federal long-term / per-state ordinary brackets,
+# NIIT, annual ordinary income), the de-minimis threshold, the effective-dated
+# residency timeline, the platform suggestion list, the symbol->ticker alias
+# map, and machine/secret settings.
+#
+# It is the first validation gate behind `tax`'s bounded-tax invariant: a
+# malformed or rate-excessive bracket set is rejected HERE before `tax` ever
+# sees it (the stacked-rate <100% ceiling).
+#
+# Depends ONLY on pt-core (Cents / Date / ppm units). It is NOT a verus!{} crate
+# (mostly data and I/O, outside the verified boundary); its pure helpers
+# (residency resolution, staleness, bracket validation) are unit-tested and
+# cargo test is the gate for this segment. Real workbook / local-file
+# persistence is wired later by `runtime`; here persistence sits behind a thin
+# trait with an in-memory fake for TDD. No serde, no I/O in this crate yet.
+[package]
+name = "config"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+
+[lib]
+name = "config"
+path = "src/lib.rs"
+
+[dependencies]
+pt-core = { workspace = true }

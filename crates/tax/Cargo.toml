@@ -1,0 +1,45 @@
+# tax: the verified tax-calculation + accrual-lifecycle kernel for
+# portfolio-tracker.
+#
+# Turns ledger-core's RealizedGains into money set aside and, eventually, paid.
+# Owns three things: the tax CALCULATION (federal ST=ordinary / LT=preferential
+# + NIIT; state=ordinary on all gains, stacked, marginal-increment in
+# chronological (sale_date, sale_seq) order), the accrual LIFECYCLE
+# (Accrued -> Allocated -> Moved -> Paid, event-sourced via a TaxEvent log), and
+# the RESERVE ledgers + quarterly/annual REPORTING that ride on top. It owns no
+# share or cost-basis math (that is ledger-core's).
+#
+# Mirrors ledger-core's dual-build discipline: the tax ARITHMETIC (T_J bracket
+# stacking, the marginal accrual increment, the effective unrealized rate in
+# ppm) lives inside a `verus!{}` module that ERASES under plain stable
+# `cargo build` (compiling as ordinary Rust) and is deductively verified under
+# the pinned `cargo verus verify` toolchain. The accrual-lifecycle fold over the
+# TaxEvent log uses BTreeMap/String and stays OUTSIDE the verus!{} boundary
+# (covered by #[test]s; CBMC cannot fold heap collections tractably). Kani
+# harnesses target the verus!{} arithmetic kernel ONLY, with concrete divisors
+# and tiny symbolic ranges.
+#
+# Serde and all I/O sit OUTSIDE this boundary (the `store` segment owns them):
+# `tax` takes already-deserialized RealizedGains, config data, and a
+# Vec<TaxEvent>, and returns computed accruals / reserves / reports.
+[package]
+name = "tax"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+
+[lib]
+name = "tax"
+path = "src/lib.rs"
+
+[dependencies]
+pt-core = { workspace = true }
+ledger-core = { workspace = true }
+config = { workspace = true }
+vstd = "=0.0.0-2026-05-10-0145"
+
+[package.metadata.verus]
+verify = true
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(verus_only)', 'cfg(kani)', 'cfg(verus_keep_ghost)'] }

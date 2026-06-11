@@ -1,0 +1,48 @@
+# tui: the ratatui terminal application for portfolio-tracker.
+#
+# The ONLY way activity is entered and the primary way the portfolio is read day
+# to day. It is a sub-HLD with two leaf prefixes: TUI-ENTRY-* (the write-path
+# composer flows — buy/vest/sell/split/reversal, the lot picker, tax-accrual
+# actions, config edits) and TUI-VIEW-* (the read-only screens — positions,
+# open lots, history, tax & reserves, realized, with filter/sort/drill-down/
+# group). The `tui` sub-HLD owns the shared shell + the cross-screen display
+# conventions (freshness / degraded / [est] / integrity-block / confirmations)
+# and the Ledger ROLE-TOKEN theme.
+#
+# It runs THROUGH `runtime`: runtime drives the replay cycle, holds the Snapshot
+# + cached marks the screens render, owns the Sheets-access layer + the advisory
+# write-lock, and is where interactive submits acquire the lock. The TUI itself
+# is a hand-rolled Model-Update-View loop over `ratatui` + `crossterm`; input
+# fields use simple in-crate line editors (the design's "tui-textarea (or simple
+# line editors)" — no extra dep).
+#
+# It is NOT a verus!{} crate: UI + I/O orchestration, OUTSIDE the verified
+# boundary (CLAUDE.md "Verify the money math; trust the I/O"). cargo test is the
+# gate. All money is integer pt_core::Cents / MicroShares; no float past the
+# input boundary. Tests drive the Model-Update-View logic + rendering against a
+# FAKE runtime (no real terminal / no Sheets): they assert on rendered buffers
+# (ratatui TestBackend) and state transitions, never a live TTY.
+[package]
+name = "tui"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+
+[lib]
+name = "tui"
+path = "src/lib.rs"
+
+[dependencies]
+pt-core = { workspace = true }
+ledger-core = { workspace = true }
+config = { workspace = true }
+tax = { workspace = true }
+store = { workspace = true }
+sheets-view = { workspace = true }
+reports = { workspace = true }
+runtime = { workspace = true }
+
+# Immediate-mode TUI. ratatui 0.28 re-exports crossterm 0.28; the TestBackend it
+# ships renders to an in-memory Buffer so tests assert on rendered cells with no
+# TTY. Default features keep the crossterm backend.
+ratatui = "0.28"

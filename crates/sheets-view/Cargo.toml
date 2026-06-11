@@ -1,0 +1,34 @@
+# sheets-view: the PROJECTION half of the workbook for portfolio-tracker.
+#
+# Regenerates clean, read-only, filterable VIEW tabs (Positions, Open Lots,
+# Realized, Tax) from the kernels' output, and is the one place the LIVE price
+# enters the system (via GOOGLEFINANCE). It consumes ledger-core's `Snapshot`
+# (positions, open lots, realized gains) and `tax`'s accruals / reserves / the
+# per-position effective unrealized rate, writes them as view tabs, and reads
+# the GOOGLEFINANCE-computed prices BACK as the per-symbol marks `runtime` caches
+# and injects into the next replay. It owns no accounting or tax math — it
+# renders and it prices.
+#
+# It is NOT a verus!{} crate (all I/O and the sheet/formula boundary live
+# outside the verified kernels; CLAUDE.md "Verify the money math; trust the
+# I/O"). cargo test is the gate for this segment. The price->Cents conversion
+# uses pt-core's canonical round_half_to_even, the single rounding site.
+#
+# The low-level Sheets-access layer is `runtime`'s; sheets-view depends on a thin
+# `SheetsViewClient` trait modeled on store's `SheetsClient`, with an in-memory
+# fake for ALL tests. Runtime supplies the real impl later.
+[package]
+name = "sheets-view"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+
+[lib]
+name = "sheets_view"
+path = "src/lib.rs"
+
+[dependencies]
+pt-core = { workspace = true }
+ledger-core = { workspace = true }
+config = { workspace = true }
+tax = { workspace = true }

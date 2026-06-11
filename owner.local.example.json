@@ -1,0 +1,14 @@
+{
+  "_comment": "Template for `owner.local.json` (gitignored — never commit the real file). This is the PERSONAL half of the tax-rules seeding inputs read by crates/runtime/tests/seed_taxrules.rs (the executable companion of docs/runbooks/refresh-tax-brackets.md). The bracket TABLES stay transcribed in seed_taxrules.rs — they are public IRS / state revenue data; this file carries only the owner-specific values. Copy to owner.local.json and fill in real values. All money fields are integer cents. filing_status is one of: Single | MarriedFilingJointly | MarriedFilingSeparately | HeadOfHousehold (it must match the bracket set transcribed in seed_taxrules.rs). residency_state is the two-letter code of the founding residency entry (a state table for it must be transcribed in seed_taxrules.rs). display_names maps ticker symbols to the company names the TUI renders (an unmapped symbol falls back to its ticker).",
+  "filing_status": "MarriedFilingJointly",
+  "ordinary_income_cents": 20000000,
+  "residency_state": "DC",
+  "de_minimis_cents": 500,
+  "platforms": ["ExampleBroker", "Schwab"],
+  "display_names": {
+    "AMZN": "Amazon.com",
+    "GOOG": "Alphabet",
+    "GOOGL": "Alphabet",
+    "PRIVCO": "PrivCo (private)"
+  }
+}

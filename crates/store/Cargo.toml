@@ -1,0 +1,32 @@
+# store: the single Sheets-row<->event trust seam for portfolio-tracker.
+#
+# Owns the workbook's append-only event-log tabs (`Ledger Events`,
+# `Tax Events`), the total structural row<->event serialization that crosses
+# into/out of the verified kernels, the append + read-back-verify write path,
+# the rebuildable local cache (two-tier currency probe), and the on-load
+# integrity check. It holds NO accounting/tax math — that is ledger-core's and
+# tax's. By concentrating serialization here and proving the kernels pure, the
+# unverified surface is one small, totally-structural conversion locked by a
+# drift-guard test (the prior project's drift-guard analog).
+#
+# NOT a verus!{} crate (all I/O and serde, outside the verified boundary; see
+# CLAUDE.md "Verify the money math; trust the I/O"). cargo test is the gate.
+#
+# The low-level Sheets access layer and the advisory write-lock are runtime's;
+# store depends on a `SheetsClient` trait and a `Lock` trait, with in-memory /
+# no-op fakes for ALL tests. Runtime supplies the real impls later.
+[package]
+name = "store"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+
+[lib]
+name = "store"
+path = "src/lib.rs"
+
+[dependencies]
+pt-core = { workspace = true }
+ledger-core = { workspace = true }
+tax = { workspace = true }
+config = { workspace = true }

@@ -1,0 +1,35 @@
+# ledger-core: the Verus-verified event-sourced accounting kernel.
+#
+# Mirrors the prior verified project's engine core. The pure accounting fold lives inside a
+# `verus!{}` module that ERASES under plain stable `cargo build` (compiling as
+# ordinary Rust the public API calls) and is deductively verified under the
+# pinned `cargo verus verify` toolchain. NO rust-toolchain.toml pin: plain build
+# runs on stable; Verus brings its own toolchain.
+#
+# Dual-build wiring (per a prior spike proved):
+#   - vstd from crates.io (NOT a path dep), pinned by version.
+#   - the package.metadata.verus verify=true marker.
+#   - the unexpected_cfgs allow for cfg(verus_only) and cfg(kani).
+#
+# Serde and all I/O sit OUTSIDE this boundary (the `store` segment owns them):
+# `ledger-core` takes an already-deserialized `Vec<LedgerEvent>` and returns a
+# `Snapshot`; it never reads a file, a socket, or a spreadsheet.
+[package]
+name = "ledger-core"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+
+[lib]
+name = "ledger_core"
+path = "src/lib.rs"
+
+[dependencies]
+pt-core = { workspace = true }
+vstd = "=0.0.0-2026-05-10-0145"
+
+[package.metadata.verus]
+verify = true
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(verus_only)', 'cfg(kani)', 'cfg(verus_keep_ghost)'] }

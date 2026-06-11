@@ -1,0 +1,66 @@
+# runtime: the shared HOST that wires the leaves together and closes the loops
+# they each assume someone else owns. It is I/O + orchestration, OUTSIDE the
+# verus!{} boundary; `cargo test` is the gate (not Verus). It owns three concerns
+# the cross-segment audit found named-by-many / owned-by-none:
+#
+#   1. the low-level Sheets-access layer (RUNTIME-SHEETS) — the ONE place Google
+#      Sheets API mechanics live: JWT service-account auth, read / append /
+#      batchUpdate / clear, and rate-limit/backoff/retry. The real client is
+#      `SheetsApi` over the Sheets REST API; tests use the in-memory `FakeSheetsApi`
+#      (no network). The other segments' thin traits (store::SheetsClient,
+#      sheets_view::SheetsViewClient, reports::HistoryClient, config::ConfigStore)
+#      are built ON this primitive — no segment opens its own client.
+#
+#   2. the cross-process, machine-local advisory write-lock (RUNTIME-LOCK) — a
+#      lockfile under the cache dir with a non-blocking `try_acquire() -> Acquired
+#      | Held{holder, since}`, an explicit release, holder identity, and a TTL by
+#      which a crashed holder's stale lock is reclaimable. It also adapts to
+#      store's `Lock` trait so it is acquired INSIDE every write primitive.
+#
+#   3. the replay -> project -> read-marks -> cache cycle (RUNTIME-CYCLE) —
+#      `runtime` is the replay caller: load the event log (store), replay
+#      ledger-core then tax (config + the prior cycle's cached marks), hold the
+#      Snapshot + accruals + tax estimates, read marks back (sheets-view), cache
+#      them and inject into the NEXT replay, and reduce the per-symbol quote-epochs
+#      to ONE trading-day key for reports/summary/tui.
+#
+# The lock, cycle, and segment adapters are unit-tested with the FAKE Sheets client
+# (no network); the retry loop is unit-tested via `run_with_retry` and the JWT mint
+# with a throwaway key. Only the live HTTP round-trip of the real `GoogleSheetsApi`
+# is confirmed manually against a real workbook.
+[package]
+name = "runtime"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+
+[lib]
+name = "runtime"
+path = "src/lib.rs"
+
+[dependencies]
+pt-core = { workspace = true }
+ledger-core = { workspace = true }
+config = { workspace = true }
+tax = { workspace = true }
+store = { workspace = true }
+sheets-view = { workspace = true }
+reports = { workspace = true }
+
+# The real Sheets-access layer (RUNTIME-SHEETS): a blocking HTTP client over the
+# Sheets REST API, a JWT signed with the service-account RSA key, JSON, and time.
+# These are I/O-boundary deps only — none cross the verified kernels.
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+jsonwebtoken = "9"
+base64 = "0.22"
+
+[dev-dependencies]
+# The real-Sheets e2e (tests/e2e_real_sheets.rs) drives the live round-trip all the
+# way to a report + summary. `summary` does NOT depend on `runtime`, so this is a
+# test-only edge with no dependency cycle.
+summary = { workspace = true }
+# The tax-rules seeding harness (tests/seed_taxrules.rs) reads the gitignored
+# owner seed file (owner.local.json / owner.local.example.json).
+serde_json = "1"

@@ -1,0 +1,21 @@
+# Rust
+/target
+**/*.rs.bk
+
+# Local rebuildable cache (carries no truth; rebuilt from the workbook)
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# Local owner/machine files — personal data, credential paths, one-time migration
+# facts. NEVER committed. Each has a checked-in `*.local.example.*` sibling
+# documenting its shape (config.local.toml, import.local.json, owner.local.json).
+secrets.toml
+*.local.toml
+*.local.json
+
+# OS
+.DS_Store
+
+# Vendored Verus toolchain (machine-provisioned; symlink or vendor a Verus build here)
+/tools
