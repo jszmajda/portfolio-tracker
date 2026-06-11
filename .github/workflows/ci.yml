@@ -44,6 +44,12 @@ jobs:
     # test/@spec-coverage) is platform-agnostic; Verus/Kani run only when their
     # toolchains are provisioned (scripts/ci.sh SKIPs them otherwise).
     runs-on: macos-14
+    # Secrets are lifted to job env because the `secrets` context is not
+    # permitted in step-level `if:` expressions (the workflow file fails
+    # validation outright). Empty when unconfigured — the e2e step then skips.
+    env:
+      GOOGLE_SHEETS_SA: ${{ secrets.GOOGLE_SHEETS_SA }}
+      PT_WORKBOOK_ID: ${{ secrets.PT_WORKBOOK_ID }}
     steps:
       - uses: actions/checkout@v4
 
@@ -87,12 +93,12 @@ jobs:
       # the e2e points at; when absent, the e2e SKIPs (the env vars below stay
       # empty).
       - name: Materialize Google creds (if the secrets are configured)
-        if: ${{ secrets.GOOGLE_SHEETS_SA != '' && secrets.PT_WORKBOOK_ID != '' }}
+        if: ${{ env.GOOGLE_SHEETS_SA != '' && env.PT_WORKBOOK_ID != '' }}
         run: |
-          echo '${{ secrets.GOOGLE_SHEETS_SA }}' > "$RUNNER_TEMP/gsheets-sa.json"
+          # via env, never inline interpolation: the SA JSON must land byte-exact.
+          printf '%s' "$GOOGLE_SHEETS_SA" > "$RUNNER_TEMP/gsheets-sa.json"
           echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/gsheets-sa.json" >> "$GITHUB_ENV"
           echo "PT_E2E=1" >> "$GITHUB_ENV"
-          echo "PT_WORKBOOK_ID=${{ secrets.PT_WORKBOOK_ID }}" >> "$GITHUB_ENV"
 
       # The single canonical gate. build/test always; Verus/Kani if provisioned
       # above (else SKIP); @spec-coverage always; e2e if PT_E2E=1 + creds are set.
