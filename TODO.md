@@ -24,3 +24,4 @@ owner-declared, reported exclusion.
 Wanted: decide whether/how non-security holdings (physical commodities, etc.)
 belong in the tracker — likely a separate asset-kind with manual marks rather
 than a forced fit into tax lots.
+
