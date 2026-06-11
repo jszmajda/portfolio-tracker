@@ -199,15 +199,6 @@ the gate.
 
 ## Open Questions & Future Decisions
 
-### Needs user input
-1. **Historical residency timeline.** Where the owner lived during past sales (to stamp
-   `accrues_to_state`) — at minimum the founding entry (a best-guess founding state is allowed,
-   flagged, if the oldest sale predates memory); plus any pre-DC history.
-2. **Known corporate actions list.** Confirm AMZN 20:1 (2022-06-06) and any other splits/actions
-   across the holding history to reconstruct.
-3. **Closed-year set.** Which prior years are filing-closed and paid (to seed via override + `Pay`);
-   confirmed by the owner, not inferred from the clock.
-
 ### Deferred
 1. **Mergers / spin-offs in history.** If any past holding had one (beyond splits) — depends on
    the corporate-action model `ledger-core` deferred.
