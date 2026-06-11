@@ -290,13 +290,14 @@ fn accrual_006_reversed_accrued_sale_is_omitted() {
 }
 
 // ===========================================================================
-// TAX-ACCRUAL-007 — a closed-year combined migration accrual supersedes that
-// year's per-RealizedGain accruals (they are excluded from outstanding).
+// TAX-ACCRUAL-007/009 — a closed-year combined migration accrual is accepted
+// as a first-class accrual (TAX-ACCRUAL-007) and supersedes that year's
+// per-RealizedGain accruals (excluded from outstanding, TAX-ACCRUAL-009).
 // ===========================================================================
 
-// @spec TAX-ACCRUAL-007, TAX-REPORT-005
+// @spec TAX-ACCRUAL-007, TAX-ACCRUAL-009, TAX-REPORT-005
 #[test]
-fn accrual_007_migration_seed_supersedes_per_gain_accruals() {
+fn accrual_007_009_migration_seed_supersedes_per_gain_accruals() {
     // A closed prior year (2024) with a MATERIAL per-gain accrual — a SHORT-TERM
     // gain at the 30% ordinary rate so its derived federal accrual is a non-zero
     // 30_000c (NOT a long-term-against-flat(0) zero that masks a double-count).

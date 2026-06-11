@@ -320,7 +320,7 @@ fn daily_script_hidden_symbols_are_imported_as_real_holdings() {
     assert!(symbols.contains("WXYZ"), "the view-hidden WXYZ is imported");
 }
 
-// @spec IMPORT-RUN-005
+// @spec IMPORT-RUN-011
 #[test]
 fn a_genuinely_malformed_source_row_is_listed_not_dropped() {
     // A Buy row whose `$/share` is unparseable (not a derived-column #DIV/0!, but a
@@ -353,7 +353,7 @@ fn a_genuinely_malformed_source_row_is_listed_not_dropped() {
     // And an outstanding malformed row BLOCKS commit: it was listed, not migrated,
     // so committing would silently drop its data. GOOG itself reconciles cleanly
     // (the dropped 1-share garble leaves GOOG at 80), so only the malformed list
-    // can block here — and it must. (IMPORT-RUN-005)
+    // can block here — and it must. (IMPORT-RUN-011)
     let report = dry_run(&wb, &Marks::new()).expect("dry-run still produces a report");
     assert!(
         !report.commit_allowed,

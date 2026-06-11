@@ -195,7 +195,7 @@ pub fn residency(entries: &[(Date, &str)]) -> ResidencyTimeline {
 }
 
 /// An empty legacy workbook with a founding residency entry (the common base a
-/// test extends with rows). (IMPORT-RUN-005)
+/// test extends with rows). (IMPORT-RUN-009)
 pub fn empty_workbook(founding_state: &str, founding_from: Date) -> LegacyWorkbook {
     LegacyWorkbook {
         residency: founding_residency(founding_state, founding_from),

@@ -67,7 +67,7 @@ pub enum LockOutcome {
     /// exclusive create fails with anything other than `AlreadyExists`). This is
     /// surfaced as an acquisition error to the caller rather than silently
     /// proceeding as if `Acquired` OR falsely claiming the lock is `Held` by
-    /// another holder (which would mislead a held-lock policy). (RUNTIME-LOCK-007)
+    /// another holder (which would mislead a held-lock policy). (RUNTIME-LOCK-010)
     Error {
         /// A short human-readable reason for the acquisition failure.
         reason: String,
@@ -86,7 +86,7 @@ impl LockOutcome {
     }
 
     /// Whether acquisition failed for an I/O reason other than contention (an
-    /// unwritable lock path). (RUNTIME-LOCK-007)
+    /// unwritable lock path). (RUNTIME-LOCK-010)
     pub fn is_error(&self) -> bool {
         matches!(self, LockOutcome::Error { .. })
     }
@@ -229,26 +229,26 @@ impl<C: Clock> AdvisoryLock<C> {
     /// same `O_EXCL` create** — so a reclaim is just another exclusive create and only
     /// one of N concurrent reclaimers can win. Never blocks. (RUNTIME-LOCK-001/003)
     ///
-    /// **Recovery outcomes** (RUNTIME-LOCK-007):
-    /// - *stale past TTL* — reclaim atomically and grant.
+    /// **Recovery outcomes** (RUNTIME-LOCK-007..010):
+    /// - *stale past TTL* — reclaim atomically and grant. (RUNTIME-LOCK-007)
     /// - *corrupt / unreadable holder record* — once its on-disk mtime is itself past
     ///   the TTL, treat as not validly held and reclaim atomically rather than refuse
     ///   forever (a freshly-created-but-not-yet-written file is treated as `Held`, see
-    ///   next case).
+    ///   next case). (RUNTIME-LOCK-008)
     /// - *mid-initialization* (present but not yet bearing a complete holder/timestamp
     ///   record, mtime within TTL) — treat as `Held` (`<initializing>`), so an
-    ///   in-progress acquisition by another process is not stolen.
+    ///   in-progress acquisition by another process is not stolen. (RUNTIME-LOCK-009)
     /// - *unwritable lock path* (the acquire fails for an I/O reason other than
     ///   contention) — return [`LockOutcome::Error`], never silently `Acquired` and
-    ///   never a misleading `Held`.
-    // @spec RUNTIME-LOCK-007
+    ///   never a misleading `Held`. (RUNTIME-LOCK-010)
+    // @spec RUNTIME-LOCK-007, RUNTIME-LOCK-008, RUNTIME-LOCK-009, RUNTIME-LOCK-010
     pub fn try_acquire(&self) -> LockOutcome {
         let now = self.clock.now_secs();
 
         // The parent dir (the cache dir) must exist before we can create the file.
         // If it cannot be created, the lock path is unwritable — surface an
         // acquisition ERROR rather than silently proceeding or falsely claiming the
-        // lock is Held by another holder. (RUNTIME-LOCK-007)
+        // lock is Held by another holder. (RUNTIME-LOCK-010)
         if let Some(parent) = self.path.parent() {
             if !parent.as_os_str().is_empty() {
                 if let Err(e) = fs::create_dir_all(parent) {
@@ -278,7 +278,7 @@ impl<C: Clock> AdvisoryLock<C> {
                 // unacquired. This is NOT contention — surface an acquisition ERROR
                 // to the caller rather than silently proceeding as if Acquired or
                 // falsely claiming the lock is Held by another holder (which would
-                // mislead a held-lock policy into waiting forever). (RUNTIME-LOCK-007)
+                // mislead a held-lock policy into waiting forever). (RUNTIME-LOCK-010)
                 Err(e) => {
                     return LockOutcome::Error {
                         reason: format!("lock path unwritable: {e}"),
@@ -509,7 +509,7 @@ impl<C: Clock> Lock for StoreLockAdapter<'_, C> {
             }
             // An acquisition I/O error (an unwritable lock path) — surface it as an
             // error to the caller rather than silently proceed as if Acquired.
-            // (RUNTIME-LOCK-007)
+            // (RUNTIME-LOCK-010)
             LockOutcome::Error { .. } => Err(LockError::Io),
             // Held by another process: a write primitive that acquires inside
             // itself must NOT proceed (a cron capture and an open TUI cannot both

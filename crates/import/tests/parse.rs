@@ -179,7 +179,7 @@ fn positions_grid() -> Grid {
     ]
 }
 
-// @spec IMPORT-RUN-008
+// @spec IMPORT-RUN-008, IMPORT-RUN-009
 #[test]
 fn the_real_layout_parses_into_typed_rows() {
     let parsed = parse_legacy_tabs(
@@ -256,7 +256,7 @@ fn the_real_layout_parses_into_typed_rows() {
     assert_eq!(parsed.marks.get("O"), Some(&Cents(5_500)));
 }
 
-// @spec IMPORT-MAP-005, IMPORT-CORP-006
+// @spec IMPORT-MAP-005, IMPORT-CORP-006, IMPORT-RUN-010
 #[test]
 fn exercise_split_and_grant_activities_map_per_the_owner_vocabulary() {
     let mut grid = actions_grid();

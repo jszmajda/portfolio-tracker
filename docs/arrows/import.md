@@ -5,7 +5,7 @@ dry-run + reconcile against the legacy Positions, and commit through the verifie
 
 ## Status
 
-**OK** — last audited 2026-06-11 (git SHA `2e43e4dd8896b05a75325c9a08fd37846cfb172d`). All 33
+**OK** — last audited 2026-06-11 (git SHA `2e43e4dd8896b05a75325c9a08fd37846cfb172d`). All 36
 specs implemented with citing tests (the migration itself was live-proven; the previously
 test-uncovered MAP-007 / RECON-007 / RECON-008 / CORP-007 now have focused citing tests).
 
@@ -18,7 +18,7 @@ test-uncovered MAP-007 / RECON-007 / RECON-008 / CORP-007 now have focused citin
 - docs/intent/import/import-design.md
 
 ### EARS
-- docs/intent/import/import-specs.md (33 specs)
+- docs/intent/import/import-specs.md (36 specs)
 
 ### Tests
 - crates/import/tests/parse.rs
@@ -57,10 +57,10 @@ accepts.
 | Corporate Actions, Frame & FMV | IMPORT-CORP-001..005 | 5 | 0 | 0 |
 | Historical Tax & Residency | IMPORT-TAX-001..003 | 3 | 0 | 0 |
 | Dry-Run & Reconciliation | IMPORT-RECON-001..008 | 8 | 0 | 0 |
-| Run Mechanics | IMPORT-RUN-001..008 | 8 | 0 | 0 |
+| Run Mechanics | IMPORT-RUN-001..011 | 11 | 0 | 0 |
 | Owner's Activity Vocabulary & Frame Mappings | IMPORT-MAP-005..007, IMPORT-CORP-006..007 | 5 | 0 | 0 |
 
-**Summary:** 33 of 33 active specs implemented; 0 deferred.
+**Summary:** 36 of 36 active specs implemented; 0 deferred.
 
 ## Key Findings
 

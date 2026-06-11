@@ -89,7 +89,7 @@ fn explicit_release_frees_the_lock() {
     assert!(lock.try_acquire().is_acquired(), "re-acquire after release");
 }
 
-// @spec RUNTIME-LOCK-001
+// @spec RUNTIME-LOCK-001, RUNTIME-LOCK-007
 #[test]
 fn ttl_reclaims_a_stale_crashed_holder_lock() {
     let path = temp_lockfile("ttl");
@@ -426,12 +426,14 @@ fn held_outcome_drives_per_writer_policy() {
 }
 
 // ===========================================================================
-// RUNTIME-LOCK-007 recovery outcomes. The stale-past-TTL reclaim is already
-// covered by `ttl_reclaims_a_stale_crashed_holder_lock` above; these add the
-// corrupt/unreadable, mid-initialization, and unwritable-path cases.
+// RUNTIME-LOCK-007..010 recovery outcomes. The stale-past-TTL reclaim
+// (RUNTIME-LOCK-007) is covered by `ttl_reclaims_a_stale_crashed_holder_lock`
+// above; these add the corrupt/unreadable (RUNTIME-LOCK-008),
+// mid-initialization (RUNTIME-LOCK-009), and unwritable-path
+// (RUNTIME-LOCK-010) cases.
 // ===========================================================================
 
-// @spec RUNTIME-LOCK-007
+// @spec RUNTIME-LOCK-008
 #[test]
 fn a_corrupt_unparseable_lockfile_past_its_mtime_ttl_is_reclaimed() {
     // A lockfile whose holder/timestamp record is corrupt/unparseable must NOT wedge
@@ -463,7 +465,7 @@ fn a_corrupt_unparseable_lockfile_past_its_mtime_ttl_is_reclaimed() {
     let _ = std::fs::remove_file(&path);
 }
 
-// @spec RUNTIME-LOCK-007
+// @spec RUNTIME-LOCK-009
 #[test]
 fn a_mid_initialization_lockfile_is_treated_as_held_not_stolen() {
     // A lockfile that EXISTS but does not yet bear a complete holder/timestamp record
@@ -492,7 +494,7 @@ fn a_mid_initialization_lockfile_is_treated_as_held_not_stolen() {
     let _ = std::fs::remove_file(&path);
 }
 
-// @spec RUNTIME-LOCK-007
+// @spec RUNTIME-LOCK-010
 #[test]
 fn an_unwritable_lock_path_surfaces_an_acquisition_error_not_a_silent_acquire() {
     // When the lock path is unwritable (the parent "directory" is actually a regular

@@ -5,7 +5,7 @@ write-lock, the replay → project → read-marks → cache cycle, bootstrap, an
 
 ## Status
 
-**OK** — last audited 2026-06-11 (git SHA `2e43e4dd8896b05a75325c9a08fd37846cfb172d`). All 26
+**OK** — last audited 2026-06-11 (git SHA `2e43e4dd8896b05a75325c9a08fd37846cfb172d`). All 30
 specs implemented with citing tests; the live e2e is env-gated (`PT_E2E=1`).
 
 ## References
@@ -17,7 +17,7 @@ specs implemented with citing tests; the live e2e is env-gated (`PT_E2E=1`).
 - docs/intent/runtime/runtime-design.md
 
 ### EARS
-- docs/intent/runtime/runtime-specs.md (26 specs)
+- docs/intent/runtime/runtime-specs.md (30 specs)
 
 ### Tests
 - crates/runtime/tests/sheets.rs
@@ -60,7 +60,7 @@ replay cycle that turns the event log into views, and the composition root the b
 | Category | Spec IDs | Implemented | Deferred | Gaps |
 |----------|----------|-------------|----------|------|
 | Sheets-Access Layer | RUNTIME-SHEETS-001..005 | 5 | 0 | 0 |
-| Advisory Write-Lock | RUNTIME-LOCK-001..007 | 7 | 0 | 0 |
+| Advisory Write-Lock | RUNTIME-LOCK-001..010 | 10 | 0 | 0 |
 | Replay & Marks Cycle | RUNTIME-CYCLE-001..006 | 6 | 0 | 0 |
 | Composition Root & Bootstrap | RUNTIME-BOOT-001..003 | 3 | 0 | 0 |
 | Cache Detection & Rebuild | RUNTIME-CACHE-001..002 | 2 | 0 | 0 |
@@ -68,7 +68,7 @@ replay cycle that turns the event log into views, and the composition root the b
 | Global EventId Assignment | RUNTIME-EVENTID-001 | 1 | 0 | 0 |
 | History-Append Retry Loop | RUNTIME-REPORTS-001 | 1 | 0 | 0 |
 
-**Summary:** 26 of 26 active specs implemented; 0 deferred.
+**Summary:** 30 of 30 active specs implemented; 0 deferred.
 
 ## Key Findings
 

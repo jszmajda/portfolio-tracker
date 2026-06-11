@@ -438,7 +438,7 @@ pub fn render_report(report: &DryRunReport, parsed: &ParsedLegacy, notes: &[Stri
     }
 
     // BOTH malformed channels block: the parse boundary's (a required source
-    // cell failed) and the reconstruction's. (IMPORT-RUN-005, IMPORT-RECON-006)
+    // cell failed) and the reconstruction's. (IMPORT-RUN-011, IMPORT-RECON-006)
     let malformed_total = parsed.malformed.len() + recon.malformed.len();
     if malformed_total > 0 {
         let _ = writeln!(

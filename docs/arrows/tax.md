@@ -5,7 +5,7 @@ The verified tax kernel: per-sale tax calculation over bracket data, the accrual
 
 ## Status
 
-**OK** — last audited 2026-06-11 (git SHA `2e43e4dd8896b05a75325c9a08fd37846cfb172d`). All 44
+**OK** — last audited 2026-06-11 (git SHA `2e43e4dd8896b05a75325c9a08fd37846cfb172d`). All 45
 specs implemented with citing tests; Verus/Kani gates run in `scripts/ci.sh`.
 
 ## References
@@ -17,7 +17,7 @@ specs implemented with citing tests; Verus/Kani gates run in `scripts/ci.sh`.
 - docs/intent/tax/tax-design.md
 
 ### EARS
-- docs/intent/tax/tax-specs.md (44 specs)
+- docs/intent/tax/tax-specs.md (45 specs)
 
 ### Tests
 - crates/tax/tests/calc.rs
@@ -47,13 +47,13 @@ per-sale accruals through their lifecycle, and reports reserves and quarterly po
 | Category | Spec IDs | Implemented | Deferred | Gaps |
 |----------|----------|-------------|----------|------|
 | Tax Calculation | TAX-CALC-001..015 | 15 | 0 | 0 |
-| Accruals & Lifecycle | TAX-ACCRUAL-001..008 | 8 | 0 | 0 |
+| Accruals & Lifecycle | TAX-ACCRUAL-001..009 | 9 | 0 | 0 |
 | Reserves | TAX-RESERVE-001..002 | 2 | 0 | 0 |
 | Reporting | TAX-REPORT-001..005 | 5 | 0 | 0 |
 | Validation & Errors | TAX-ERR-001..006 | 6 | 0 | 0 |
 | Verification Invariants | TAX-VERIF-001..008 | 8 | 0 | 0 |
 
-**Summary:** 44 of 44 active specs implemented; 0 deferred.
+**Summary:** 45 of 45 active specs implemented; 0 deferred.
 
 ## Key Findings
 

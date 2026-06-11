@@ -191,7 +191,7 @@ pub struct RowCorrection {
 /// any per-row corrections). The real workbook is parsed into this same shape for
 /// a manual run; ALL tests build it in memory. The legacy workbook's
 /// non-portfolio tabs (an owner-configured out-of-scope list) are not modeled.
-/// (IMPORT-RUN-005)
+/// (IMPORT-RUN-009)
 #[derive(Clone, PartialEq, Eq, Debug, Default)]
 pub struct LegacyWorkbook {
     /// `Stock Actions` rows (Buys and Vests).
@@ -245,7 +245,7 @@ pub struct ReconstructedEvent {
 /// The full reconstruction: the ledger events (Buy/Vest/Sell/Split) in intended
 /// `Seq` order, the tax events (the closed-year migration lifecycle), and the
 /// list of malformed source rows surfaced for manual review (never dropped).
-/// (IMPORT-MAP-*, IMPORT-CORP-*, IMPORT-TAX-002, IMPORT-RUN-005)
+/// (IMPORT-MAP-*, IMPORT-CORP-*, IMPORT-TAX-002, IMPORT-RUN-011)
 #[derive(Clone, PartialEq, Eq, Debug, Default)]
 pub struct Reconstruction {
     /// Reconstructed ledger events in intended fold order (Splits inserted by date
@@ -256,7 +256,7 @@ pub struct Reconstruction {
     /// (IMPORT-TAX-002)
     pub tax: Vec<TaxEvent>,
     /// Genuinely malformed source rows, listed for manual review rather than
-    /// silently dropped. (IMPORT-RUN-005)
+    /// silently dropped. (IMPORT-RUN-011)
     pub malformed: Vec<MalformedRow>,
     /// Per-symbol Σ FMV value of sell-to-cover shares (sales whose `$0` price
     /// was substituted with the vest-date FMV, `IMPORT-MAP-002`). The
@@ -268,7 +268,7 @@ pub struct Reconstruction {
 
 /// A genuinely malformed source row, surfaced for manual review. Distinct from a
 /// `#DIV/0!`/`#N/A`/blank cell in a DERIVED column (which is simply ignored).
-/// (IMPORT-RUN-005)
+/// (IMPORT-RUN-011)
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct MalformedRow {
     pub coord: RowCoord,
@@ -334,14 +334,14 @@ pub enum ImportError {
     /// commit would silently drop its data). Distinct from `TargetNotEmpty` (a
     /// write-target condition): this is the reconciliation safety gate refusing the
     /// write until the migration bug is fixed and the owner can accept a clean
-    /// reconciliation. Carries the blocking causes. (IMPORT-RECON-003, IMPORT-RUN-005)
+    /// reconciliation. Carries the blocking causes. (IMPORT-RECON-003, IMPORT-RUN-011)
     CommitBlockedByReconciliation {
         /// Symbols whose dollar verdict is `Unexplained`.
         unexplained_symbols: Vec<Symbol>,
         /// Symbols whose share verdict is `Flagged`.
         flagged_symbols: Vec<Symbol>,
         /// Coordinates of malformed source rows still outstanding (listed for
-        /// manual review, never migrated). (IMPORT-RUN-005)
+        /// manual review, never migrated). (IMPORT-RUN-011)
         malformed_rows: Vec<RowCoord>,
     },
     /// A commit was attempted without the owner's explicit acceptance: the typed
@@ -355,7 +355,7 @@ pub enum ImportError {
     /// the earliest event date). Surfaced from `config`. (IMPORT-TAX-001)
     MissingFoundingResidency,
     /// A monetary/quantity field could not be parsed at the input boundary, or an
-    /// owner input was internally inconsistent. (IMPORT-RUN-005)
+    /// owner input was internally inconsistent. (IMPORT-RUN-011)
     Malformed { coord: RowCoord, reason: String },
     /// A failure crossing the `store` trust seam during commit. (IMPORT-RUN-001)
     Store(store::StoreError),
@@ -552,7 +552,7 @@ pub const SHARE_TOLERANCE_MICRO: i64 = 1_000; // 0.001 share
 /// `"#DIV/0!"`, `"#N/A"`, or otherwise unparseable cell (the unrecoverable
 /// signal). The boundary is one rounding-free decimal-to-cents conversion (at most
 /// two fractional digits are significant; more are an error, not silent
-/// truncation). (IMPORT-CORP-003, IMPORT-RUN-005)
+/// truncation). (IMPORT-CORP-003, IMPORT-RUN-011)
 pub fn parse_dollars_to_cents(s: &str) -> Option<Cents> {
     let t = s.trim();
     // The unrecoverable / blank signals: an empty cell or a spreadsheet error.
@@ -762,7 +762,7 @@ pub fn assert_share_frame_precondition(wb: &LegacyWorkbook) -> Result<(), Import
 ///    -> Pay`, one combined accrual per `(jurisdiction, tax_year)`). (IMPORT-TAX-002)
 /// 6. A `Positions`-only symbol (no surviving Buy/Sell rows) is a hard error
 ///    (IMPORT-RUN-004); a genuinely malformed row is collected, not dropped
-///    (IMPORT-RUN-005).
+///    (IMPORT-RUN-011).
 ///
 /// Per-row corrections (`wb.corrections`) are applied as date/qty/frame overrides
 /// for a re-run (IMPORT-CORP-004). The reconstructed events are NOT yet
@@ -771,6 +771,7 @@ pub fn assert_share_frame_precondition(wb: &LegacyWorkbook) -> Result<(), Import
 // @spec IMPORT-MAP-001, IMPORT-MAP-002, IMPORT-MAP-003, IMPORT-MAP-004
 // @spec IMPORT-CORP-001, IMPORT-CORP-002, IMPORT-CORP-003, IMPORT-CORP-004
 // @spec IMPORT-TAX-001, IMPORT-TAX-002, IMPORT-RUN-002, IMPORT-RUN-004, IMPORT-RUN-005
+// @spec IMPORT-RUN-010, IMPORT-RUN-011
 pub fn reconstruct(wb: &LegacyWorkbook) -> Result<Reconstruction, ImportError> {
     use ledger_core::{LedgerEvent, LedgerEventKind, LotRef};
     use pt_core::Seq;
@@ -825,7 +826,7 @@ pub fn reconstruct(wb: &LegacyWorkbook) -> Result<Reconstruction, ImportError> {
                     Some(c) => c,
                     None => {
                         // A genuinely malformed price on a Buy: list for manual
-                        // review, never silently drop. (IMPORT-RUN-005)
+                        // review, never silently drop. (IMPORT-RUN-011)
                         malformed.push(MalformedRow {
                             coord: a.coord.clone(),
                             reason: format!(
@@ -1380,7 +1381,7 @@ pub fn dry_run(wb: &LegacyWorkbook, marks: &Marks) -> Result<DryRunReport, Impor
     }
 
     let mut symbols: Vec<SymbolReconciliation> = Vec::new();
-    // A genuinely malformed source row was listed (IMPORT-RUN-005), not migrated:
+    // A genuinely malformed source row was listed (IMPORT-RUN-011), not migrated:
     // committing while it is outstanding would silently drop its data from the
     // canonical log. Block commit until the owner resolves it (a corrected re-run),
     // so "listed for manual review rather than dropping them" holds end-to-end.

@@ -166,7 +166,7 @@ pub enum TaxEventKind {
     },
     /// Seeds a single combined migration accrual for a closed prior year (no
     /// backing `RealizedGain`); supersedes that year's per-gain accruals.
-    /// (TAX-ACCRUAL-007)
+    /// (TAX-ACCRUAL-007, TAX-ACCRUAL-009)
     SeedMigration {
         jurisdiction: Jurisdiction,
         tax_year: TaxYear,
@@ -254,7 +254,7 @@ pub struct Accrual {
     /// this per-gain accrual: it is excluded from the year's accrued/outstanding so
     /// the year reconciles to the seeded legacy actual instead of double-counting
     /// the recomputed-but-uncollectible per-gain figure. Distinct from `de_minimis`
-    /// (a genuinely tiny accrual) — supersession is migration-only. (TAX-ACCRUAL-007)
+    /// (a genuinely tiny accrual) — supersession is migration-only. (TAX-ACCRUAL-009)
     pub superseded: bool,
     /// The per-jurisdiction freshness tag carried from `config`. (TAX-CALC-012)
     pub bracket_state: BracketState,
@@ -830,7 +830,7 @@ fn fold_lifecycle(
 /// sale_seq)` marginal increments (TAX-CALC-005/007), one per gain per
 /// jurisdiction (Federal + the gain's resolved state — TAX-ACCRUAL-001), each
 /// carrying its `BracketState` (TAX-CALC-012). A migration-seeded year
-/// supersedes its per-gain accruals (TAX-ACCRUAL-007); a gain reversed in
+/// supersedes its per-gain accruals (TAX-ACCRUAL-009); a gain reversed in
 /// `ledger-core` (absent from `gains`) drops or folds its events as no-ops
 /// (TAX-ACCRUAL-006, TAX-VERIF-007). Returns accruals in a deterministic order.
 pub fn compute_accruals(
@@ -890,7 +890,7 @@ pub fn compute_accruals(
         // superseded per-gain accrual is excluded from the year's outstanding
         // (the migration figure reconciles the year). Kept DISTINCT from the
         // de-minimis flag (a genuinely tiny accrual) so the two exclusions are
-        // independently observable. (TAX-ACCRUAL-007)
+        // independently observable. (TAX-ACCRUAL-009)
         let superseded = migrations.contains_key(&(c.key.jurisdiction.clone(), c.key.tax_year));
         // De-minimis: strictly `|applied| < threshold` (auto-settled). (TAX-ACCRUAL-005)
         let dm = applied_cents
@@ -1471,7 +1471,7 @@ pub fn safe_harbor_ppm(period: Quarter) -> config::Ppm {
 /// LT/ST gain split, computed accrual, and cumulative safe-harbor target.
 /// (TAX-REPORT-001/002)
 // @spec TAX-REPORT-005 (the report owns applying the de-minimis (TAX-ACCRUAL-005) and
-// migration-supersession (TAX-ACCRUAL-007) exclusions to the per-period accrual sums)
+// migration-supersession (TAX-ACCRUAL-009) exclusions to the per-period accrual sums)
 pub fn quarterly_report(
     gains: &[RealizedGain],
     events: &[TaxEvent],
@@ -1542,7 +1542,7 @@ pub fn quarterly_report(
 /// effective rate (`accrual ÷ gain`) only where `|gain|` exceeds de-minimis.
 /// (TAX-REPORT-003/004)
 // @spec TAX-REPORT-005 (the report owns applying the de-minimis (TAX-ACCRUAL-005) and
-// migration-supersession (TAX-ACCRUAL-007) exclusions to accrued/outstanding/shortfall)
+// migration-supersession (TAX-ACCRUAL-009) exclusions to accrued/outstanding/shortfall)
 pub fn annual_report(
     gains: &[RealizedGain],
     events: &[TaxEvent],
@@ -1568,7 +1568,7 @@ pub fn annual_report(
         // De-minimis (auto-settled) accruals are excluded from the outstanding
         // balance (TAX-ACCRUAL-005), and migration-superseded per-gain accruals
         // are excluded so the year reconciles to the seeded legacy actual rather
-        // than double-counting (TAX-ACCRUAL-007). `accrued` drives outstanding
+        // than double-counting (TAX-ACCRUAL-009). `accrued` drives outstanding
         // (`accrued − paid`) and shortfall (`accrued − moved`).
         if !a.de_minimis && !a.superseded {
             entry.accrued += a.applied_cents.map(|c| c.0).unwrap_or(0);
