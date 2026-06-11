@@ -244,6 +244,11 @@ live marks; the system never persists live prices as truth, only daily snapshots
 - **Full-history migration via a one-time importer into a new workbook.** Open-positions-only
   and fresh-start were considered; both lose cost-basis and prior-year tax history that current
   sales and reports depend on.
+- **The workspace is rustfmt-formatted, and formatting gates in CI.** Considered leaving
+  formatting unenforced to keep a blanket reformat away from the verified cores; rustfmt
+  cannot parse Verus syntax and leaves `verus!{}` macro bodies byte-untouched, so the gate is
+  safe for the verified crates. One mechanical style keeps diffs reviewable and keeps
+  formatting out of review entirely; `scripts/ci.sh` carries the executable gate.
 
 ## Success Metrics
 
