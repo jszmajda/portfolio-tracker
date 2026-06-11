@@ -76,7 +76,9 @@ struct CacheState {
 impl InMemoryCache {
     /// A cold (unpopulated) cache.
     pub fn new() -> Self {
-        InMemoryCache { inner: std::cell::RefCell::new(None) }
+        InMemoryCache {
+            inner: std::cell::RefCell::new(None),
+        }
     }
 }
 

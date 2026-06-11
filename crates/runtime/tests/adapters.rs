@@ -17,10 +17,10 @@ use runtime::{ConfigSheetsAdapter, HistorySheetsAdapter, ViewSheetsAdapter};
 // reports::HistoryClient over the one primitive.
 // ---------------------------------------------------------------------------
 
+use reports::testkit::NoopLock;
 use reports::{
     append_snapshot, point_checksum, HistoryClient, PricedMark, SeriesPoint, TradingDayKey,
 };
-use reports::testkit::NoopLock;
 
 const HIST_TAB: &str = "History";
 
@@ -28,7 +28,10 @@ fn series_point(key_days: i32, mv_cents: i64) -> SeriesPoint {
     let mut marks: BTreeMap<String, PricedMark> = BTreeMap::new();
     marks.insert(
         "AMZN".to_string(),
-        PricedMark { price_cents: Cents(170_00), quote_epoch: Date(key_days) },
+        PricedMark {
+            price_cents: Cents(170_00),
+            quote_epoch: Date(key_days),
+        },
     );
     let mut per_symbol_value = BTreeMap::new();
     per_symbol_value.insert("AMZN".to_string(), Cents(mv_cents));
@@ -53,7 +56,11 @@ fn series_point(key_days: i32, mv_cents: i64) -> SeriesPoint {
 fn seed_history_header(fake: &FakeSheetsApi) {
     fake.seed(
         &format!("'{HIST_TAB}'!A1:Z"),
-        vec![vec!["Key".to_string(), "Checksum".to_string(), "Point".to_string()]],
+        vec![vec![
+            "Key".to_string(),
+            "Checksum".to_string(),
+            "Point".to_string(),
+        ]],
     );
 }
 
@@ -75,14 +82,27 @@ fn history_append_snapshot_rides_the_one_low_level_primitive() {
 
     // The capture rode the low-level update (the batchUpdate upsert) and read
     // (the read-back-verify + the pre-upsert read).
-    assert!(adapter.api().update_count() >= 1, "the upsert rode the low-level update");
-    assert!(adapter.api().read_count() >= 1, "the read-back-verify rode the low-level read");
+    assert!(
+        adapter.api().update_count() >= 1,
+        "the upsert rode the low-level update"
+    );
+    assert!(
+        adapter.api().read_count() >= 1,
+        "the read-back-verify rode the low-level read"
+    );
 
     // The point is durably present, read back through the same primitive.
     let back = adapter.read_history().expect("read back");
     assert_eq!(back.len(), 1, "one captured point");
-    assert_eq!(back[0].point, point, "the point round-trips through the grid exactly");
-    assert_eq!(back[0].checksum, point_checksum(&point), "the stored checksum matches");
+    assert_eq!(
+        back[0].point, point,
+        "the point round-trips through the grid exactly"
+    );
+    assert_eq!(
+        back[0].checksum,
+        point_checksum(&point),
+        "the stored checksum matches"
+    );
 }
 
 // @spec RUNTIME-SHEETS-002
@@ -103,9 +123,20 @@ fn history_upsert_is_last_wins_by_trading_day_key_through_the_primitive() {
     append_snapshot(&mut adapter, &lock, &series_point(19_181, 600_00)).expect("new day");
 
     let back = adapter.read_history().expect("read back");
-    assert_eq!(back.len(), 2, "last-wins: the repeated key did not duplicate");
-    let day0 = back.iter().find(|r| r.key == TradingDayKey(Date(19_180))).unwrap();
-    assert_eq!(day0.point.total_market_value_cents, Cents(999_00), "the re-capture overwrote");
+    assert_eq!(
+        back.len(),
+        2,
+        "last-wins: the repeated key did not duplicate"
+    );
+    let day0 = back
+        .iter()
+        .find(|r| r.key == TradingDayKey(Date(19_180)))
+        .unwrap();
+    assert_eq!(
+        day0.point.total_market_value_cents,
+        Cents(999_00),
+        "the re-capture overwrote"
+    );
 }
 
 // @spec RUNTIME-SHEETS-002
@@ -117,7 +148,10 @@ fn history_offline_primitive_surfaces_unreachable() {
     let fake = FakeSheetsApi::new();
     fake.set_unreachable(true);
     let adapter = HistorySheetsAdapter::new(fake, HIST_TAB);
-    assert_eq!(adapter.read_history(), Err(reports::HistoryError::Unreachable));
+    assert_eq!(
+        adapter.read_history(),
+        Err(reports::HistoryError::Unreachable)
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -140,7 +174,10 @@ fn view_republish_and_marks_read_back_ride_the_one_primitive() {
     // beneath it.
     fake.seed(
         &format!("'{POS_TAB}'!A1:Z"),
-        vec![sheets_view::POSITIONS_HEADER.iter().map(|s| s.to_string()).collect()],
+        vec![sheets_view::POSITIONS_HEADER
+            .iter()
+            .map(|s| s.to_string())
+            .collect()],
     );
     let mut adapter = ViewSheetsAdapter::new(fake, POS_TAB);
 
@@ -152,19 +189,39 @@ fn view_republish_and_marks_read_back_ride_the_one_primitive() {
     row[12] = Cell::Value("19180".to_string());
     let tab = ViewTab {
         name: POS_TAB.to_string(),
-        header: sheets_view::POSITIONS_HEADER.iter().map(|s| s.to_string()).collect(),
+        header: sheets_view::POSITIONS_HEADER
+            .iter()
+            .map(|s| s.to_string())
+            .collect(),
         rows: vec![row],
     };
-    adapter.batch_update_view(&tab).expect("republish rides the primitive");
-    assert_eq!(adapter.api().update_count(), 1, "republish rode the low-level update");
+    adapter
+        .batch_update_view(&tab)
+        .expect("republish rides the primitive");
+    assert_eq!(
+        adapter.api().update_count(),
+        1,
+        "republish rode the low-level update"
+    );
 
     // The settle pass reads the Price cells back through the primitive — a separate
     // call (its own read), and parses the numeric reading + quote date.
-    let pass = adapter.read_price_pass().expect("settle pass rides the primitive");
-    assert!(adapter.api().read_count() >= 1, "the settle pass rode the low-level read");
+    let pass = adapter
+        .read_price_pass()
+        .expect("settle pass rides the primitive");
+    assert!(
+        adapter.api().read_count() >= 1,
+        "the settle pass rode the low-level read"
+    );
     match pass.get("AMZN") {
-        Some(PriceReading::Numeric { price_usd, quote_date }) => {
-            assert!((*price_usd - 170.25).abs() < 1e-9, "the numeric price reads back");
+        Some(PriceReading::Numeric {
+            price_usd,
+            quote_date,
+        }) => {
+            assert!(
+                (*price_usd - 170.25).abs() < 1e-9,
+                "the numeric price reads back"
+            );
             assert_eq!(*quote_date, Date(19_180), "the quote date reads back");
         }
         other => panic!("expected a numeric AMZN reading, got {other:?}"),
@@ -187,11 +244,20 @@ fn view_offline_primitive_surfaces_publish_failed() {
     let mut adapter = ViewSheetsAdapter::new(fake, POS_TAB);
     let tab = ViewTab {
         name: POS_TAB.to_string(),
-        header: sheets_view::POSITIONS_HEADER.iter().map(|s| s.to_string()).collect(),
+        header: sheets_view::POSITIONS_HEADER
+            .iter()
+            .map(|s| s.to_string())
+            .collect(),
         rows: vec![],
     };
-    assert_eq!(adapter.batch_update_view(&tab), Err(sheets_view::ViewError::PublishFailed));
-    assert_eq!(adapter.read_price_pass(), Err(sheets_view::ViewError::PublishFailed));
+    assert_eq!(
+        adapter.batch_update_view(&tab),
+        Err(sheets_view::ViewError::PublishFailed)
+    );
+    assert_eq!(
+        adapter.read_price_pass(),
+        Err(sheets_view::ViewError::PublishFailed)
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -217,10 +283,16 @@ fn config_put_and_load_ride_the_one_primitive() {
             &NoopLock::new(),
         )
         .expect("put_platforms rides the primitive");
-    assert!(adapter.api().update_count() >= 1, "the put rode the low-level update");
+    assert!(
+        adapter.api().update_count() >= 1,
+        "the put rode the low-level update"
+    );
 
     let data = adapter.load().expect("load rides the primitive");
-    assert!(adapter.api().read_count() >= 1, "the load rode the low-level read");
+    assert!(
+        adapter.api().read_count() >= 1,
+        "the load rode the low-level read"
+    );
     assert_eq!(
         data.platforms.names(),
         &["schwab".to_string(), "fidelity".to_string()],
@@ -236,7 +308,11 @@ fn config_cold_start_workbook_reads_as_empty() {
     let fake = FakeSheetsApi::new();
     let adapter = ConfigSheetsAdapter::new(fake, CFG_TAB, Some(config::Settings::default()));
     let data = adapter.load().expect("cold-start load");
-    assert_eq!(data, config::ConfigData::default(), "an empty workbook is cold-start");
+    assert_eq!(
+        data,
+        config::ConfigData::default(),
+        "an empty workbook is cold-start"
+    );
 }
 
 // @spec RUNTIME-SHEETS-002
@@ -246,7 +322,10 @@ fn config_missing_credentials_surface_a_hard_error_through_the_seam() {
     // empty config. (RUNTIME-SHEETS-002, CONFIG-SETTINGS-004)
     let fake = FakeSheetsApi::new();
     let adapter = ConfigSheetsAdapter::new(fake, CFG_TAB, None);
-    assert_eq!(adapter.load_settings(), Err(config::ConfigError::CredentialsUnavailable));
+    assert_eq!(
+        adapter.load_settings(),
+        Err(config::ConfigError::CredentialsUnavailable)
+    );
 }
 
 // @spec CONFIG-SETTINGS-002
@@ -257,17 +336,23 @@ fn the_config_wire_form_round_trips_every_domain_field() {
     // stub carried only platforms — the live seeding run lost the tax rules).
     // Drive a fully-populated ConfigData through put_*/load over the fake
     // primitive and assert total equality.
-    use std::collections::BTreeMap;
     use config::{
         AliasMap, BracketRow, BracketSet, ConfigStore as _, DeMinimis, FilingStatus, Niit,
         PlatformList, Ppm, ResidencyEntry, ResidencyTimeline, TaxRules, TaxYear,
     };
     use pt_core::{Cents, Date, NoopLock};
+    use std::collections::BTreeMap;
 
     let set = |note: &str| BracketSet {
         rows: vec![
-            BracketRow { lower_threshold_cents: Cents(0), rate_ppm: Ppm(40_000) },
-            BracketRow { lower_threshold_cents: Cents(1_000_000), rate_ppm: Ppm(85_000) },
+            BracketRow {
+                lower_threshold_cents: Cents(0),
+                rate_ppm: Ppm(40_000),
+            },
+            BracketRow {
+                lower_threshold_cents: Cents(1_000_000),
+                rate_ppm: Ppm(85_000),
+            },
         ],
         last_verified: Date(20_614),
         source_note: note.to_string(),
@@ -280,13 +365,22 @@ fn the_config_wire_form_round_trips_every_domain_field() {
         federal_ordinary: set("Rev. Proc. ordinary"),
         federal_long_term: BracketSet {
             rows: vec![
-                BracketRow { lower_threshold_cents: Cents(0), rate_ppm: Ppm(0) },
-                BracketRow { lower_threshold_cents: Cents(9_890_000), rate_ppm: Ppm(150_000) },
+                BracketRow {
+                    lower_threshold_cents: Cents(0),
+                    rate_ppm: Ppm(0),
+                },
+                BracketRow {
+                    lower_threshold_cents: Cents(9_890_000),
+                    rate_ppm: Ppm(150_000),
+                },
             ],
             last_verified: Date(20_614),
             source_note: "Rev. Proc. LT".to_string(),
         },
-        niit: Niit { rate_ppm: Ppm(38_000), magi_threshold_cents: Cents(25_000_000) },
+        niit: Niit {
+            rate_ppm: Ppm(38_000),
+            magi_threshold_cents: Cents(25_000_000),
+        },
         state_ordinary,
         ordinary_income_cents: Cents(30_000_000),
     };
@@ -296,20 +390,28 @@ fn the_config_wire_form_round_trips_every_domain_field() {
     let mut adapter = ConfigSheetsAdapter::new(fake, CFG_TAB, Some(config::Settings::default()));
     let lock = NoopLock::new();
 
-    adapter.put_tax_rules(rules.clone(), &lock).expect("rules persist");
-    adapter.put_de_minimis(DeMinimis(Cents(100)), &lock).expect("de-minimis persists");
+    adapter
+        .put_tax_rules(rules.clone(), &lock)
+        .expect("rules persist");
+    adapter
+        .put_de_minimis(DeMinimis(Cents(100)), &lock)
+        .expect("de-minimis persists");
     let timeline = ResidencyTimeline::from_entries(vec![ResidencyEntry {
         effective_date: Date(0),
         state_code: "DC".to_string(),
     }])
     .unwrap();
-    adapter.put_residency(timeline.clone(), &lock).expect("residency persists");
+    adapter
+        .put_residency(timeline.clone(), &lock)
+        .expect("residency persists");
     adapter
         .put_platforms(PlatformList::new(vec!["Schwab".to_string()]), &lock)
         .expect("platforms persist");
     let mut amap = BTreeMap::new();
     amap.insert("BRK.B".to_string(), "BRK-B".to_string());
-    adapter.put_aliases(AliasMap::new(amap.clone()), &lock).expect("aliases persist");
+    adapter
+        .put_aliases(AliasMap::new(amap.clone()), &lock)
+        .expect("aliases persist");
     let mut nmap = BTreeMap::new();
     nmap.insert("AMZN".to_string(), "Amazon.com".to_string());
     nmap.insert("GOOGL".to_string(), "Alphabet".to_string());
@@ -318,10 +420,18 @@ fn the_config_wire_form_round_trips_every_domain_field() {
         .expect("display names persist");
 
     let data = adapter.load().expect("load back");
-    assert_eq!(data.rules_by_year.get(&TaxYear(2026)), Some(&rules), "tax rules survive whole");
+    assert_eq!(
+        data.rules_by_year.get(&TaxYear(2026)),
+        Some(&rules),
+        "tax rules survive whole"
+    );
     assert_eq!(data.de_minimis, DeMinimis(Cents(100)));
     assert_eq!(data.residency, timeline);
     assert_eq!(data.platforms.names(), ["Schwab".to_string()]);
     assert_eq!(data.aliases.entries(), &amap);
-    assert_eq!(data.display_names.entries(), &nmap, "display names survive whole");
+    assert_eq!(
+        data.display_names.entries(),
+        &nmap,
+        "display names survive whole"
+    );
 }

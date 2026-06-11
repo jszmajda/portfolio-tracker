@@ -556,9 +556,8 @@ pub fn compute_delta(
             // key — never calendar-day subtraction (which would mislabel a normal
             // Fri→Mon consecutive pair, 3 calendar days apart, as a weekend "gap").
             // (SUMMARY-DELTA-002)
-            let total_delta_cents = Cents(
-                current.total_market_value_cents.0 - baseline.total_market_value_cents.0,
-            );
+            let total_delta_cents =
+                Cents(current.total_market_value_cents.0 - baseline.total_market_value_cents.0);
             let spans_gap = calendar
                 .iter()
                 .any(|d| *d > baseline.key && *d < current.key);
@@ -650,8 +649,8 @@ pub fn build_report(
     let net_post_tax_cents = match inputs.bracket_state {
         BracketState::NoBracketsAvailable => None,
         _ => {
-            let estimated_tax = point.total_unrealized_pretax_cents.0
-                - point.total_unrealized_net_of_tax_cents.0;
+            let estimated_tax =
+                point.total_unrealized_pretax_cents.0 - point.total_unrealized_net_of_tax_cents.0;
             Some(Cents(total_value_cents.0 - estimated_tax))
         }
     };
@@ -667,8 +666,10 @@ pub fn build_report(
     // flagged* live-vs-stored figure (SUMMARY-DELTA-005), not the plain point-to-point
     // per-symbol move — so a per-symbol row must not show an unmarked signed move that
     // reads like a normal captured delta. (SUMMARY-DELTA-005)
-    let suppress_all_symbol_deltas =
-        matches!(delta, Delta::Suppressed { .. } | Delta::FirstEver | Delta::Uncaptured { .. });
+    let suppress_all_symbol_deltas = matches!(
+        delta,
+        Delta::Suppressed { .. } | Delta::FirstEver | Delta::Uncaptured { .. }
+    );
     let mut positions: Vec<PositionRow> = Vec::new();
     let mut degraded_symbols: Vec<Symbol> = Vec::new();
     for (symbol, pos) in &inputs.snapshot.positions {
@@ -823,7 +824,10 @@ pub fn render_text(report: &Report) -> String {
         None => "first point".to_string(),
     };
     let stale_marker = if report.stale { "  [STALE]" } else { "" };
-    let _ = writeln!(s, "Portfolio -- trading day {day}    (delta {span}){stale_marker}");
+    let _ = writeln!(
+        s,
+        "Portfolio -- trading day {day}    (delta {span}){stale_marker}"
+    );
     let _ = writeln!(s, "  as of run {}", report.run_at_epoch_secs);
     let _ = writeln!(s, "{}", "-".repeat(62));
 
@@ -840,7 +844,10 @@ pub fn render_text(report: &Report) -> String {
     let _ = writeln!(s);
 
     // Net (post-tax), qualified per the bracket state.
-    let net = match (report.header.net_post_tax_cents, report.header.net_qualifier) {
+    let net = match (
+        report.header.net_post_tax_cents,
+        report.header.net_qualifier,
+    ) {
         (_, TaxQualifier::NoBrackets) => "n/a (no brackets)".to_string(),
         (Some(c), TaxQualifier::Plain) => format!("{}            [est]", money(c.0)),
         (Some(c), TaxQualifier::Stale) => {
@@ -970,8 +977,12 @@ fn render_total_delta(delta: &Delta) -> String {
     match delta {
         Delta::FirstEver => "-".to_string(),
         Delta::Suppressed { .. } => "-#".to_string(),
-        Delta::PointToPoint { total_delta_cents, .. } => signed_money(total_delta_cents.0),
-        Delta::Uncaptured { total_delta_cents, .. } => match total_delta_cents {
+        Delta::PointToPoint {
+            total_delta_cents, ..
+        } => signed_money(total_delta_cents.0),
+        Delta::Uncaptured {
+            total_delta_cents, ..
+        } => match total_delta_cents {
             Some(d) => format!("{} (uncaptured)", signed_money(d.0)),
             None => "-".to_string(),
         },
@@ -1044,8 +1055,12 @@ pub fn render_json(report: &Report) -> String {
     };
 
     let total_delta = match &report.delta {
-        Delta::PointToPoint { total_delta_cents, .. } => Some(total_delta_cents.0),
-        Delta::Uncaptured { total_delta_cents, .. } => total_delta_cents.map(|c| c.0),
+        Delta::PointToPoint {
+            total_delta_cents, ..
+        } => Some(total_delta_cents.0),
+        Delta::Uncaptured {
+            total_delta_cents, ..
+        } => total_delta_cents.map(|c| c.0),
         // First-ever / suppressed: no trustworthy total move → null (never fabricated).
         Delta::FirstEver | Delta::Suppressed { .. } => None,
     };

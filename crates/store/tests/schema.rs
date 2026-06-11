@@ -88,7 +88,9 @@ fn event_id_lookup_is_global_a_ledger_id_colliding_with_a_tax_row_is_detected() 
     let sheets = InMemorySheets::new();
     let mut store = Store::new(sheets, NoopLock::new(), InMemoryCache::new());
 
-    let tax_out = store.append_tax(&allocate(0)).expect("tax append assigns an id");
+    let tax_out = store
+        .append_tax(&allocate(0))
+        .expect("tax append assigns an id");
     let tax_id = tax_out.event_id.clone();
 
     // A ledger event whose id collides with the existing TAX row id.
@@ -152,9 +154,14 @@ fn tax_append_is_idempotent_on_the_content_addressed_id() {
     let sheets = InMemorySheets::new();
     let mut store = Store::new(sheets, NoopLock::new(), InMemoryCache::new());
     let first = store.append_tax(&pay(0)).expect("first tax append");
-    let retry = store.append_tax(&pay(0)).expect("retry of the same tax event");
+    let retry = store
+        .append_tax(&pay(0))
+        .expect("retry of the same tax event");
     assert!(!first.idempotent_skip);
-    assert!(retry.idempotent_skip, "byte-identical tax event is an idempotent skip");
+    assert!(
+        retry.idempotent_skip,
+        "byte-identical tax event is an idempotent skip"
+    );
     assert_eq!(store.sheets().rows(Tab::Tax).len(), 1, "no second tax row");
     assert_eq!(first.event_id, retry.event_id, "the id is retry-stable");
 }
@@ -165,7 +172,10 @@ fn tax_append_mismatch_when_a_stored_row_with_the_same_id_differs() {
     // A tax row already exists with the id this event would derive, but a field was
     // edited out of band so it differs → WriteVerifyMismatch, no append.
     let mut store_probe = Store::new(InMemorySheets::new(), NoopLock::new(), InMemoryCache::new());
-    let id = store_probe.append_tax(&move_(0)).expect("learn id").event_id;
+    let id = store_probe
+        .append_tax(&move_(0))
+        .expect("learn id")
+        .event_id;
 
     let sheets = InMemorySheets::new();
     let mut edited = tax_to_row(&move_(1), &id);
@@ -175,7 +185,11 @@ fn tax_append_mismatch_when_a_stored_row_with_the_same_id_differs() {
 
     let err = store.append_tax(&move_(0)).unwrap_err();
     assert_eq!(err, StoreError::WriteVerifyMismatch);
-    assert_eq!(store.sheets().rows(Tab::Tax).len(), 1, "the differing row was not appended over");
+    assert_eq!(
+        store.sheets().rows(Tab::Tax).len(),
+        1,
+        "the differing row was not appended over"
+    );
 }
 
 // @spec STORE-SCHEMA-003
@@ -188,8 +202,17 @@ fn append_idempotency_keys_on_the_event_id_so_retries_are_stable() {
     let mut store = Store::new(sheets, NoopLock::new(), InMemoryCache::new());
     let ev = buy(0, "stable-id");
     let first = store.append_ledger(&ev).expect("first append");
-    let retry = store.append_ledger(&ev).expect("retry with the same EventId");
+    let retry = store
+        .append_ledger(&ev)
+        .expect("retry with the same EventId");
     assert!(!first.idempotent_skip, "first append lands");
-    assert!(retry.idempotent_skip, "retry with the fixed id is a no-op skip");
-    assert_eq!(store.sheets().rows(Tab::Ledger).len(), 1, "no double-append");
+    assert!(
+        retry.idempotent_skip,
+        "retry with the fixed id is a no-op skip"
+    );
+    assert_eq!(
+        store.sheets().rows(Tab::Ledger).len(),
+        1,
+        "no double-append"
+    );
 }

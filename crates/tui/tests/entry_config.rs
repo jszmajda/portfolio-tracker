@@ -14,11 +14,20 @@ fn residency_add_move_future_dated_ok_consecutive_same_state_rejected_with_note(
     }];
 
     // A future-dated move to a new state is accepted.
-    let good = ResidencyForm { effective_date: Date(25_000), state: "NJ".to_string() };
-    assert!(good.validate(&existing).is_ok(), "future-dated move to a new state is allowed");
+    let good = ResidencyForm {
+        effective_date: Date(25_000),
+        state: "NJ".to_string(),
+    };
+    assert!(
+        good.validate(&existing).is_ok(),
+        "future-dated move to a new state is allowed"
+    );
 
     // A consecutive same-state move is rejected inline (a no-op move).
-    let same = ResidencyForm { effective_date: Date(25_000), state: "DC".to_string() };
+    let same = ResidencyForm {
+        effective_date: Date(25_000),
+        state: "DC".to_string(),
+    };
     assert_eq!(
         same.validate(&existing),
         Err(config::ConfigError::ResidencyConsecutiveSameState),
@@ -60,8 +69,14 @@ fn tax_rule_edit_validates_inline_and_confirm_restates_the_retroactive_blast_rad
     // A non-monotonic set (thresholds not strictly ascending) is rejected.
     let bad = BracketSet {
         rows: vec![
-            BracketRow { lower_threshold_cents: pt_core::Cents(0), rate_ppm: Ppm(100_000) },
-            BracketRow { lower_threshold_cents: pt_core::Cents(0), rate_ppm: Ppm(200_000) },
+            BracketRow {
+                lower_threshold_cents: pt_core::Cents(0),
+                rate_ppm: Ppm(100_000),
+            },
+            BracketRow {
+                lower_threshold_cents: pt_core::Cents(0),
+                rate_ppm: Ppm(200_000),
+            },
         ],
         last_verified: Date(19_000),
         source_note: "x".to_string(),
@@ -89,6 +104,14 @@ fn platform_and_alias_management() {
     let mut m = std::collections::BTreeMap::new();
     m.insert("GOOG".to_string(), "GOOGL".to_string());
     let aliases = config::AliasMap::new(m);
-    assert_eq!(aliases.resolve("GOOG"), "GOOGL", "the alias map resolves symbol→ticker");
-    assert_eq!(aliases.resolve("AMZN"), "AMZN", "an unmapped symbol resolves to itself");
+    assert_eq!(
+        aliases.resolve("GOOG"),
+        "GOOGL",
+        "the alias map resolves symbol→ticker"
+    );
+    assert_eq!(
+        aliases.resolve("AMZN"),
+        "AMZN",
+        "an unmapped symbol resolves to itself"
+    );
 }

@@ -20,7 +20,13 @@ use tax::{
 fn ctx() -> tax::TaxContext {
     context(
         2025,
-        federal(flat(300_000), flat(0), niit(0, 0), 0, BracketState::Verified),
+        federal(
+            flat(300_000),
+            flat(0),
+            niit(0, 0),
+            0,
+            BracketState::Verified,
+        ),
         &[],
         0, // de-minimis $0
         None,
@@ -29,7 +35,16 @@ fn ctx() -> tax::TaxContext {
 fn one_gain() -> ledger_core::RealizedGain {
     // Short-term (acquired the same year, well under a year before sale), so the
     // gain is taxed at the federal ordinary 30% → derived/applied 30_000c.
-    gain("s1", 1, "lotA", "AMZN", date(2025, 1, 2), date(2025, 6, 1), 100_000, None)
+    gain(
+        "s1",
+        1,
+        "lotA",
+        "AMZN",
+        date(2025, 1, 2),
+        date(2025, 6, 1),
+        100_000,
+        None,
+    )
 }
 
 // ===========================================================================
@@ -44,18 +59,47 @@ fn accrual_001_one_per_gain_per_jurisdiction_defaults_accrued() {
     // Accrued with no events.
     let ctx = context(
         2025,
-        federal(flat(300_000), flat(0), niit(0, 0), 0, BracketState::Verified),
+        federal(
+            flat(300_000),
+            flat(0),
+            niit(0, 0),
+            0,
+            BracketState::Verified,
+        ),
         &[state("DC", flat(100_000), 0, BracketState::Verified)],
         0,
         None,
     );
-    let g = gain("s1", 1, "lotA", "AMZN", date(2025, 1, 2), date(2025, 6, 1), 100_000, Some("DC"));
+    let g = gain(
+        "s1",
+        1,
+        "lotA",
+        "AMZN",
+        date(2025, 1, 2),
+        date(2025, 6, 1),
+        100_000,
+        Some("DC"),
+    );
     let accruals = compute_accruals(&[g], &[], &ctx);
 
-    assert_eq!(accruals.len(), 2, "one accrual per jurisdiction: Federal + DC");
+    assert_eq!(
+        accruals.len(),
+        2,
+        "one accrual per jurisdiction: Federal + DC"
+    );
     let fed = find_accrual(&accruals, "s1", "lotA", &Jurisdiction::Federal).unwrap();
-    let st = find_accrual(&accruals, "s1", "lotA", &Jurisdiction::State("DC".to_string())).unwrap();
-    assert_eq!(fed.state, AccrualState::Accrued, "no event ⇒ default Accrued");
+    let st = find_accrual(
+        &accruals,
+        "s1",
+        "lotA",
+        &Jurisdiction::State("DC".to_string()),
+    )
+    .unwrap();
+    assert_eq!(
+        fed.state,
+        AccrualState::Accrued,
+        "no event ⇒ default Accrued"
+    );
     assert_eq!(st.state, AccrualState::Accrued);
     assert_eq!(fed.key.tax_year.0, 2025, "tax_year = year(sale_date)");
 }
@@ -73,7 +117,9 @@ fn accrual_002_allocate_advances_and_records_label() {
     let fed = find_accrual(&accruals, "s1", "lotA", &Jurisdiction::Federal).unwrap();
     assert_eq!(
         fed.state,
-        AccrualState::Allocated { account_label: "reserve-checking".to_string() },
+        AccrualState::Allocated {
+            account_label: "reserve-checking".to_string()
+        },
         "Allocate advances to Allocated and records the account label"
     );
 }
@@ -89,7 +135,9 @@ fn accrual_002_reallocate_is_last_write_wins() {
     let fed = find_accrual(&accruals, "s1", "lotA", &Jurisdiction::Federal).unwrap();
     assert_eq!(
         fed.state,
-        AccrualState::Allocated { account_label: "second".to_string() },
+        AccrualState::Allocated {
+            account_label: "second".to_string()
+        },
         "re-Allocate before Pay is last-write-wins on account_label"
     );
 }
@@ -132,12 +180,25 @@ fn accrual_004_pay_marks_covered_accruals_paid() {
     let events = vec![
         allocate(1, key.clone(), "acct"),
         move_(2, key.clone(), 30_000, date(2025, 6, 15)),
-        pay(3, Jurisdiction::Federal, 2025, Quarter::Q2, 30_000, date(2025, 6, 16), vec![key.clone()]),
+        pay(
+            3,
+            Jurisdiction::Federal,
+            2025,
+            Quarter::Q2,
+            30_000,
+            date(2025, 6, 16),
+            vec![key.clone()],
+        ),
     ];
     let accruals = compute_accruals(&[one_gain()], &events, &ctx());
     let fed = find_accrual(&accruals, "s1", "lotA", &Jurisdiction::Federal).unwrap();
     match &fed.state {
-        AccrualState::Paid { amount_cents, date: d, period, .. } => {
+        AccrualState::Paid {
+            amount_cents,
+            date: d,
+            period,
+            ..
+        } => {
             assert_eq!(*amount_cents, pt_core::Cents(30_000));
             assert_eq!(*d, date(2025, 6, 16));
             assert_eq!(*period, Quarter::Q2);
@@ -158,12 +219,27 @@ fn accrual_005_below_de_minimis_auto_settles() {
     // accrual of 30c, below the threshold → auto-settled, even with no events.
     let ctx = context(
         2025,
-        federal(flat(300_000), flat(0), niit(0, 0), 0, BracketState::Verified),
+        federal(
+            flat(300_000),
+            flat(0),
+            niit(0, 0),
+            0,
+            BracketState::Verified,
+        ),
         &[],
         500, // de-minimis $5
         None,
     );
-    let g = gain("s1", 1, "lotA", "AMZN", date(2025, 1, 2), date(2025, 6, 1), 100, None);
+    let g = gain(
+        "s1",
+        1,
+        "lotA",
+        "AMZN",
+        date(2025, 1, 2),
+        date(2025, 6, 1),
+        100,
+        None,
+    );
     let accruals = compute_accruals(&[g], &[], &ctx);
     let fed = find_accrual(&accruals, "s1", "lotA", &Jurisdiction::Federal).unwrap();
     assert_eq!(fed.applied_cents, Some(pt_core::Cents(30)), "30c accrual");
@@ -179,7 +255,13 @@ fn accrual_005_above_de_minimis_is_not_auto_settled() {
     // Same threshold but a $1,000 gain → 30_000c accrual, well above de-minimis.
     let ctx = context(
         2025,
-        federal(flat(300_000), flat(0), niit(0, 0), 0, BracketState::Verified),
+        federal(
+            flat(300_000),
+            flat(0),
+            niit(0, 0),
+            0,
+            BracketState::Verified,
+        ),
         &[],
         500,
         None,
@@ -224,14 +306,35 @@ fn accrual_007_migration_seed_supersedes_per_gain_accruals() {
     // 99_999c, NOT 99_999 + 30_000.
     let ctx = context(
         2024,
-        federal(flat(300_000), flat(0), niit(0, 0), 0, BracketState::Verified),
+        federal(
+            flat(300_000),
+            flat(0),
+            niit(0, 0),
+            0,
+            BracketState::Verified,
+        ),
         &[],
         0,
         None,
     );
     // Short-term: acquired and sold within the year → 30% ordinary → 30_000c.
-    let g = gain("s1", 1, "lotA", "AMZN", date(2024, 1, 2), date(2024, 6, 1), 100_000, None);
-    let events = vec![seed_migration(1, Jurisdiction::Federal, 2024, 99_999, "legacy 2024 actual")];
+    let g = gain(
+        "s1",
+        1,
+        "lotA",
+        "AMZN",
+        date(2024, 1, 2),
+        date(2024, 6, 1),
+        100_000,
+        None,
+    );
+    let events = vec![seed_migration(
+        1,
+        Jurisdiction::Federal,
+        2024,
+        99_999,
+        "legacy 2024 actual",
+    )];
     let accruals = compute_accruals(&[g.clone()], &events, &ctx);
 
     // The migration accrual itself is present, carrying the legacy actual.
@@ -250,7 +353,10 @@ fn accrual_007_migration_seed_supersedes_per_gain_accruals() {
         Some(pt_core::Cents(30_000)),
         "the per-gain accrual is a material 30_000c (not masked by a zero rate)"
     );
-    assert!(per_gain.superseded, "the per-gain accrual is flagged superseded");
+    assert!(
+        per_gain.superseded,
+        "the per-gain accrual is flagged superseded"
+    );
 
     // THE CORE PROMISE: the year reconciles to the seeded legacy actual. The
     // annual federal-2024 accrued and outstanding equal EXACTLY 99_999c — the
@@ -302,12 +408,24 @@ fn accrual_008_migration_accrual_term_is_a_fixed_placeholder() {
     // anything derived from a gain.
     let ctx = context(
         2024,
-        federal(flat(300_000), flat(0), niit(0, 0), 0, BracketState::Verified),
+        federal(
+            flat(300_000),
+            flat(0),
+            niit(0, 0),
+            0,
+            BracketState::Verified,
+        ),
         &[],
         0,
         None,
     );
-    let events = vec![seed_migration(1, Jurisdiction::Federal, 2024, 99_999, "legacy 2024 actual")];
+    let events = vec![seed_migration(
+        1,
+        Jurisdiction::Federal,
+        2024,
+        99_999,
+        "legacy 2024 actual",
+    )];
     let accruals = compute_accruals(&[], &events, &ctx);
     let migration = accruals
         .iter()
@@ -344,7 +462,10 @@ fn err_001_reject_leaves_state_byte_identical() {
 
     // The replayed state over the accepted prefix is unchanged by the rejection.
     let after = compute_accruals(&[one_gain()], &accepted, &ctx());
-    assert_eq!(before, after, "rejecting a candidate leaves replayed state byte-identical");
+    assert_eq!(
+        before, after,
+        "rejecting a candidate leaves replayed state byte-identical"
+    );
 }
 
 // ===========================================================================
@@ -374,7 +495,15 @@ fn err_003_pay_on_unmoved_rejected() {
     let key = fed_key("s1", "lotA", 2025);
     // Allocated but not Moved → Pay must be rejected.
     let accepted = vec![allocate(1, key.clone(), "acct")];
-    let candidate = pay(2, Jurisdiction::Federal, 2025, Quarter::Q2, 30_000, date(2025, 6, 16), vec![key]);
+    let candidate = pay(
+        2,
+        Jurisdiction::Federal,
+        2025,
+        Quarter::Q2,
+        30_000,
+        date(2025, 6, 16),
+        vec![key],
+    );
     assert_eq!(
         validate_event(&[one_gain()], &accepted, &candidate, &ctx()),
         Err(TaxError::PayOnUnmoved),
@@ -389,10 +518,26 @@ fn err_003_double_pay_rejected() {
     let accepted = vec![
         allocate(1, key.clone(), "acct"),
         move_(2, key.clone(), 30_000, date(2025, 6, 15)),
-        pay(3, Jurisdiction::Federal, 2025, Quarter::Q2, 30_000, date(2025, 6, 16), vec![key.clone()]),
+        pay(
+            3,
+            Jurisdiction::Federal,
+            2025,
+            Quarter::Q2,
+            30_000,
+            date(2025, 6, 16),
+            vec![key.clone()],
+        ),
     ];
     // A second Pay covering the already-Paid accrual must be rejected.
-    let candidate = pay(4, Jurisdiction::Federal, 2025, Quarter::Q3, 1, date(2025, 9, 1), vec![key]);
+    let candidate = pay(
+        4,
+        Jurisdiction::Federal,
+        2025,
+        Quarter::Q3,
+        1,
+        date(2025, 9, 1),
+        vec![key],
+    );
     assert_eq!(
         validate_event(&[one_gain()], &accepted, &candidate, &ctx()),
         Err(TaxError::DoublePay),
@@ -416,7 +561,12 @@ fn err_004_pay_cover_mismatch_rejected() {
         move_(2, fed.clone(), 30_000, date(2025, 6, 15)),
     ];
     let candidate = pay(
-        3, Jurisdiction::Federal, 2025, Quarter::Q2, 30_000, date(2025, 6, 16),
+        3,
+        Jurisdiction::Federal,
+        2025,
+        Quarter::Q2,
+        30_000,
+        date(2025, 6, 16),
         vec![st], // wrong jurisdiction
     );
     assert_eq!(
@@ -439,7 +589,12 @@ fn err_004_pay_cover_tax_year_mismatch_rejected() {
         move_(2, fed_2025, 30_000, date(2025, 6, 15)),
     ];
     let candidate = pay(
-        3, Jurisdiction::Federal, 2025, Quarter::Q2, 30_000, date(2025, 6, 16),
+        3,
+        Jurisdiction::Federal,
+        2025,
+        Quarter::Q2,
+        30_000,
+        date(2025, 6, 16),
         vec![fed_2024], // right jurisdiction, wrong tax_year
     );
     assert_eq!(
@@ -499,23 +654,47 @@ fn err_005_override_against_a_loss_is_bounded_to_the_loss() {
     // positive, is rejected; one inside the interval (or 0) is accepted. This
     // closes the data-integrity gap where any value was accepted against a loss.
     let key = fed_key("sL", "lotL", 2025);
-    let loss = gain("sL", 1, "lotL", "AMZN", date(2025, 1, 2), date(2025, 6, 1), -100_000, None);
+    let loss = gain(
+        "sL",
+        1,
+        "lotL",
+        "AMZN",
+        date(2025, 1, 2),
+        date(2025, 6, 1),
+        -100_000,
+        None,
+    );
 
     // More negative than the loss → rejected.
     assert_eq!(
-        validate_event(&[loss.clone()], &[], &override_(1, key.clone(), -999_999, "too low"), &ctx()),
+        validate_event(
+            &[loss.clone()],
+            &[],
+            &override_(1, key.clone(), -999_999, "too low"),
+            &ctx()
+        ),
         Err(TaxError::BadOverride),
         "an override more negative than the loss is rejected"
     );
     // Positive against a loss → rejected (outside [gain, 0]).
     assert_eq!(
-        validate_event(&[loss.clone()], &[], &override_(1, key.clone(), 5_000, "wrong sign"), &ctx()),
+        validate_event(
+            &[loss.clone()],
+            &[],
+            &override_(1, key.clone(), 5_000, "wrong sign"),
+            &ctx()
+        ),
         Err(TaxError::BadOverride),
         "a positive override against a loss is rejected"
     );
     // Inside [gain, 0] → accepted (a within-loss negative accrual, or zero).
     assert_eq!(
-        validate_event(&[loss.clone()], &[], &override_(1, key.clone(), -40_000, "ok"), &ctx()),
+        validate_event(
+            &[loss.clone()],
+            &[],
+            &override_(1, key.clone(), -40_000, "ok"),
+            &ctx()
+        ),
         Ok(()),
         "an override within [gain, 0] is accepted"
     );
@@ -534,7 +713,12 @@ fn err_005_override_against_orphan_key_must_be_zero() {
     // override cannot encode an arbitrary signed amount against a ghost key.
     let orphan = fed_key("ghost", "lotZ", 2025);
     assert_eq!(
-        validate_event(&[one_gain()], &[], &override_(1, orphan.clone(), -5_000_000, "ghost"), &ctx()),
+        validate_event(
+            &[one_gain()],
+            &[],
+            &override_(1, orphan.clone(), -5_000_000, "ghost"),
+            &ctx()
+        ),
         Err(TaxError::BadOverride),
         "an arbitrary override against an orphan key is rejected"
     );

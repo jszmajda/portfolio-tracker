@@ -67,10 +67,20 @@ fn pt_owns_the_headless_summary_argv_to_stdout_to_exit_code_contract() {
     let (text_out, text_exit) = dispatch(&fatal, mode_of(&text_cmd));
     let (json_out, json_exit) = dispatch(&fatal, mode_of(&json_cmd));
     assert_eq!(text_exit, ExitCode::NoTrustworthySummary);
-    assert_eq!(text_exit.code(), 2, "argv -> ExitCode 2 on a fatal headless run");
+    assert_eq!(
+        text_exit.code(),
+        2,
+        "argv -> ExitCode 2 on a fatal headless run"
+    );
     assert_eq!(json_exit.code(), 2);
-    assert!(!text_out.contains("Total value"), "no confident report on a fatal run");
-    assert!(json_out.contains("schema_version"), "json fatal is still schema-tagged");
+    assert!(
+        !text_out.contains("Total value"),
+        "no confident report on a fatal run"
+    );
+    assert!(
+        json_out.contains("schema_version"),
+        "json fatal is still schema-tagged"
+    );
     // The rendered output is the stdout the binary `print!`s — non-empty, mode-shaped.
     assert!(!text_out.trim().is_empty());
     assert!(json_out.trim_start().starts_with('{'));
@@ -137,7 +147,10 @@ fn settings_loader_reads_local_toml_then_env_wins() {
     };
     let s = load_settings_from(&path, env);
     assert_eq!(s.workbook_id, "ENV-WB", "env overrides the file");
-    assert_eq!(s.credentials_path, "/file/creds.json", "file value kept where env is absent");
+    assert_eq!(
+        s.credentials_path, "/file/creds.json",
+        "file value kept where env is absent"
+    );
     assert_eq!(s.reporting_timezone, "US/Pacific");
 
     let _ = std::fs::remove_file(&path);

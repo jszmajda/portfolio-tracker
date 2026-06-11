@@ -59,8 +59,14 @@ pub fn sell(seq: u64, id: &str) -> LedgerEvent {
             unit_price_cents: Cents(175_00),
             fees_cents: Cents(2_00),
             lot_refs: vec![
-                LotRef { lot_id: "lot-a".to_string(), qty: MicroShares(1_000_000) },
-                LotRef { lot_id: "lot-b".to_string(), qty: MicroShares(1_000_000) },
+                LotRef {
+                    lot_id: "lot-a".to_string(),
+                    qty: MicroShares(1_000_000),
+                },
+                LotRef {
+                    lot_id: "lot-b".to_string(),
+                    qty: MicroShares(1_000_000),
+                },
             ],
             accrues_to_state: Some("NJ".to_string()),
             platform: "schwab".to_string(),

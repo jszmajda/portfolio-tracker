@@ -28,9 +28,7 @@ pub mod testkit;
 
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use ratatui::widgets::{
-    Block, BorderType, Borders, Cell, Paragraph, Row, Table, Widget,
-};
+use ratatui::widgets::{Block, BorderType, Borders, Cell, Paragraph, Row, Table, Widget};
 
 use entry::{Candidate, Composer, LotPicker, Phase};
 use form::{FormAction, FormModel, InputMode};
@@ -72,7 +70,9 @@ pub struct Frame {
 impl Frame {
     /// A fresh top-level frame for a screen.
     pub fn new(screen: Screen) -> Self {
-        Frame { nav: NavState::new(screen) }
+        Frame {
+            nav: NavState::new(screen),
+        }
     }
 }
 
@@ -243,7 +243,12 @@ impl Model {
         }
         // Retain the landing frame's nav for its screen (drilled frames carry
         // contextual scopes that are meaningless on another screen's stack).
-        let bottom = self.stack.first().expect("the screen stack is never empty").nav.clone();
+        let bottom = self
+            .stack
+            .first()
+            .expect("the screen stack is never empty")
+            .nav
+            .clone();
         self.screen_nav.retain(|n| n.screen != bottom.screen);
         self.screen_nav.push(bottom);
         let nav = match self.screen_nav.iter().position(|n| n.screen == screen) {
@@ -268,7 +273,9 @@ impl Model {
 
     /// The current frame, mutably.
     pub fn current_mut(&mut self) -> &mut Frame {
-        self.stack.last_mut().expect("the screen stack is never empty")
+        self.stack
+            .last_mut()
+            .expect("the screen stack is never empty")
     }
 
     /// Toggle the top-level mode (Entry ⇄ Views) — `[tab]`. Navigation alone
@@ -321,7 +328,8 @@ impl Model {
         let view = port.view();
         for frame in &mut self.stack {
             let new_order = views::screen_identities(view, &frame.nav);
-            let (focus, scroll) = views::reanchor_focus(&frame.nav.focus, frame.nav.scroll, &new_order);
+            let (focus, scroll) =
+                views::reanchor_focus(&frame.nav.focus, frame.nav.scroll, &new_order);
             frame.nav.focus = focus;
             frame.nav.scroll = scroll;
         }
@@ -527,8 +535,14 @@ impl Model {
         platforms: &config::PlatformList,
         aliases: &config::AliasMap,
     ) {
-        let form =
-            entry::SellForm::with_defaults(port, sale_id, typed_symbol, residency, platforms, aliases);
+        let form = entry::SellForm::with_defaults(
+            port,
+            sale_id,
+            typed_symbol,
+            residency,
+            platforms,
+            aliases,
+        );
         self.open_composer(Composer::Sell(form));
     }
 
@@ -553,7 +567,10 @@ impl Model {
     /// `true` when the active Entry context has an operable lot picker (a Sell).
     /// (TUI-ENTRY-LOT-006)
     pub fn entry_has_picker(&self) -> bool {
-        self.entry.last().map(|c| c.picker_ref().is_some()).unwrap_or(false)
+        self.entry
+            .last()
+            .map(|c| c.picker_ref().is_some())
+            .unwrap_or(false)
     }
 
     /// `true` when the active composer is holding on a new-symbol guard (`[c]` is
@@ -627,8 +644,12 @@ impl Model {
     /// new-symbol guard. (TUI-ENTRY-FLOW-002/003/004/005/010)
     // @spec TUI-ENTRY-FLOW-002, TUI-ENTRY-FLOW-003, TUI-ENTRY-FLOW-004, TUI-ENTRY-FLOW-005, TUI-ENTRY-FLOW-010, TUI-ENTRY-ACT-006, CONFIG-RESIDENCY-005
     pub fn entry_submit<P: RuntimePort>(&mut self, port: &mut P, aliases: &config::AliasMap) {
-        let Some(ctx) = self.entry.last_mut() else { return };
-        let Some(composer) = ctx.composer.as_mut() else { return };
+        let Some(ctx) = self.entry.last_mut() else {
+            return;
+        };
+        let Some(composer) = ctx.composer.as_mut() else {
+            return;
+        };
 
         // A frozen candidate from a prior returned-control submit re-submits
         // byte-identical — no re-parse, no re-compose, no re-derived field.
@@ -682,7 +703,11 @@ impl Model {
 
     /// Confirm a held new-symbol guard (`[c]`) and re-submit the frozen Buy/Vest as a
     /// deliberate new position. (TUI-ENTRY-ACT-006)
-    pub fn entry_confirm_new_symbol<P: RuntimePort>(&mut self, port: &mut P, aliases: &config::AliasMap) {
+    pub fn entry_confirm_new_symbol<P: RuntimePort>(
+        &mut self,
+        port: &mut P,
+        aliases: &config::AliasMap,
+    ) {
         if let Some(ctx) = self.entry.last_mut() {
             if let Some(composer) = ctx.composer.as_mut() {
                 match composer {
@@ -770,13 +795,21 @@ impl StatusLine {
 
     /// The rendered `·`-segmented status line text. (tui-design.md → "Status line")
     pub fn text(&self) -> String {
-        let dot = if self.connected { theme::GLYPH_STATUS_ON } else { theme::GLYPH_STATUS_OFF };
+        let dot = if self.connected {
+            theme::GLYPH_STATUS_ON
+        } else {
+            theme::GLYPH_STATUS_OFF
+        };
         let lock = if self.lock_held {
             format!("{} lock held", theme::GLYPH_LOCK_HELD)
         } else {
             theme::GLYPH_LOCK_FREE.to_string()
         };
-        let conn = if self.connected { "connected" } else { "stale (offline)" };
+        let conn = if self.connected {
+            "connected"
+        } else {
+            "stale (offline)"
+        };
         // The `updated HH:MM` wall-clock segment, omitted (never fabricated)
         // when no run time is available. (TUI-VIEW-NAV-013)
         let updated = self
@@ -807,7 +840,12 @@ impl StatusLine {
 /// testable with no TTY. Renders the masthead, the active screen (or the loud
 /// integrity block / a calm empty state), and the status line, all in the Ledger
 /// language. (tui-design.md → "App Shell" / "Cross-Screen Display Conventions")
-pub fn render_to_buffer<P: RuntimePort>(model: &Model, port: &P, width: u16, height: u16) -> Buffer {
+pub fn render_to_buffer<P: RuntimePort>(
+    model: &Model,
+    port: &P,
+    width: u16,
+    height: u16,
+) -> Buffer {
     let area = Rect::new(0, 0, width, height);
     let mut buf = Buffer::empty(area);
     render(model, port, area, &mut buf);
@@ -847,7 +885,11 @@ pub fn render<P: RuntimePort>(model: &Model, port: &P, area: Rect, buf: &mut Buf
         let mut chars = text.chars();
         let dot: String = chars.next().map(|c| c.to_string()).unwrap_or_default();
         let rest: String = chars.collect();
-        let dot_role = if status.connected { Role::Accent } else { Role::Warn };
+        let dot_role = if status.connected {
+            Role::Accent
+        } else {
+            Role::Warn
+        };
         let line = ratatui::text::Line::from(vec![
             ratatui::text::Span::styled(dot, pal.style(dot_role)),
             ratatui::text::Span::styled(rest, pal.style(Role::FgFaint)),
@@ -953,8 +995,12 @@ pub fn key_hints(model: &Model) -> Vec<(&'static str, &'static str)> {
             // `1`–`5` are bound on EVERY Views frame (drilled or not), so the
             // between-screens hint is truthful everywhere in Views.
             // (TUI-VIEW-NAV-014/015)
-            let mut hints =
-                vec![("tab", "entry"), ("1-5", "screens"), ("r", "refresh"), ("?", "help")];
+            let mut hints = vec![
+                ("tab", "entry"),
+                ("1-5", "screens"),
+                ("r", "refresh"),
+                ("?", "help"),
+            ];
             if model.stack.len() > 1 {
                 hints.push(("esc", "back"));
             } else {
@@ -971,10 +1017,19 @@ fn hint_line(hints: &[(&str, &str)], pal: &Palette) -> ratatui::text::Line<'stat
     let mut spans: Vec<ratatui::text::Span<'static>> = Vec::new();
     for (i, (key, word)) in hints.iter().enumerate() {
         if i > 0 {
-            spans.push(ratatui::text::Span::styled("  ".to_string(), pal.style(Role::FgFaint)));
+            spans.push(ratatui::text::Span::styled(
+                "  ".to_string(),
+                pal.style(Role::FgFaint),
+            ));
         }
-        spans.push(ratatui::text::Span::styled(format!("[{key}]"), pal.style(Role::Accent)));
-        spans.push(ratatui::text::Span::styled(format!(" {word}"), pal.style(Role::FgFaint)));
+        spans.push(ratatui::text::Span::styled(
+            format!("[{key}]"),
+            pal.style(Role::Accent),
+        ));
+        spans.push(ratatui::text::Span::styled(
+            format!(" {word}"),
+            pal.style(Role::FgFaint),
+        ));
     }
     ratatui::text::Line::from(spans)
 }
@@ -1009,14 +1064,15 @@ pub fn help_keymap() -> Vec<(&'static str, Vec<(&'static str, &'static str)>)> {
         ),
         (
             "views",
-            vec![
-                ("esc", "ascend a drilled frame · quit at the landing screen"),
-            ],
+            vec![("esc", "ascend a drilled frame · quit at the landing screen")],
         ),
         (
             "entry",
             vec![
-                ("b / v / s / x", "open Buy / Vest / Sell / Split (idle panel)"),
+                (
+                    "b / v / s / x",
+                    "open Buy / Vest / Sell / Split (idle panel)",
+                ),
                 ("tab / ↓", "next field"),
                 ("shift-tab / ↑", "previous field"),
                 ("enter", "advance · submit on the last field"),
@@ -1060,7 +1116,10 @@ fn render_help_overlay(pal: &Palette, area: Rect, buf: &mut Buffer) {
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
         .border_style(pal.style(Role::Accent))
-        .title(ratatui::text::Span::styled(" Help — the keymap ", pal.style(Role::Accent)));
+        .title(ratatui::text::Span::styled(
+            " Help — the keymap ",
+            pal.style(Role::Accent),
+        ));
     let inner = block.inner(panel);
     block.render(panel, buf);
 
@@ -1101,9 +1160,10 @@ fn header_as_of(view: &port::ViewState) -> (String, Role) {
         (port::Connection::Offline, Some(cal)) => {
             (format!("{} as-of {cal}", theme::GLYPH_STALE), Role::Stale)
         }
-        (port::Connection::Offline, None) => {
-            (format!("{} no priced day yet", theme::GLYPH_STALE), Role::Stale)
-        }
+        (port::Connection::Offline, None) => (
+            format!("{} no priced day yet", theme::GLYPH_STALE),
+            Role::Stale,
+        ),
         (port::Connection::Live, Some(cal)) => (format!("as-of {cal}"), Role::FgDim),
         (port::Connection::Live, None) => ("no priced day yet".to_string(), Role::FgDim),
     }
@@ -1120,7 +1180,9 @@ fn render_integrity_block(pal: &Palette, err: &port::IntegrityError, area: Rect,
     let inner = block.inner(area);
     block.render(area, buf);
     let msg = format!("{} {}", theme::GLYPH_ERROR, err.message());
-    Paragraph::new(msg).style(pal.style(Role::Error)).render(inner, buf);
+    Paragraph::new(msg)
+        .style(pal.style(Role::Error))
+        .render(inner, buf);
 }
 
 /// Render the active `views` screen into the body, in a focused gilt-bordered
@@ -1158,7 +1220,9 @@ fn render_views(model: &Model, view: &ViewState, pal: &Palette, area: Rect, buf:
                 row_style = row_style.bg(bg);
             }
         }
-        Paragraph::new(line.to_ratatui(pal)).style(row_style).render(row, buf);
+        Paragraph::new(line.to_ratatui(pal))
+            .style(row_style)
+            .render(row, buf);
     }
 }
 
@@ -1184,12 +1248,20 @@ pub struct Seg {
 impl Seg {
     /// A regular-weight segment in a role.
     pub fn new(text: impl Into<String>, role: Role) -> Self {
-        Seg { text: text.into(), role, bold: false }
+        Seg {
+            text: text.into(),
+            role,
+            bold: false,
+        }
     }
 
     /// A bold segment in a role (figures beside tracked-caps labels; the today-tick).
     pub fn bold(text: impl Into<String>, role: Role) -> Self {
-        Seg { text: text.into(), role, bold: true }
+        Seg {
+            text: text.into(),
+            role,
+            bold: true,
+        }
     }
 }
 
@@ -1204,7 +1276,9 @@ pub struct ScreenLine {
 impl ScreenLine {
     /// A single-role line (chrome, headers, notices, empty states).
     pub fn plain(text: impl Into<String>, role: Role) -> Self {
-        ScreenLine { spans: vec![Seg::new(text, role)] }
+        ScreenLine {
+            spans: vec![Seg::new(text, role)],
+        }
     }
 
     /// A line from explicit segments.
@@ -1220,7 +1294,10 @@ impl ScreenLine {
     /// The role of the first segment whose text contains `needle` (the assertion
     /// seam for per-segment styling).
     pub fn span_role(&self, needle: &str) -> Option<Role> {
-        self.spans.iter().find(|s| s.text.contains(needle)).map(|s| s.role)
+        self.spans
+            .iter()
+            .find(|s| s.text.contains(needle))
+            .map(|s| s.role)
     }
 
     /// The styled `ratatui` line for this screen line at a palette.
@@ -1334,7 +1411,9 @@ fn trend_strip_segs(spark: &str, role: Role) -> Vec<Seg> {
     }
     if pad > 0 {
         out.push(Seg::new(
-            std::iter::repeat(theme::SPARK_DOT).take(pad).collect::<String>(),
+            std::iter::repeat(theme::SPARK_DOT)
+                .take(pad)
+                .collect::<String>(),
             Role::FgFaint,
         ));
     }
@@ -1449,7 +1528,11 @@ pub fn screen_lines(view: &ViewState, nav: &NavState) -> Vec<ScreenLine> {
                 let group = (r.key.jurisdiction.clone(), r.key.tax_year);
                 if last_group.as_ref() != Some(&group) {
                     out.push(ScreenLine::plain(
-                        format!("{} {}", jurisdiction_label(&group.0).to_uppercase(), group.1 .0),
+                        format!(
+                            "{} {}",
+                            jurisdiction_label(&group.0).to_uppercase(),
+                            group.1 .0
+                        ),
                         Role::FgFaint,
                     ));
                     last_group = Some(group);
@@ -1477,8 +1560,14 @@ pub fn screen_lines(view: &ViewState, nav: &NavState) -> Vec<ScreenLine> {
                         spans.push(Seg::new(theme::stepper(&r.stepper), Role::FgDim));
                     }
                     theme::StepperState::Lifecycle(stop) => {
-                        spans.push(Seg::new(theme::stepper_dots(*stop), theme::lifecycle_role(*stop)));
-                        spans.push(Seg::new(format!(" {}", theme::stepper_label(*stop)), Role::Fg));
+                        spans.push(Seg::new(
+                            theme::stepper_dots(*stop),
+                            theme::lifecycle_role(*stop),
+                        ));
+                        spans.push(Seg::new(
+                            format!(" {}", theme::stepper_label(*stop)),
+                            Role::Fg,
+                        ));
                     }
                 }
                 out.push(ScreenLine::from_spans(spans));
@@ -1551,8 +1640,7 @@ fn realized_lines(rows: &[views::RealizedRow], nav: &NavState) -> Vec<ScreenLine
         })
         .collect();
 
-    let period_w =
-        column_width_titled(cells.iter().map(|c| c.period.as_str()), "PERIOD", 6, 24);
+    let period_w = column_width_titled(cells.iter().map(|c| c.period.as_str()), "PERIOD", 6, 24);
     let proceeds_w =
         column_width_titled(cells.iter().map(|c| c.proceeds.as_str()), "PROCEEDS", 3, 18);
     let basis_w = column_width_titled(cells.iter().map(|c| c.basis.as_str()), "BASIS", 3, 18);
@@ -1573,7 +1661,10 @@ fn realized_lines(rows: &[views::RealizedRow], nav: &NavState) -> Vec<ScreenLine
         let sep = Seg::new(" │ ", Role::FgFaint);
         ScreenLine::from_spans(vec![
             caret_seg(c.focused),
-            Seg::new(pad_right(&ellipsize(&c.period, period_w), period_w), Role::Fg),
+            Seg::new(
+                pad_right(&ellipsize(&c.period, period_w), period_w),
+                Role::Fg,
+            ),
             sep.clone(),
             Seg::new(pad_left(&c.proceeds, proceeds_w), Role::Fg),
             sep.clone(),
@@ -1624,10 +1715,7 @@ fn jurisdiction_label(j: &config::Jurisdiction) -> String {
 /// abbreviated**. (tui-design.md → "A screen in this language" / "Tracked-caps
 /// labels" / "Money columns"; TUI-VIEW-POS-001/003/006/010)
 // @spec TUI-VIEW-POS-006, TUI-VIEW-POS-008, TUI-VIEW-POS-010
-fn positions_summary_band(
-    view: &ViewState,
-    caveat: &views::CompositionCaveat,
-) -> Vec<ScreenLine> {
+fn positions_summary_band(view: &ViewState, caveat: &views::CompositionCaveat) -> Vec<ScreenLine> {
     let mut out = Vec::new();
     if caveat.shares_na {
         // Priced total ≤ 0: no priced value at all — dash, never a fabricated $0.
@@ -1644,14 +1732,8 @@ fn positions_summary_band(
     let key = view
         .trading_day_key
         .unwrap_or(reports::TradingDayKey(pt_core::Date(0)));
-    let point = reports::build_series_point(
-        &view.snapshot,
-        &view.marks,
-        &view.estimates,
-        key,
-        0,
-        key.0,
-    );
+    let point =
+        reports::build_series_point(&view.snapshot, &view.marks, &view.estimates, key, 0, key.0);
     let partial = if point.incomplete {
         format!(" {}", theme::GLYPH_DEGRADED)
     } else {
@@ -1859,9 +1941,15 @@ fn position_lines(
                 // The company-name cell (ticker fallback; blank on a platform
                 // group row). (TUI-VIEW-POS-009)
                 name: r.name.clone(),
-                shares: r.shares.map(theme::shares_grouped).unwrap_or_else(|| dash.clone()),
+                shares: r
+                    .shares
+                    .map(theme::shares_grouped)
+                    .unwrap_or_else(|| dash.clone()),
                 price: r.price.map(theme::money).unwrap_or_else(|| dash.clone()),
-                mv: r.market_value.map(theme::money_compact).unwrap_or_else(|| dash.clone()),
+                mv: r
+                    .market_value
+                    .map(theme::money_compact)
+                    .unwrap_or_else(|| dash.clone()),
                 // Basis is reconstructable: the figure renders even degraded.
                 // (TUI-VIEW-POS-004)
                 basis: theme::money_compact(r.basis),
@@ -1871,13 +1959,19 @@ fn position_lines(
                 gainpct_role,
                 net,
                 net_role,
-                est: if r.degraded { String::new() } else { est.clone() },
+                est: if r.degraded {
+                    String::new()
+                } else {
+                    est.clone()
+                },
                 delta,
                 delta_role,
                 share: if r.share_na {
                     "n/a".to_string()
                 } else {
-                    r.share_ppm.map(theme::percent_ppm).unwrap_or_else(|| dash.clone())
+                    r.share_ppm
+                        .map(theme::percent_ppm)
+                        .unwrap_or_else(|| dash.clone())
                 },
                 spark: r.sparkline.clone(),
                 spark_role: r.sparkline_role,
@@ -1893,8 +1987,7 @@ fn position_lines(
     // (TUI-VIEW-POS-007)
     let label_w = column_width_titled(cells.iter().map(|c| c.label.as_str()), "SYMBOL", 4, 10);
     let name_w = column_width_titled(cells.iter().map(|c| c.name.as_str()), "NAME", 4, 18);
-    let shares_cells =
-        decimal_align(&cells.iter().map(|c| c.shares.clone()).collect::<Vec<_>>());
+    let shares_cells = decimal_align(&cells.iter().map(|c| c.shares.clone()).collect::<Vec<_>>());
     let shares_w = shares_cells
         .iter()
         .map(|s| char_w(s))
@@ -1906,8 +1999,7 @@ fn position_lines(
     let mv_w = column_width_titled(cells.iter().map(|c| c.mv.as_str()), "VALUE", 3, 18);
     let basis_w = column_width_titled(cells.iter().map(|c| c.basis.as_str()), "BASIS", 3, 18);
     let unreal_w = column_width_titled(cells.iter().map(|c| c.unreal.as_str()), "UNREAL", 3, 20);
-    let gainpct_w =
-        column_width_titled(cells.iter().map(|c| c.gainpct.as_str()), "GAIN%", 3, 10);
+    let gainpct_w = column_width_titled(cells.iter().map(|c| c.gainpct.as_str()), "GAIN%", 3, 10);
     let net_w = column_width(cells.iter().map(|c| c.net.as_str()), 3, 18);
     let est_w = cells.iter().map(|c| char_w(&c.est)).max().unwrap_or(0);
     let delta_w = column_width_titled(cells.iter().map(|c| c.delta.as_str()), "DAY Δ", 3, 30);
@@ -1946,7 +2038,10 @@ fn position_lines(
     // symbol pivot only (a platform group has no single per-symbol series).
     // (TUI-VIEW-POS-007/013)
     if matches!(nav.grouping, views::Grouping::BySymbol) {
-        title.push(Seg::new(format!(" {}", pad_right("TREND", theme::SPARK_STRIP_W)), Role::FgFaint));
+        title.push(Seg::new(
+            format!(" {}", pad_right("TREND", theme::SPARK_STRIP_W)),
+            Role::FgFaint,
+        ));
     }
 
     let mut out = vec![ScreenLine::from_spans(title)];
@@ -1980,7 +2075,10 @@ fn position_lines(
             Seg::new(pad_left(&c.net, net_w), c.net_role),
         ];
         if est_w > 0 {
-            spans.push(Seg::new(format!(" {}", pad_right(&c.est, est_w)), Role::Estimate));
+            spans.push(Seg::new(
+                format!(" {}", pad_right(&c.est, est_w)),
+                Role::Estimate,
+            ));
         }
         spans.push(sep.clone());
         spans.push(Seg::new(pad_left(&c.delta, delta_w), c.delta_role));
@@ -2054,7 +2152,12 @@ fn lot_lines(rows: &[views::LotRow], nav: &NavState) -> Vec<ScreenLine> {
     let source_w = column_width_titled(cells.iter().map(|c| c.source.as_str()), "SOURCE", 3, 6);
     let term_w = char_w("TERM").max(2);
     let rem_cells = decimal_align(&cells.iter().map(|c| c.rem.clone()).collect::<Vec<_>>());
-    let rem_w = rem_cells.iter().map(|s| char_w(s)).max().unwrap_or(0).max(3);
+    let rem_w = rem_cells
+        .iter()
+        .map(|s| char_w(s))
+        .max()
+        .unwrap_or(0)
+        .max(3);
     let basis_w = column_width(cells.iter().map(|c| c.basis.as_str()), 3, 18);
     let bps_w = column_width(cells.iter().map(|c| c.bps.as_str()), 3, 14);
     let platform_w =
@@ -2088,7 +2191,10 @@ fn lot_lines(rows: &[views::LotRow], nav: &NavState) -> Vec<ScreenLine> {
         let sep = Seg::new(" │ ", Role::FgFaint);
         ScreenLine::from_spans(vec![
             caret_seg(c.focused),
-            Seg::new(format!("{} ", pad_right(&ellipsize(&c.id, id_w), id_w)), Role::Fg),
+            Seg::new(
+                format!("{} ", pad_right(&ellipsize(&c.id, id_w), id_w)),
+                Role::Fg,
+            ),
             Seg::new(
                 format!("{} ", pad_right(&ellipsize(&c.sym, sym_w), sym_w)),
                 Role::Fg,
@@ -2199,8 +2305,8 @@ fn history_chart_lines(hv: &views::HistoryView) -> Vec<ScreenLine> {
                 Some((v, incomplete)) => {
                     // The column's total height in eighth-blocks (≥ 1 so the min
                     // still shows a tick), sliced into this row's cell.
-                    let eighths = ((((v - min) as i128) * ((rows * 8 - 1) as i128)
-                        / (span as i128)) as i64)
+                    let eighths = ((((v - min) as i128) * ((rows * 8 - 1) as i128) / (span as i128))
+                        as i64)
                         + 1;
                     let cell = (eighths - (row_from_bottom as i64) * 8).clamp(0, 8);
                     if cell == 0 {
@@ -2250,15 +2356,21 @@ fn history_chart_lines(hv: &views::HistoryView) -> Vec<ScreenLine> {
 // @spec TUI-VIEW-HIST-004
 fn history_cell_line(cell: &views::HistoryCell) -> ScreenLine {
     match cell {
-        views::HistoryCell::Value { key, value } => {
-            ScreenLine::plain(format!("day {} {}", key.0, theme::money_compact(*value)), Role::Fg)
-        }
+        views::HistoryCell::Value { key, value } => ScreenLine::plain(
+            format!("day {} {}", key.0, theme::money_compact(*value)),
+            Role::Fg,
+        ),
         // A gap is a blank cell — never interpolated. (TUI-VIEW-HIST-001)
         views::HistoryCell::Gap { key } => {
             ScreenLine::plain(format!("day {} · gap ·", key.0), Role::FgFaint)
         }
         views::HistoryCell::Incomplete { key, value } => ScreenLine::plain(
-            format!("day {} {} {}", key.0, theme::money_compact(*value), theme::GLYPH_DEGRADED),
+            format!(
+                "day {} {} {}",
+                key.0,
+                theme::money_compact(*value),
+                theme::GLYPH_DEGRADED
+            ),
             Role::Degraded,
         ),
     }
@@ -2349,8 +2461,16 @@ fn render_entry_form(form: &FormModel, pal: &Palette, area: Rect, buf: &mut Buff
         // `warn`-role advisory vs an `error`-role rejection. (TUI-ENTRY-FLOW-009)
         if let Some(err) = &form.error {
             if err.field == i && y < area.y + body_height {
-                let role = if err.advisory { Role::Warn } else { Role::Error };
-                let glyph = if err.advisory { theme::GLYPH_WARN } else { theme::GLYPH_ERROR };
+                let role = if err.advisory {
+                    Role::Warn
+                } else {
+                    Role::Error
+                };
+                let glyph = if err.advisory {
+                    theme::GLYPH_WARN
+                } else {
+                    theme::GLYPH_ERROR
+                };
                 let row = Rect::new(area.x, y, area.width, 1);
                 Paragraph::new(format!("    {glyph} {}", err.message))
                     .style(pal.style(role))
@@ -2375,7 +2495,9 @@ fn render_entry_form(form: &FormModel, pal: &Palette, area: Rect, buf: &mut Buff
 /// (TUI-ENTRY-LOT-006)
 // @spec TUI-ENTRY-LOT-006
 fn render_lot_picker(ctx: &EntryContext, pal: &Palette, area: Rect, buf: &mut Buffer) {
-    let Some(picker) = ctx.picker_ref() else { return };
+    let Some(picker) = ctx.picker_ref() else {
+        return;
+    };
     if area.height == 0 {
         return;
     }
@@ -2412,7 +2534,11 @@ fn render_lot_picker(ctx: &EntryContext, pal: &Palette, area: Rect, buf: &mut Bu
         .enumerate()
         .map(|(i, l)| {
             let focused = i == ctx.picker_focus;
-            let caret = if focused { theme::GLYPH_FOCUS.to_string() } else { String::new() };
+            let caret = if focused {
+                theme::GLYPH_FOCUS.to_string()
+            } else {
+                String::new()
+            };
             // A `rem 0` lot is greyed (listed but unallocatable). (TUI-ENTRY-LOT-004)
             let role = if l.greyed() {
                 Role::FgFaint
@@ -2463,7 +2589,9 @@ fn render_lot_picker(ctx: &EntryContext, pal: &Palette, area: Rect, buf: &mut Bu
             break;
         }
         let row = Rect::new(area.x, y, area.width, 1);
-        Paragraph::new(text.clone()).style(pal.style(*role)).render(row, buf);
+        Paragraph::new(text.clone())
+            .style(pal.style(*role))
+            .render(row, buf);
     }
 
     // The footer hint line of the active accelerators (`[F] FIFO`, `[enter] submit`,
@@ -2506,7 +2634,11 @@ pub fn gain_tax_preview(
     mark_available: bool,
 ) -> entry::GainTaxPreview {
     if !mark_available {
-        return entry::GainTaxPreview { est_gain: None, est_tax: None, degraded: true };
+        return entry::GainTaxPreview {
+            est_gain: None,
+            est_tax: None,
+            degraded: true,
+        };
     }
     // Estimated gain = net proceeds − Σ consumed basis over the proposed allocation.
     // proceeds = scale(allocated_qty × unit_price) − fees (the kernel's net). The

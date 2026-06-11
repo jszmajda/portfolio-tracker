@@ -44,9 +44,20 @@ fn verif_001_accrual_monotonic_in_gain() {
         None,
     );
     let mut prev = -1i64;
-    for g_cents in [0, 1, 100, 25_000, 49_999, 50_000, 100_000, 500_000, 1_000_000] {
+    for g_cents in [
+        0, 1, 100, 25_000, 49_999, 50_000, 100_000, 500_000, 1_000_000,
+    ] {
         // Short-term so the gain exercises the progressive ordinary brackets.
-        let g = gain("s1", 1, "lotA", "AMZN", date(2025, 1, 2), date(2025, 6, 1), g_cents, None);
+        let g = gain(
+            "s1",
+            1,
+            "lotA",
+            "AMZN",
+            date(2025, 1, 2),
+            date(2025, 6, 1),
+            g_cents,
+            None,
+        );
         let accruals = compute_accruals(&[g], &[], &ctx);
         let acc = find_accrual(&accruals, "s1", "lotA", &Jurisdiction::Federal)
             .unwrap()
@@ -74,13 +85,28 @@ fn verif_002_accrual_bounded_zero_to_gain() {
     // [0, gain].
     let ctx = context(
         2025,
-        federal(flat(370_000), flat(200_000), niit(38_000, 0), 0, BracketState::Verified),
+        federal(
+            flat(370_000),
+            flat(200_000),
+            niit(38_000, 0),
+            0,
+            BracketState::Verified,
+        ),
         &[state("DC", flat(107_500), 0, BracketState::Verified)],
         0,
         Some("DC"),
     );
     for g_cents in [1, 50, 1_000, 100_000, 5_000_000] {
-        let g = gain("s1", 1, "lotA", "AMZN", date(2024, 1, 1), date(2025, 6, 1), g_cents, Some("DC"));
+        let g = gain(
+            "s1",
+            1,
+            "lotA",
+            "AMZN",
+            date(2024, 1, 1),
+            date(2025, 6, 1),
+            g_cents,
+            Some("DC"),
+        );
         let accruals = compute_accruals(&[g], &[], &ctx);
         for a in &accruals {
             if let Some(applied) = a.applied_cents {
@@ -108,21 +134,66 @@ fn verif_003_total_over_signed_inputs() {
     // every gain (clamped at zero where the year is net-negative).
     let ctx = context(
         2025,
-        federal(flat(300_000), flat(150_000), niit(38_000, 0), 0, BracketState::Verified),
+        federal(
+            flat(300_000),
+            flat(150_000),
+            niit(38_000, 0),
+            0,
+            BracketState::Verified,
+        ),
         &[],
         0,
         None,
     );
     let gains = vec![
-        gain("s1", 1, "lotA", "AMZN", date(2024, 1, 1), date(2025, 2, 1), -500_000, None),
-        gain("s2", 2, "lotB", "AMZN", date(2024, 1, 1), date(2025, 3, 1), 100_000, None),
-        gain("s3", 3, "lotC", "AMZN", date(2023, 1, 1), date(2025, 4, 1), -200_000, None),
-        gain("s4", 4, "lotD", "AMZN", date(2023, 1, 1), date(2025, 5, 1), 800_000, None),
+        gain(
+            "s1",
+            1,
+            "lotA",
+            "AMZN",
+            date(2024, 1, 1),
+            date(2025, 2, 1),
+            -500_000,
+            None,
+        ),
+        gain(
+            "s2",
+            2,
+            "lotB",
+            "AMZN",
+            date(2024, 1, 1),
+            date(2025, 3, 1),
+            100_000,
+            None,
+        ),
+        gain(
+            "s3",
+            3,
+            "lotC",
+            "AMZN",
+            date(2023, 1, 1),
+            date(2025, 4, 1),
+            -200_000,
+            None,
+        ),
+        gain(
+            "s4",
+            4,
+            "lotD",
+            "AMZN",
+            date(2023, 1, 1),
+            date(2025, 5, 1),
+            800_000,
+            None,
+        ),
     ];
     let accruals = compute_accruals(&gains, &[], &ctx); // must not panic
     for a in &accruals {
         // Every accrual is defined (Some) since brackets are present.
-        assert!(a.applied_cents.is_some(), "T_J is total: every accrual is defined");
+        assert!(
+            a.applied_cents.is_some(),
+            "T_J is total: every accrual is defined"
+        );
     }
 }
 
@@ -136,17 +207,38 @@ fn verif_003_total_over_signed_inputs() {
 fn verif_004_lifecycle_forward_only() {
     let ctx = context(
         2025,
-        federal(flat(300_000), flat(0), niit(0, 0), 0, BracketState::Verified),
+        federal(
+            flat(300_000),
+            flat(0),
+            niit(0, 0),
+            0,
+            BracketState::Verified,
+        ),
         &[],
         0,
         None,
     );
-    let g = gain("s1", 1, "lotA", "AMZN", date(2024, 1, 1), date(2025, 6, 1), 100_000, None);
+    let g = gain(
+        "s1",
+        1,
+        "lotA",
+        "AMZN",
+        date(2024, 1, 1),
+        date(2025, 6, 1),
+        100_000,
+        None,
+    );
     let key = fed_key("s1", "lotA", 2025);
 
     // Skip Allocate → Move on Accrued is rejected (no skip).
     assert!(
-        validate_event(&[g.clone()], &[], &move_(1, key.clone(), 30_000, date(2025, 6, 1)), &ctx).is_err(),
+        validate_event(
+            &[g.clone()],
+            &[],
+            &move_(1, key.clone(), 30_000, date(2025, 6, 1)),
+            &ctx
+        )
+        .is_err(),
         "Move skipping Allocate is rejected"
     );
     // Skip Move → Pay on Allocated is rejected (no skip).
@@ -155,7 +247,15 @@ fn verif_004_lifecycle_forward_only() {
         validate_event(
             &[g.clone()],
             &allocated,
-            &pay(2, Jurisdiction::Federal, 2025, Quarter::Q2, 30_000, date(2025, 6, 1), vec![key.clone()]),
+            &pay(
+                2,
+                Jurisdiction::Federal,
+                2025,
+                Quarter::Q2,
+                30_000,
+                date(2025, 6, 1),
+                vec![key.clone()]
+            ),
             &ctx,
         )
         .is_err(),
@@ -170,7 +270,15 @@ fn verif_004_lifecycle_forward_only() {
     assert!(validate_event(
         &[g],
         &moved,
-        &pay(3, Jurisdiction::Federal, 2025, Quarter::Q2, 30_000, date(2025, 6, 2), vec![key]),
+        &pay(
+            3,
+            Jurisdiction::Federal,
+            2025,
+            Quarter::Q2,
+            30_000,
+            date(2025, 6, 2),
+            vec![key]
+        ),
         &ctx,
     )
     .is_ok());
@@ -185,7 +293,13 @@ fn verif_004_lifecycle_forward_only() {
 fn verif_005_reserve_conservation() {
     let ctx = context(
         2025,
-        federal(flat(300_000), flat(0), niit(0, 0), 0, BracketState::Verified),
+        federal(
+            flat(300_000),
+            flat(0),
+            niit(0, 0),
+            0,
+            BracketState::Verified,
+        ),
         &[],
         0,
         None,
@@ -193,16 +307,50 @@ fn verif_005_reserve_conservation() {
     let k1 = fed_key("s1", "lotA", 2025);
     let k2 = fed_key("s2", "lotB", 2025);
     let gains = vec![
-        gain("s1", 1, "lotA", "AMZN", date(2024, 1, 1), date(2025, 6, 1), 100_000, None),
-        gain("s2", 2, "lotB", "AMZN", date(2024, 1, 1), date(2025, 7, 1), 100_000, None),
+        gain(
+            "s1",
+            1,
+            "lotA",
+            "AMZN",
+            date(2024, 1, 1),
+            date(2025, 6, 1),
+            100_000,
+            None,
+        ),
+        gain(
+            "s2",
+            2,
+            "lotB",
+            "AMZN",
+            date(2024, 1, 1),
+            date(2025, 7, 1),
+            100_000,
+            None,
+        ),
     ];
     let events = vec![
         allocate(1, k1.clone(), "acct"),
         move_(2, k1.clone(), 30_000, date(2025, 6, 15)),
         allocate(3, k2.clone(), "acct"),
         move_(4, k2.clone(), 7_000, date(2025, 7, 1)),
-        pay(5, Jurisdiction::Federal, 2025, Quarter::Q2, 20_000, date(2025, 6, 16), vec![k1]),
-        pay(6, Jurisdiction::Federal, 2025, Quarter::Q3, 7_000, date(2025, 9, 1), vec![k2]),
+        pay(
+            5,
+            Jurisdiction::Federal,
+            2025,
+            Quarter::Q2,
+            20_000,
+            date(2025, 6, 16),
+            vec![k1],
+        ),
+        pay(
+            6,
+            Jurisdiction::Federal,
+            2025,
+            Quarter::Q3,
+            7_000,
+            date(2025, 9, 1),
+            vec![k2],
+        ),
     ];
     // Independently sum Moves and Pays for the federal/2025 key.
     let sum_move = 30_000 + 7_000;
@@ -244,7 +392,11 @@ fn verif_006_quarters_partition_year_no_gap_or_overlap() {
     }
     // Q1 Jan1–Mar31 = 31+28+31 = 90; Q2 Apr+May = 30+31 = 61; Q3 Jun+Jul+Aug =
     // 30+31+31 = 92; Q4 Sep–Dec = 30+31+30+31 = 122. Sum = 365 (no gap/overlap).
-    assert_eq!(counts, [90, 61, 92, 122], "the four IRS periods partition 2025 exactly");
+    assert_eq!(
+        counts,
+        [90, 61, 92, 122],
+        "the four IRS periods partition 2025 exactly"
+    );
     assert_eq!(counts.iter().sum::<usize>(), 365);
 }
 
@@ -255,13 +407,37 @@ fn verif_006_sum_over_periods_equals_annual_accrual() {
     // cells equals the total federal accrual.
     let ctx = context(
         2025,
-        federal(flat(300_000), flat(0), niit(0, 0), 0, BracketState::Verified),
+        federal(
+            flat(300_000),
+            flat(0),
+            niit(0, 0),
+            0,
+            BracketState::Verified,
+        ),
         &[],
         0,
         None,
     );
-    let g1 = gain("s1", 1, "lotA", "AMZN", date(2025, 1, 2), date(2025, 2, 1), 100_000, None);
-    let g2 = gain("s2", 2, "lotB", "AMZN", date(2025, 6, 1), date(2025, 7, 1), 200_000, None);
+    let g1 = gain(
+        "s1",
+        1,
+        "lotA",
+        "AMZN",
+        date(2025, 1, 2),
+        date(2025, 2, 1),
+        100_000,
+        None,
+    );
+    let g2 = gain(
+        "s2",
+        2,
+        "lotB",
+        "AMZN",
+        date(2025, 6, 1),
+        date(2025, 7, 1),
+        200_000,
+        None,
+    );
     let cells = quarterly_report(&[g1, g2], &[], &ctx);
     let quarterly_total: i64 = cells
         .iter()
@@ -285,12 +461,27 @@ fn verif_006_sum_over_periods_equals_annual_accrual() {
 fn verif_007_orphan_event_folds_as_noop() {
     let ctx = context(
         2025,
-        federal(flat(300_000), flat(0), niit(0, 0), 0, BracketState::Verified),
+        federal(
+            flat(300_000),
+            flat(0),
+            niit(0, 0),
+            0,
+            BracketState::Verified,
+        ),
         &[],
         0,
         None,
     );
-    let g = gain("s1", 1, "lotA", "AMZN", date(2024, 1, 1), date(2025, 6, 1), 100_000, None);
+    let g = gain(
+        "s1",
+        1,
+        "lotA",
+        "AMZN",
+        date(2024, 1, 1),
+        date(2025, 6, 1),
+        100_000,
+        None,
+    );
     // An Allocate for a NON-EXISTENT accrual (sale "ghost" has no RealizedGain).
     let orphan = allocate(1, fed_key("ghost", "lotZ", 2025), "acct");
     // Plus a real Allocate for s1.
@@ -321,7 +512,13 @@ fn verif_007_orphan_move_surfaces_a_warning_and_flags_a_backless_reserve() {
     use tax::{compute_accruals_with_warnings, orphan_warnings, reserves, OrphanKind};
     let ctx = context(
         2025,
-        federal(flat(300_000), flat(0), niit(0, 0), 0, BracketState::Verified),
+        federal(
+            flat(300_000),
+            flat(0),
+            niit(0, 0),
+            0,
+            BracketState::Verified,
+        ),
         &[],
         0,
         None,
@@ -338,7 +535,9 @@ fn verif_007_orphan_move_surfaces_a_warning_and_flags_a_backless_reserve() {
     // dropped — so it can be unwound manually.
     let warnings = orphan_warnings(&[], &events, &ctx);
     assert!(
-        warnings.iter().any(|w| w.accrual_key == ghost && w.kind == OrphanKind::Move),
+        warnings
+            .iter()
+            .any(|w| w.accrual_key == ghost && w.kind == OrphanKind::Move),
         "the orphan Move is surfaced as a warning"
     );
 
@@ -349,7 +548,11 @@ fn verif_007_orphan_move_surfaces_a_warning_and_flags_a_backless_reserve() {
         .iter()
         .find(|r| r.jurisdiction == Jurisdiction::Federal && r.tax_year.0 == 2025)
         .expect("a federal 2025 reserve still exists");
-    assert_eq!(fed.balance_cents, pt_core::Cents(50_000), "balance = Σ Move − Σ Pay");
+    assert_eq!(
+        fed.balance_cents,
+        pt_core::Cents(50_000),
+        "balance = Σ Move − Σ Pay"
+    );
     assert!(
         fed.has_backless_entry,
         "a backless Move makes the reserve distinguishable from a backed one"
@@ -357,19 +560,34 @@ fn verif_007_orphan_move_surfaces_a_warning_and_flags_a_backless_reserve() {
 
     // A BACKED reserve (same Move against a real gain) is NOT flagged backless —
     // the warning distinguishes the two.
-    let g = gain("s1", 1, "lotA", "AMZN", date(2024, 1, 1), date(2025, 6, 1), 100_000, None);
+    let g = gain(
+        "s1",
+        1,
+        "lotA",
+        "AMZN",
+        date(2024, 1, 1),
+        date(2025, 6, 1),
+        100_000,
+        None,
+    );
     let backed = vec![
         allocate(1, fed_key("s1", "lotA", 2025), "acct"),
         move_(2, fed_key("s1", "lotA", 2025), 50_000, date(2025, 6, 15)),
     ];
     let (_accruals, backed_warnings) = compute_accruals_with_warnings(&[g.clone()], &backed, &ctx);
-    assert!(backed_warnings.is_empty(), "a backed Move surfaces no orphan warning");
+    assert!(
+        backed_warnings.is_empty(),
+        "a backed Move surfaces no orphan warning"
+    );
     let r2 = reserves(&[g], &backed, &ctx);
     let fed2 = r2
         .iter()
         .find(|r| r.jurisdiction == Jurisdiction::Federal && r.tax_year.0 == 2025)
         .unwrap();
-    assert!(!fed2.has_backless_entry, "a backed reserve is not flagged backless");
+    assert!(
+        !fed2.has_backless_entry,
+        "a backed reserve is not flagged backless"
+    );
 }
 
 // @spec TAX-VERIF-002
@@ -401,8 +619,14 @@ fn verif_006_term_split_feeds_quarterly_cells() {
     use tax::classify_term;
     // The same gain dated one day apart flips term, so the report's LT/ST split
     // tracks the calendar boundary.
-    assert_eq!(classify_term(date(2024, 6, 1), date(2025, 6, 1)), Term::ShortTerm);
-    assert_eq!(classify_term(date(2024, 6, 1), date(2025, 6, 2)), Term::LongTerm);
+    assert_eq!(
+        classify_term(date(2024, 6, 1), date(2025, 6, 1)),
+        Term::ShortTerm
+    );
+    assert_eq!(
+        classify_term(date(2024, 6, 1), date(2025, 6, 2)),
+        Term::LongTerm
+    );
 }
 
 // ===========================================================================

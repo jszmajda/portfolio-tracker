@@ -297,11 +297,15 @@ impl GoogleSheetsApi {
                 .map_err(|e| SheetsError::Unreachable(e.to_string()))?;
             let status = resp.status().as_u16();
             if !(200..300).contains(&status) {
-                return Err(SheetsError::Api { status, message: resp.text().unwrap_or_default() });
+                return Err(SheetsError::Api {
+                    status,
+                    message: resp.text().unwrap_or_default(),
+                });
             }
-            let body: SpreadsheetMeta = resp
-                .json()
-                .map_err(|e| SheetsError::Api { status, message: e.to_string() })?;
+            let body: SpreadsheetMeta = resp.json().map_err(|e| SheetsError::Api {
+                status,
+                message: e.to_string(),
+            })?;
             let mut out = std::collections::BTreeMap::new();
             for s in body.sheets.unwrap_or_default() {
                 if let Some(p) = s.properties {
@@ -341,7 +345,10 @@ impl GoogleSheetsApi {
                 .map_err(|e| SheetsError::Unreachable(e.to_string()))?;
             let status = resp.status().as_u16();
             if !(200..300).contains(&status) {
-                return Err(SheetsError::Api { status, message: resp.text().unwrap_or_default() });
+                return Err(SheetsError::Api {
+                    status,
+                    message: resp.text().unwrap_or_default(),
+                });
             }
             // Re-read the id rather than parse the reply shape (the title is now
             // present); a concurrent creator only makes this idempotent.
@@ -379,7 +386,10 @@ impl GoogleSheetsApi {
                 .map_err(|e| SheetsError::Unreachable(e.to_string()))?;
             let status = resp.status().as_u16();
             if !(200..300).contains(&status) {
-                return Err(SheetsError::Api { status, message: resp.text().unwrap_or_default() });
+                return Err(SheetsError::Api {
+                    status,
+                    message: resp.text().unwrap_or_default(),
+                });
             }
             Ok(())
         })
@@ -463,9 +473,10 @@ impl SheetsApi for GoogleSheetsApi {
                 let message = resp.text().unwrap_or_default();
                 return Err(SheetsError::Api { status, message });
             }
-            let body: ValuesResponse = resp
-                .json()
-                .map_err(|e| SheetsError::Api { status, message: e.to_string() })?;
+            let body: ValuesResponse = resp.json().map_err(|e| SheetsError::Api {
+                status,
+                message: e.to_string(),
+            })?;
             Ok(body.values.unwrap_or_default())
         })
     }
@@ -475,7 +486,10 @@ impl SheetsApi for GoogleSheetsApi {
             "{}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS",
             self.values_url(range)
         );
-        let body = ValuesBody { range: range.to_string(), values: rows.clone() };
+        let body = ValuesBody {
+            range: range.to_string(),
+            values: rows.clone(),
+        };
         self.with_retry(|| {
             let token = self.access_token()?; // per-attempt freshness (RUNTIME-SHEETS-005)
             let resp = self
@@ -487,7 +501,10 @@ impl SheetsApi for GoogleSheetsApi {
                 .map_err(|e| SheetsError::Unreachable(e.to_string()))?;
             let status = resp.status().as_u16();
             if !(200..300).contains(&status) {
-                return Err(SheetsError::Api { status, message: resp.text().unwrap_or_default() });
+                return Err(SheetsError::Api {
+                    status,
+                    message: resp.text().unwrap_or_default(),
+                });
             }
             Ok(())
         })
@@ -495,7 +512,10 @@ impl SheetsApi for GoogleSheetsApi {
 
     fn update_range(&self, range: &str, rows: &Grid) -> Result<(), SheetsError> {
         let url = format!("{}?valueInputOption=USER_ENTERED", self.values_url(range));
-        let body = ValuesBody { range: range.to_string(), values: rows.clone() };
+        let body = ValuesBody {
+            range: range.to_string(),
+            values: rows.clone(),
+        };
         self.with_retry(|| {
             let token = self.access_token()?; // per-attempt freshness (RUNTIME-SHEETS-005)
             let resp = self
@@ -507,7 +527,10 @@ impl SheetsApi for GoogleSheetsApi {
                 .map_err(|e| SheetsError::Unreachable(e.to_string()))?;
             let status = resp.status().as_u16();
             if !(200..300).contains(&status) {
-                return Err(SheetsError::Api { status, message: resp.text().unwrap_or_default() });
+                return Err(SheetsError::Api {
+                    status,
+                    message: resp.text().unwrap_or_default(),
+                });
             }
             Ok(())
         })
@@ -525,7 +548,10 @@ impl SheetsApi for GoogleSheetsApi {
                 .map_err(|e| SheetsError::Unreachable(e.to_string()))?;
             let status = resp.status().as_u16();
             if !(200..300).contains(&status) {
-                return Err(SheetsError::Api { status, message: resp.text().unwrap_or_default() });
+                return Err(SheetsError::Api {
+                    status,
+                    message: resp.text().unwrap_or_default(),
+                });
             }
             Ok(())
         })
@@ -542,7 +568,10 @@ impl SheetsApi for GoogleSheetsApi {
             "{}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS",
             self.values_url(range)
         );
-        let body = ValuesBody { range: range.to_string(), values: rows.clone() };
+        let body = ValuesBody {
+            range: range.to_string(),
+            values: rows.clone(),
+        };
         self.with_retry(|| {
             let token = self.access_token()?; // per-attempt freshness (RUNTIME-SHEETS-005)
             let resp = self
@@ -554,7 +583,10 @@ impl SheetsApi for GoogleSheetsApi {
                 .map_err(|e| SheetsError::Unreachable(e.to_string()))?;
             let status = resp.status().as_u16();
             if !(200..300).contains(&status) {
-                return Err(SheetsError::Api { status, message: resp.text().unwrap_or_default() });
+                return Err(SheetsError::Api {
+                    status,
+                    message: resp.text().unwrap_or_default(),
+                });
             }
             Ok(())
         })
@@ -582,7 +614,15 @@ fn urlencode(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     for b in s.bytes() {
         match b {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'!' | b':' | b'$' | b'.' | b'_' | b'-'
+            b'A'..=b'Z'
+            | b'a'..=b'z'
+            | b'0'..=b'9'
+            | b'!'
+            | b':'
+            | b'$'
+            | b'.'
+            | b'_'
+            | b'-'
             | b'~' => out.push(b as char),
             _ => out.push_str(&format!("%{b:02X}")),
         }
@@ -678,7 +718,11 @@ impl<A: SheetsApi> store::SheetsClient for StoreSheetsAdapter<A> {
         })
     }
 
-    fn batch_update(&mut self, tab: store::Tab, rows: &[store::Row]) -> Result<(), store::StoreError> {
+    fn batch_update(
+        &mut self,
+        tab: store::Tab,
+        rows: &[store::Row],
+    ) -> Result<(), store::StoreError> {
         let grid: Grid = rows.iter().map(|r| r.to_cells(tab)).collect();
         self.api
             .update_range(&Self::data_range(tab), &grid)

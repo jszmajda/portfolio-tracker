@@ -203,7 +203,11 @@ pub fn parse_shares_to_micro(s: &str) -> Option<MicroShares> {
     {
         return None;
     }
-    let whole: i64 = if whole_str.is_empty() { 0 } else { whole_str.parse().ok()? };
+    let whole: i64 = if whole_str.is_empty() {
+        0
+    } else {
+        whole_str.parse().ok()?
+    };
     let frac: i64 = if frac_str.is_empty() {
         0
     } else {
@@ -320,8 +324,9 @@ fn parse_actions(grid: &Grid, platforms: &PlatformAssignment, out: &mut ParsedLe
         }
         // The raw `$/share` decimal string IS the row boundary: blank/`#…`
         // stays as-is for the reconstruction's unrecoverable-Vest-source rule.
-        let mut dps =
-            cell(row, &cols, "$/share").trim_start_matches('$').replace(',', "");
+        let mut dps = cell(row, &cols, "$/share")
+            .trim_start_matches('$')
+            .replace(',', "");
         let mut fees = fees;
         // True-cash-basis rule (IMPORT-MAP-006): on a whole-share Buy, when the
         // row's `Total Cost` disagrees with `shares × $/share + fees` (the
@@ -418,7 +423,10 @@ fn parse_sales(grid: &Grid, platforms: &PlatformAssignment, out: &mut ParsedLega
             });
             continue;
         };
-        let entry = out.profit_sums.entry(symbol.to_string()).or_insert(Cents(0));
+        let entry = out
+            .profit_sums
+            .entry(symbol.to_string())
+            .or_insert(Cents(0));
         entry.0 += profit.0;
 
         // Never-filled price cell (IMPORT-MAP-007): a zero/blank `$/share` with
@@ -426,7 +434,9 @@ fn parse_sales(grid: &Grid, platforms: &PlatformAssignment, out: &mut ParsedLega
         // reconstructed proceeds equal the recorded proceeds to the cent. A
         // present price always governs; a zero-price zero-proceeds Vest sale is
         // the sell-to-cover case the reconstruction substitutes FMV for.
-        let mut dps = cell(row, &cols, "$/share").trim_start_matches('$').replace(',', "");
+        let mut dps = cell(row, &cols, "$/share")
+            .trim_start_matches('$')
+            .replace(',', "");
         let mut fees = fees;
         let price_zero = matches!(parse_dollars_to_cents(&dps), Some(Cents(0)) | None);
         if price_zero && qty.0 > 0 && qty.0 % 1_000_000 == 0 {

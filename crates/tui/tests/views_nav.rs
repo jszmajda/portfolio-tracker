@@ -5,9 +5,7 @@ mod common;
 
 use pt_core::{Cents, Date};
 use tui::testkit::{buy, flat_federal_ctx, replay, FakeRuntime, ViewBuilder};
-use tui::views::{
-    self, Filter, NavState, RowIdentity, Scope, Screen, SortDir, SortKey,
-};
+use tui::views::{self, Filter, NavState, RowIdentity, Scope, Screen, SortDir, SortKey};
 use tui::{Frame, Model};
 
 // @spec TUI-VIEW-NAV-001
@@ -34,16 +32,29 @@ fn filter_is_visibility_only_totals_stay_over_the_whole_priced_portfolio() {
     let mut nav = NavState::new(Screen::Positions);
     nav.filter = Filter::Symbol("AMZN".to_string());
     let (rows, _c, header) = views::positions_rows(&view, &nav);
-    assert_eq!(rows.len(), 1, "filter hides the other rows (visibility-only)");
+    assert_eq!(
+        rows.len(),
+        1,
+        "filter hides the other rows (visibility-only)"
+    );
     assert_eq!(header.shown, 1);
-    assert_eq!(header.total, 3, "the total stays over the whole priced portfolio");
+    assert_eq!(
+        header.total, 3,
+        "the total stays over the whole priced portfolio"
+    );
     // The filter-state header text reads honestly.
     let text = header.text();
-    assert!(text.contains("showing 1 of 3"), "header states the subset: {text}");
+    assert!(
+        text.contains("showing 1 of 3"),
+        "header states the subset: {text}"
+    );
     assert!(text.contains("of book"));
     // The shown share ≈ 1/3 of the book (each is an equal third).
     let shown_ppm = header.shown_share_ppm.unwrap();
-    assert!((shown_ppm - 333_333).abs() < 10, "the shown subset is ~33% of the book, not rebased to 100%");
+    assert!(
+        (shown_ppm - 333_333).abs() < 10,
+        "the shown subset is ~33% of the book, not rebased to 100%"
+    );
 }
 
 // @spec TUI-VIEW-NAV-002
@@ -68,7 +79,11 @@ fn sort_sends_a_row_to_the_tail_only_when_the_sort_key_itself_is_degraded() {
         nav.sort_key = SortKey::MarketValue;
         nav.sort_dir = dir;
         let (rows, _c, _h) = views::positions_rows(&view, &nav);
-        assert_eq!(rows.last().unwrap().label, "PLTR", "the MV-degraded row tails in {dir:?}");
+        assert_eq!(
+            rows.last().unwrap().label,
+            "PLTR",
+            "the MV-degraded row tails in {dir:?}"
+        );
     }
 }
 
@@ -76,7 +91,7 @@ fn sort_sends_a_row_to_the_tail_only_when_the_sort_key_itself_is_degraded() {
 #[test]
 fn drill_sets_contextual_scope_cleared_on_ascend_with_retained_filter_and_sort() {
     let mut model = Model::new(); // landing: Positions
-    // Set a retained filter + sort on Positions.
+                                  // Set a retained filter + sort on Positions.
     model.current_mut().nav.filter = Filter::Symbol("AMZN".to_string());
     model.current_mut().nav.sort_key = SortKey::MarketValue;
 
@@ -84,15 +99,30 @@ fn drill_sets_contextual_scope_cleared_on_ascend_with_retained_filter_and_sort()
     assert!(model.drill(&RowIdentity::Symbol("AMZN".to_string())));
     assert_eq!(model.current().nav.screen, Screen::OpenLots);
     assert_eq!(model.current().nav.scope, Scope::Symbol("AMZN".to_string()));
-    assert!(model.current().nav.scope.breadcrumb().contains("AMZN ›"), "a breadcrumb chip is set");
+    assert!(
+        model.current().nav.scope.breadcrumb().contains("AMZN ›"),
+        "a breadcrumb chip is set"
+    );
 
     // Ascend: the OpenLots frame (and its contextual scope) is popped; the parent
     // Positions frame's retained filter + sort survive. (TUI-VIEW-NAV-003)
     assert!(model.ascend());
     assert_eq!(model.current().nav.screen, Screen::Positions);
-    assert_eq!(model.current().nav.scope, Scope::All, "the contextual scope is cleared on ascend");
-    assert_eq!(model.current().nav.filter, Filter::Symbol("AMZN".to_string()), "the user filter is retained");
-    assert_eq!(model.current().nav.sort_key, SortKey::MarketValue, "the sort is retained");
+    assert_eq!(
+        model.current().nav.scope,
+        Scope::All,
+        "the contextual scope is cleared on ascend"
+    );
+    assert_eq!(
+        model.current().nav.filter,
+        Filter::Symbol("AMZN".to_string()),
+        "the user filter is retained"
+    );
+    assert_eq!(
+        model.current().nav.sort_key,
+        SortKey::MarketValue,
+        "the sort is retained"
+    );
 }
 
 // @spec TUI-VIEW-NAV-004
@@ -117,7 +147,11 @@ fn focus_anchors_to_row_identity_across_resort_and_falls_to_nearest_when_vanishe
         RowIdentity::Symbol("MSFT".to_string()),
     ];
     let (fallen, fidx) = views::reanchor_focus(&focus, 1, &after_vanish);
-    assert_eq!(fallen, RowIdentity::Symbol("MSFT".to_string()), "falls to the nearest row");
+    assert_eq!(
+        fallen,
+        RowIdentity::Symbol("MSFT".to_string()),
+        "falls to the nearest row"
+    );
     assert_eq!(fidx, 1);
 }
 
@@ -153,7 +187,10 @@ fn a_model_refresh_preserves_focus_identity_across_a_resort() {
     // A refresh re-reads marks (the held view is unchanged here) and re-anchors:
     // GOOGL's identity survives, so focus stays on it.
     let notices = model.refresh(&mut rt);
-    assert!(notices.is_empty(), "no dangling frames on the landing screen");
+    assert!(
+        notices.is_empty(),
+        "no dangling frames on the landing screen"
+    );
     assert_eq!(
         model.current().nav.focus,
         RowIdentity::Symbol("GOOGL".to_string()),
@@ -218,8 +255,15 @@ fn refresh_reresolves_stacked_anchors_and_replaces_a_dangling_frame_with_a_calm_
     // with a calm notice. Build a view whose snapshot no longer has L-A.
     let empty = ViewBuilder::new(ledger_core::Snapshot::default()).build();
     let notices = model.reresolve_stack(&empty);
-    assert!(!notices.is_empty(), "a dangling drilled frame is replaced with a notice");
-    assert!(notices[0].contains("returning to"), "the calm notice names the parent: {}", notices[0]);
+    assert!(
+        !notices.is_empty(),
+        "a dangling drilled frame is replaced with a notice"
+    );
+    assert!(
+        notices[0].contains("returning to"),
+        "the calm notice names the parent: {}",
+        notices[0]
+    );
 }
 
 // @spec TUI-VIEW-NAV-006
@@ -278,7 +322,10 @@ fn six_calm_empty_states_distinct_from_each_other_and_the_integrity_block() {
         views::EmptyState::FilterMatchedZero,
     ];
     for e in &all {
-        assert!(!e.message().contains('\u{2717}'), "an empty state never uses ✗");
+        assert!(
+            !e.message().contains('\u{2717}'),
+            "an empty state never uses ✗"
+        );
     }
     let mut msgs: Vec<String> = all.iter().map(|e| e.message()).collect();
     msgs.sort();
@@ -293,11 +340,16 @@ fn views_mutate_nothing_and_launching_an_action_offline_or_lock_held_is_allowed(
     // entry action while offline / lock-held is allowed — entry's write loop is the
     // single rejection path — with the offline/lock state surfaced in the status
     // line. (TUI-VIEW-NAV-007)
-    let view = ViewBuilder::new(ledger_core::Snapshot::default()).offline().build();
+    let view = ViewBuilder::new(ledger_core::Snapshot::default())
+        .offline()
+        .build();
     // The status line surfaces the offline state (so launching is not a surprise).
     let status = tui::StatusLine::from_view(&view, tui::Mode::Views, &Screen::TaxReserves);
     assert!(!status.connected, "offline is surfaced");
-    assert!(status.text().contains("stale"), "the status line shows stale/offline");
+    assert!(
+        status.text().contains("stale"),
+        "the status line shows stale/offline"
+    );
 
     // The launch passes only identity (entry re-resolves live); views never mutate.
     let key = tax::AccrualKey {
@@ -349,11 +401,26 @@ fn refresh_executes_the_fixed_lifecycle_order_re_read_then_reresolve_then_reanch
     let notices = model.refresh(&mut rt);
 
     // 1) re-read marks ran.
-    assert_eq!(rt.refresh_count, before + 1, "the refresh re-reads marks first");
+    assert_eq!(
+        rt.refresh_count,
+        before + 1,
+        "the refresh re-reads marks first"
+    );
     // 2) the dangling drilled frame was dropped with a calm returning-to-parent notice.
-    assert!(!notices.is_empty(), "the dangling lot frame is dropped during re-resolve");
-    assert!(notices[0].contains("returning to"), "a calm notice names the parent: {}", notices[0]);
-    assert_eq!(model.stack.len(), 1, "the surviving frame is the landing Positions frame");
+    assert!(
+        !notices.is_empty(),
+        "the dangling lot frame is dropped during re-resolve"
+    );
+    assert!(
+        notices[0].contains("returning to"),
+        "a calm notice names the parent: {}",
+        notices[0]
+    );
+    assert_eq!(
+        model.stack.len(),
+        1,
+        "the surviving frame is the landing Positions frame"
+    );
     // 3) focus on the surviving frame re-anchored to a present row identity.
     assert_eq!(
         model.current().nav.focus,
@@ -366,7 +433,9 @@ fn refresh_executes_the_fixed_lifecycle_order_re_read_then_reresolve_then_reanch
 #[test]
 fn filter_describe_and_clear_helpers() {
     assert_eq!(Filter::None.describe(), "all");
-    assert!(Filter::Symbol("AMZN".to_string()).describe().contains("AMZN"));
+    assert!(Filter::Symbol("AMZN".to_string())
+        .describe()
+        .contains("AMZN"));
     let _ = Cents(0); // keep the import used across edits
 }
 
@@ -384,18 +453,34 @@ fn switch_screen_replaces_the_stack_and_retains_each_screens_filter_and_sort() {
     model.switch_screen(Screen::TaxReserves);
     assert_eq!(model.stack.len(), 1);
     assert_eq!(model.current().nav.screen, Screen::TaxReserves);
-    assert_eq!(model.current().nav.filter, Filter::None, "a fresh screen starts unfiltered");
+    assert_eq!(
+        model.current().nav.filter,
+        Filter::None,
+        "a fresh screen starts unfiltered"
+    );
 
     // The owner filters Tax by year, then returns to Positions: ITS filter/sort
     // come back; switching away again restores Tax's own year filter.
     model.current_mut().nav.filter = Filter::TaxYear(2026);
     model.switch_screen(Screen::Positions);
     assert_eq!(model.current().nav.screen, Screen::Positions);
-    assert_eq!(model.current().nav.filter, Filter::Symbol("AMZN".to_string()), "retained");
-    assert_eq!(model.current().nav.sort_key, SortKey::MarketValue, "sort retained");
+    assert_eq!(
+        model.current().nav.filter,
+        Filter::Symbol("AMZN".to_string()),
+        "retained"
+    );
+    assert_eq!(
+        model.current().nav.sort_key,
+        SortKey::MarketValue,
+        "sort retained"
+    );
     assert_eq!(model.current().nav.sort_dir, SortDir::Desc);
     model.switch_screen(Screen::TaxReserves);
-    assert_eq!(model.current().nav.filter, Filter::TaxYear(2026), "Tax's filter retained");
+    assert_eq!(
+        model.current().nav.filter,
+        Filter::TaxYear(2026),
+        "Tax's filter retained"
+    );
 
     // A switch never mutates anything durable: only nav state moved.
     assert!(model.entry.is_empty());
@@ -413,7 +498,11 @@ fn switch_screen_from_a_drilled_frame_drops_the_drill_scope() {
     model.switch_screen(Screen::History);
     assert_eq!(model.stack.len(), 1);
     assert_eq!(model.current().nav.screen, Screen::History);
-    assert_eq!(model.current().nav.scope, Scope::All, "no leaked drill scope");
+    assert_eq!(
+        model.current().nav.scope,
+        Scope::All,
+        "no leaked drill scope"
+    );
 
     // Switching to the screen we are already on (landing) is a no-op.
     let before = model.clone();

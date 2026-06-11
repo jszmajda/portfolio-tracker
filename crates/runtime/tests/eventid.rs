@@ -49,14 +49,21 @@ fn cross_tab_union_holds_ids_from_both_tabs() {
     let ids = cross_tab_event_ids(&logs);
 
     // The ledger event's id is in the union.
-    assert!(ids.contains("e1"), "the ledger id is in the cross-tab union");
+    assert!(
+        ids.contains("e1"),
+        "the ledger id is in the cross-tab union"
+    );
     // The tax event's store-derived id is in the union (a single-tab ledger append
     // could not see it).
     assert!(
         ids.contains(&tax_event_id(&pay_event(2))),
         "the tax id (store-derived) is in the cross-tab union"
     );
-    assert_eq!(ids.len(), 2, "the union is exactly the two ids across the two tabs");
+    assert_eq!(
+        ids.len(),
+        2,
+        "the union is exactly the two ids across the two tabs"
+    );
 }
 
 // @spec RUNTIME-EVENTID-001, STORE-WRITE-008
@@ -68,7 +75,10 @@ fn same_content_is_the_same_event_idempotent_assignment() {
     let logs = small_logs(); // contains ledger ids e1, e2, e3.
     let already = buy(1, 19_000, "lot-amzn", "AMZN", 3_000_000, 150_00); // id == "e1", present.
     let assigned = assign_ledger_event_id(&logs, &already);
-    assert_eq!(assigned, "e1", "a retry of an existing event reuses its id (content de-dup)");
+    assert_eq!(
+        assigned, "e1",
+        "a retry of an existing event reuses its id (content de-dup)"
+    );
 }
 
 // @spec RUNTIME-EVENTID-001
@@ -82,8 +92,14 @@ fn a_genuinely_distinct_event_is_assigned_a_fresh_non_colliding_id() {
     let assigned = assign_ledger_event_id(&logs, &fresh);
 
     let existing = cross_tab_event_ids(&logs);
-    assert!(!existing.contains(&assigned), "the assigned id collides with no existing id");
-    assert!(!assigned.is_empty(), "a fresh event gets a non-empty assigned id");
+    assert!(
+        !existing.contains(&assigned),
+        "the assigned id collides with no existing id"
+    );
+    assert!(
+        !assigned.is_empty(),
+        "a fresh event gets a non-empty assigned id"
+    );
 }
 
 // @spec RUNTIME-EVENTID-001
@@ -96,16 +112,25 @@ fn a_ledger_assignment_never_collides_with_a_tax_id_across_tabs() {
     // (RUNTIME-EVENTID-001)
     let tax = pay_event(1);
     let tax_id = tax_event_id(&tax);
-    let logs = EventLogs { ledger: vec![], tax: vec![tax] };
+    let logs = EventLogs {
+        ledger: vec![],
+        tax: vec![tax],
+    };
 
     let mut ledger_ev = buy(1, 19_000, "lot-x", "AMZN", 1_000_000, 150_00);
     ledger_ev.id = String::new();
     let assigned = assign_ledger_event_id(&logs, &ledger_ev);
 
-    assert_ne!(assigned, tax_id, "a ledger id never collides with a tax id across tabs");
+    assert_ne!(
+        assigned, tax_id,
+        "a ledger id never collides with a tax id across tabs"
+    );
     // And the union after assignment would be uniqueness-preserving.
     let mut after = cross_tab_event_ids(&logs);
-    assert!(after.insert(assigned), "the assigned ledger id is genuinely new in the union");
+    assert!(
+        after.insert(assigned),
+        "the assigned ledger id is genuinely new in the union"
+    );
 }
 
 // @spec RUNTIME-EVENTID-001, STORE-WRITE-008
@@ -120,10 +145,17 @@ fn a_tax_event_assignment_is_retry_stable_and_idempotent() {
 
     // Not present yet: assigned its content id.
     let empty = EventLogs::default();
-    assert_eq!(assign_tax_event_id(&empty, &tax), content_id, "a fresh tax event gets its content id");
+    assert_eq!(
+        assign_tax_event_id(&empty, &tax),
+        content_id,
+        "a fresh tax event gets its content id"
+    );
 
     // Present: the SAME id is returned (idempotent retry).
-    let with_it = EventLogs { ledger: vec![], tax: vec![tax.clone()] };
+    let with_it = EventLogs {
+        ledger: vec![],
+        tax: vec![tax.clone()],
+    };
     assert_eq!(
         assign_tax_event_id(&with_it, &tax),
         content_id,
@@ -140,7 +172,11 @@ fn a_tax_event_assignment_is_retry_stable_and_idempotent() {
     if let TaxEventKind::Pay { amount_cents, .. } = &mut other.kind {
         *amount_cents = Cents(999_99);
     }
-    assert_ne!(tax_event_id(&other), content_id, "distinct tax events get distinct ids");
+    assert_ne!(
+        tax_event_id(&other),
+        content_id,
+        "distinct tax events get distinct ids"
+    );
     // (sell helper referenced so the shared fixture import is used.)
     let _ = sell(9, 19_100, "s", "AMZN", 1_000_000, 130_00, None);
 }
@@ -158,14 +194,21 @@ fn a_tax_assignment_never_collides_with_a_ledger_id_across_tabs() {
 
     let assigned = assign_tax_event_id(&logs, &tax);
     // Distinct from every ledger id (the `evt-`/`tax-` prefixes cannot collide).
-    assert!(assigned.starts_with("tax-"), "a tax id is content-addressed `tax-…`");
+    assert!(
+        assigned.starts_with("tax-"),
+        "a tax id is content-addressed `tax-…`"
+    );
     let existing = cross_tab_event_ids(&logs);
     assert!(
         !existing.contains(&assigned),
         "a tax assignment collides with no ledger id already in the cross-tab union"
     );
     // And the assignment IS the store-persisted content address (no bump applied).
-    assert_eq!(assigned, tax_event_id(&tax), "the assignment is the content address store persists");
+    assert_eq!(
+        assigned,
+        tax_event_id(&tax),
+        "the assignment is the content address store persists"
+    );
 }
 
 // @spec RUNTIME-EVENTID-001
@@ -196,7 +239,10 @@ fn assign_tax_event_id_gives_distinct_ids_to_distinct_tax_events() {
     // With the FIRST already in the log, assigning the SECOND must NOT be mistaken for
     // a retry of the first — the distinct event keeps its own content id (no false
     // idempotent-dedup). (STORE-WRITE-008)
-    let with_first = EventLogs { ledger: vec![], tax: vec![first.clone()] };
+    let with_first = EventLogs {
+        ledger: vec![],
+        tax: vec![first.clone()],
+    };
     let id_second_against_first = assign_tax_event_id(&with_first, &second);
     assert_eq!(
         id_second_against_first, id_second,

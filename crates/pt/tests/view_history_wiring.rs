@@ -38,7 +38,9 @@ fn history_bundle_maps_points_by_key_with_an_ascending_calendar() {
         "the calendar is the ascending distinct trading days"
     );
     assert_eq!(
-        map.get(&TradingDayKey(Date(102))).unwrap().total_market_value_cents,
+        map.get(&TradingDayKey(Date(102)))
+            .unwrap()
+            .total_market_value_cents,
         Cents(3_00),
         "last-wins by trading-day key"
     );

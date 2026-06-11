@@ -26,7 +26,9 @@ fn main() -> ExitCode {
         Command::Import { commit } => run_import(commit),
         Command::Unknown(tok) => {
             eprintln!("pt: unknown subcommand {tok:?}");
-            eprintln!("usage: pt [summary [--json] | import [--commit]]   (no args: launch the TUI)");
+            eprintln!(
+                "usage: pt [summary [--json] | import [--commit]]   (no args: launch the TUI)"
+            );
             ExitCode::from(2)
         }
     }
@@ -43,7 +45,11 @@ fn main() -> ExitCode {
 fn run_summary(json: bool) -> ExitCode {
     use summary::{dispatch, OutputMode};
 
-    let mode = if json { OutputMode::Json } else { OutputMode::Text };
+    let mode = if json {
+        OutputMode::Json
+    } else {
+        OutputMode::Text
+    };
     let settings = load_settings();
 
     // No live workbook configured -> no trustworthy summary (exit 2), never a

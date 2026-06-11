@@ -35,7 +35,12 @@ fn point_to_point_baseline_is_most_recent_strictly_prior_and_reconciles() {
     let delta = compute_delta(&capture, &stored, &calendar);
 
     match delta {
-        Delta::PointToPoint { baseline_key, current_key, total_delta_cents, spans_gap } => {
+        Delta::PointToPoint {
+            baseline_key,
+            current_key,
+            total_delta_cents,
+            spans_gap,
+        } => {
             // Baseline is the most recent STRICTLY-PRIOR point (day 19_485), not 19_480.
             // (SUMMARY-DELTA-001)
             assert_eq!(baseline_key, TradingDayKey(Date(19_485)));
@@ -44,8 +49,15 @@ fn point_to_point_baseline_is_most_recent_strictly_prior_and_reconciles() {
             let header = current.total_market_value_cents.0;
             let base = baseline.total_market_value_cents.0;
             assert_eq!(total_delta_cents.0, header - base);
-            assert_eq!(header - total_delta_cents.0, base, "header − delta = baseline");
-            assert_eq!(total_delta_cents, Cents(total_value(200_00) - total_value(190_00)));
+            assert_eq!(
+                header - total_delta_cents.0,
+                base,
+                "header − delta = baseline"
+            );
+            assert_eq!(
+                total_delta_cents,
+                Cents(total_value(200_00) - total_value(190_00))
+            );
             // 19_486..19_489 are trading days with no stored point between the
             // baseline and current → a gap. (SUMMARY-DELTA-002)
             assert!(spans_gap);
@@ -77,7 +89,9 @@ fn baseline_more_than_one_trading_day_prior_flags_the_span() {
     let calendar = dense_calendar(19_489, 19_490);
     let delta = compute_delta(&CaptureOutcome::Appended(current), &stored, &calendar);
     match delta {
-        Delta::PointToPoint { spans_gap, .. } => assert!(!spans_gap, "consecutive days are not a gap"),
+        Delta::PointToPoint { spans_gap, .. } => {
+            assert!(!spans_gap, "consecutive days are not a gap")
+        }
         other => panic!("expected PointToPoint, got {other:?}"),
     }
 }
@@ -105,7 +119,12 @@ fn a_normal_friday_to_monday_pair_across_a_weekend_is_not_a_gap() {
     let current = point_at(monday, 200_00);
     let delta = compute_delta(&CaptureOutcome::Appended(current), &stored, &calendar);
     match delta {
-        Delta::PointToPoint { spans_gap, baseline_key, current_key, .. } => {
+        Delta::PointToPoint {
+            spans_gap,
+            baseline_key,
+            current_key,
+            ..
+        } => {
             assert_eq!(baseline_key, TradingDayKey(Date(friday)));
             assert_eq!(current_key, TradingDayKey(Date(monday)));
             assert!(
@@ -125,7 +144,11 @@ fn delta_across_an_incomplete_baseline_is_suppressed_not_fabricated() {
     let current = point_at(19_490, 200_00);
     let delta = compute_delta(&CaptureOutcome::Appended(current), &stored, &[]);
     match delta {
-        Delta::Suppressed { reason, baseline_key, current_key } => {
+        Delta::Suppressed {
+            reason,
+            baseline_key,
+            current_key,
+        } => {
             assert_eq!(reason, SuppressReason::BaselineIncomplete);
             assert_eq!(baseline_key, TradingDayKey(Date(19_485)));
             assert_eq!(current_key, TradingDayKey(Date(19_490)));
@@ -174,7 +197,11 @@ fn uncaptured_run_uses_a_distinct_flagged_delta_against_the_latest_stored_point(
     let delta = compute_delta(&capture, &stored, &[]);
 
     match delta {
-        Delta::Uncaptured { baseline_key, live_total_cents, total_delta_cents } => {
+        Delta::Uncaptured {
+            baseline_key,
+            live_total_cents,
+            total_delta_cents,
+        } => {
             // Baseline is the LATEST stored point (19_488), not strictly-prior-to-a
             // -current-key logic (there is no appended current point).
             assert_eq!(baseline_key, Some(TradingDayKey(Date(19_488))));
@@ -193,7 +220,10 @@ fn append_failed_run_also_uses_the_uncaptured_delta_path() {
     let stored = vec![point_at(19_488, 195_00)];
     let live = point_at(19_490, 200_00);
     let delta = compute_delta(&CaptureOutcome::AppendFailed(live.clone()), &stored, &[]);
-    assert!(matches!(delta, Delta::Uncaptured { .. }), "append-failed → uncaptured delta");
+    assert!(
+        matches!(delta, Delta::Uncaptured { .. }),
+        "append-failed → uncaptured delta"
+    );
 }
 
 // @spec SUMMARY-DELTA-005
@@ -203,9 +233,16 @@ fn uncaptured_first_ever_run_has_no_baseline_to_compare() {
     let live = point_at(19_490, 200_00);
     let delta = compute_delta(&CaptureOutcome::SkippedLockHeld(live), &[], &[]);
     match delta {
-        Delta::Uncaptured { baseline_key, total_delta_cents, .. } => {
+        Delta::Uncaptured {
+            baseline_key,
+            total_delta_cents,
+            ..
+        } => {
             assert_eq!(baseline_key, None);
-            assert_eq!(total_delta_cents, None, "no stored point → no fabricated delta");
+            assert_eq!(
+                total_delta_cents, None,
+                "no stored point → no fabricated delta"
+            );
         }
         other => panic!("expected Uncaptured, got {other:?}"),
     }

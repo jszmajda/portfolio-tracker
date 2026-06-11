@@ -179,15 +179,15 @@ pub const POSITIONS_HEADER: &[&str] = &[
     "Shares",
     "Avg Cost/Share",
     "Total Basis",
-    "Price",            // formula (GOOGLEFINANCE)
-    "Market Value",     // formula
-    "Unrealized P&L",   // formula, pre-tax
-    "Est. Tax Rate",    // value, from tax
+    "Price",                     // formula (GOOGLEFINANCE)
+    "Market Value",              // formula
+    "Unrealized P&L",            // formula, pre-tax
+    "Est. Tax Rate",             // value, from tax
     "Est. Unrealized Tax (est)", // formula, post-tax estimate
     "Net Unrealized (est)",      // formula, post-tax estimate
-    "Unrealized %",     // formula
-    "Realized P&L",     // value
-    "Quote Date",       // formula — the locale-proof companion the read-back parses
+    "Unrealized %",              // formula
+    "Realized P&L",              // value
+    "Quote Date",                // formula — the locale-proof companion the read-back parses
 ];
 
 /// The Open Lots tab header: per open lot. (SHEET-TAB-001)
@@ -561,8 +561,10 @@ pub fn render_positions(
         // Avg cost/share = total_basis / shares (engine value; guard zero shares).
         let avg_cost = if pos.total_qty.0 != 0 {
             // basis_cents per whole share = total_basis / (qty / 1e6).
-            let per_share =
-                pt_core::round_half_to_even((pos.total_basis_cents.0 as i128) * 1_000_000, pos.total_qty.0 as i128);
+            let per_share = pt_core::round_half_to_even(
+                (pos.total_basis_cents.0 as i128) * 1_000_000,
+                pos.total_qty.0 as i128,
+            );
             fmt_cents(Cents(per_share as i64))
         } else {
             "0.00".to_string()
@@ -578,23 +580,27 @@ pub fn render_positions(
         // (1 − Est. Tax Rate). (SHEET-FORMULA-003)
         let est_tax = Cell::Formula(format!("={}*{}", cell_ref('G', r), cell_ref('H', r)));
         let net_unreal = Cell::Formula(format!("={}*(1-{})", cell_ref('G', r), cell_ref('H', r)));
-        let unreal_pct = Cell::Formula(format!("=IF({d}=0,0,{g}/{d})", d = cell_ref('D', r), g = cell_ref('G', r)));
+        let unreal_pct = Cell::Formula(format!(
+            "=IF({d}=0,0,{g}/{d})",
+            d = cell_ref('D', r),
+            g = cell_ref('G', r)
+        ));
 
         rows.push(vec![
-            Cell::Value(symbol.clone()),                            // A Symbol
-            Cell::Value(fmt_shares(pos.total_qty)),                 // B Shares
-            Cell::Value(avg_cost),                                  // C Avg Cost/Share
-            Cell::Value(fmt_cents(pos.total_basis_cents)),          // D Total Basis
-            price_formula(&ticker),                                 // E Price (formula)
-            market_value,                                           // F Market Value (formula)
-            unrealized,                                             // G Unrealized P&L (formula)
+            Cell::Value(symbol.clone()),                   // A Symbol
+            Cell::Value(fmt_shares(pos.total_qty)),        // B Shares
+            Cell::Value(avg_cost),                         // C Avg Cost/Share
+            Cell::Value(fmt_cents(pos.total_basis_cents)), // D Total Basis
+            price_formula(&ticker),                        // E Price (formula)
+            market_value,                                  // F Market Value (formula)
+            unrealized,                                    // G Unrealized P&L (formula)
             // H Est. Tax Rate: an engine VALUE from tax (empty when degraded).
             Cell::Value(eff_rate.map(fmt_ppm).unwrap_or_default()),
-            est_tax,                                                // I Est. Unrealized Tax (formula)
-            net_unreal,                                             // J Net Unrealized (formula)
-            unreal_pct,                                             // K Unrealized % (formula)
-            Cell::Value(fmt_cents(pos.realized_pnl_cents)),         // L Realized P&L (value)
-            quote_date_formula(&ticker),                            // M Quote Date (formula)
+            est_tax,                                        // I Est. Unrealized Tax (formula)
+            net_unreal,                                     // J Net Unrealized (formula)
+            unreal_pct,                                     // K Unrealized % (formula)
+            Cell::Value(fmt_cents(pos.realized_pnl_cents)), // L Realized P&L (value)
+            quote_date_formula(&ticker),                    // M Quote Date (formula)
         ]);
     }
 
@@ -842,9 +848,9 @@ pub fn read_marks<C: SheetsViewClient>(
         }
         polls += 1;
         // Settled when no requested symbol is still transient/absent.
-        let settled = symbols.iter().all(|s| {
-            !matches!(latest.get(s), Some(PriceReading::Transient) | None)
-        });
+        let settled = symbols
+            .iter()
+            .all(|s| !matches!(latest.get(s), Some(PriceReading::Transient) | None));
         if settled {
             break;
         }
@@ -856,12 +862,18 @@ pub fn read_marks<C: SheetsViewClient>(
     let mut out = MarksProduced::default();
     for s in symbols {
         match latest.get(s) {
-            Some(PriceReading::Numeric { price_usd, quote_date }) => {
+            Some(PriceReading::Numeric {
+                price_usd,
+                quote_date,
+            }) => {
                 match price_to_cents(*price_usd) {
                     Ok(price_cents) => {
                         out.marks.insert(
                             s.clone(),
-                            Mark { price_cents, quote_date: *quote_date },
+                            Mark {
+                                price_cents,
+                                quote_date: *quote_date,
+                            },
                         );
                     }
                     // A positive price → 0¢ (or any non-positive) is degraded.
@@ -918,7 +930,10 @@ pub struct Publisher<C: SheetsViewClient> {
 impl<C: SheetsViewClient> Publisher<C> {
     /// Wrap a client.
     pub fn new(client: C) -> Self {
-        Publisher { client, stale: std::collections::BTreeSet::new() }
+        Publisher {
+            client,
+            stale: std::collections::BTreeSet::new(),
+        }
     }
 
     /// Borrow the client (tests inspect the published tabs).

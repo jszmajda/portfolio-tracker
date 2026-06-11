@@ -85,7 +85,11 @@ pub fn parse_owner_inputs(json: &str) -> Result<OwnerInputs, String> {
     let str_list = |name: &str| -> Vec<String> {
         obj.get(name)
             .and_then(|x| x.as_array())
-            .map(|a| a.iter().filter_map(|v| v.as_str().map(str::to_string)).collect())
+            .map(|a| {
+                a.iter()
+                    .filter_map(|v| v.as_str().map(str::to_string))
+                    .collect()
+            })
             .unwrap_or_default()
     };
     let post_split_framed_ids = str_list("post_split_framed_ids");
@@ -102,11 +106,19 @@ pub fn parse_owner_inputs(json: &str) -> Result<OwnerInputs, String> {
                     .ok_or(err("missing `symbol`"))?
                     .to_string(),
                 date: parse_iso_date(
-                    a.get("date").and_then(|x| x.as_str()).ok_or(err("missing `date`"))?,
+                    a.get("date")
+                        .and_then(|x| x.as_str())
+                        .ok_or(err("missing `date`"))?,
                 )
                 .ok_or(err("`date` must be YYYY-MM-DD"))?,
-                ratio_num: a.get("num").and_then(|x| x.as_i64()).ok_or(err("missing `num`"))?,
-                ratio_den: a.get("den").and_then(|x| x.as_i64()).ok_or(err("missing `den`"))?,
+                ratio_num: a
+                    .get("num")
+                    .and_then(|x| x.as_i64())
+                    .ok_or(err("missing `num`"))?,
+                ratio_den: a
+                    .get("den")
+                    .and_then(|x| x.as_i64())
+                    .ok_or(err("missing `den`"))?,
             });
         }
     }
@@ -126,8 +138,9 @@ pub fn parse_owner_inputs(json: &str) -> Result<OwnerInputs, String> {
                     Jurisdiction::State(juris.to_uppercase())
                 },
                 tax_year: TaxYear(
-                    c.get("tax_year").and_then(|x| x.as_i64()).ok_or(err("missing `tax_year`"))?
-                        as i32,
+                    c.get("tax_year")
+                        .and_then(|x| x.as_i64())
+                        .ok_or(err("missing `tax_year`"))? as i32,
                 ),
                 legacy_actual_cents: Cents(
                     c.get("legacy_actual_cents")
@@ -170,7 +183,11 @@ pub fn parse_owner_inputs(json: &str) -> Result<OwnerInputs, String> {
 
     Ok(OwnerInputs {
         legacy_workbook_id,
-        platforms: PlatformAssignment { default_platform, id_prefixes, per_symbol },
+        platforms: PlatformAssignment {
+            default_platform,
+            id_prefixes,
+            per_symbol,
+        },
         corporate_actions,
         closed_years,
         residency,
@@ -220,8 +237,11 @@ pub fn apply_owner_mappings(
     let mut notes = Vec::new();
 
     // 1. Owner-declared exclusions (case-insensitive symbol match), recorded.
-    let excluded: Vec<String> =
-        inputs.excluded_symbols.iter().map(|s| s.to_ascii_lowercase()).collect();
+    let excluded: Vec<String> = inputs
+        .excluded_symbols
+        .iter()
+        .map(|s| s.to_ascii_lowercase())
+        .collect();
     let is_excluded = |sym: &str| excluded.contains(&sym.to_ascii_lowercase());
     parsed.actions.retain(|a| {
         let keep = !is_excluded(&a.symbol);
@@ -246,7 +266,10 @@ pub fn apply_owner_mappings(
     parsed.positions.retain(|p| {
         let keep = !is_excluded(&p.symbol);
         if !keep {
-            notes.push(format!("excluded {} Positions row: owner-declared exclusion", p.symbol));
+            notes.push(format!(
+                "excluded {} Positions row: owner-declared exclusion",
+                p.symbol
+            ));
         }
         keep
     });
@@ -273,27 +296,41 @@ pub fn apply_owner_mappings(
             .filter(|ca| ca.symbol == symbol && ca.date.0 > date.0)
             .min_by_key(|ca| ca.date.0)
     };
-    let rewrite_qty = |qty: pt_core::MicroShares, ca: &KnownCorporateAction| -> Option<pt_core::MicroShares> {
-        let scaled = qty.0.checked_mul(ca.ratio_den)?;
-        (scaled % ca.ratio_num == 0).then(|| pt_core::MicroShares(scaled / ca.ratio_num))
-    };
+    let rewrite_qty =
+        |qty: pt_core::MicroShares, ca: &KnownCorporateAction| -> Option<pt_core::MicroShares> {
+            let scaled = qty.0.checked_mul(ca.ratio_den)?;
+            (scaled % ca.ratio_num == 0).then(|| pt_core::MicroShares(scaled / ca.ratio_num))
+        };
     let rewrite_price = |dps: &str, ca: &KnownCorporateAction| -> Option<String> {
         // price × num / den, exact in cents.
         let cents = import::parse_dollars_to_cents(dps)?;
         let scaled = cents.0.checked_mul(ca.ratio_num)?;
-        (scaled % ca.ratio_den == 0)
-            .then(|| format!("{}.{:02}", scaled / ca.ratio_den / 100, (scaled / ca.ratio_den % 100).abs()))
+        (scaled % ca.ratio_den == 0).then(|| {
+            format!(
+                "{}.{:02}",
+                scaled / ca.ratio_den / 100,
+                (scaled / ca.ratio_den % 100).abs()
+            )
+        })
     };
     for id in &inputs.post_split_framed_ids {
         for a in parsed.actions.iter_mut().filter(|a| &a.tranche_id == id) {
-            let Some(ca) = split_after(&a.symbol, a.date) else { continue };
-            let qty = rewrite_qty(a.qty, ca)
-                .ok_or(format!("{id}: qty not divisible by the {}:{} split", ca.ratio_num, ca.ratio_den))?;
+            let Some(ca) = split_after(&a.symbol, a.date) else {
+                continue;
+            };
+            let qty = rewrite_qty(a.qty, ca).ok_or(format!(
+                "{id}: qty not divisible by the {}:{} split",
+                ca.ratio_num, ca.ratio_den
+            ))?;
             let dps = rewrite_price(&a.dollars_per_share, ca)
                 .ok_or(format!("{id}: $/share does not rescale exactly"))?;
             notes.push(format!(
                 "{} ({}!row {}): post-split-framed row converted to pre-split frame ({} sh @ ${})",
-                id, a.coord.tab, a.coord.row, qty.0 as f64 / 1e6, dps
+                id,
+                a.coord.tab,
+                a.coord.row,
+                qty.0 as f64 / 1e6,
+                dps
             ));
             a.qty = qty;
             a.dollars_per_share = dps;
@@ -307,13 +344,20 @@ pub fn apply_owner_mappings(
         }
         for (coord, ca) in sale_fixes {
             let s = parsed.sales.iter_mut().find(|s| s.coord == coord).unwrap();
-            let qty = rewrite_qty(s.qty, &ca)
-                .ok_or(format!("{id} sale row {}: qty not divisible by the split", coord.row))?;
-            let dps = rewrite_price(&s.dollars_per_share, &ca)
-                .ok_or(format!("{id} sale row {}: $/share does not rescale exactly", coord.row))?;
+            let qty = rewrite_qty(s.qty, &ca).ok_or(format!(
+                "{id} sale row {}: qty not divisible by the split",
+                coord.row
+            ))?;
+            let dps = rewrite_price(&s.dollars_per_share, &ca).ok_or(format!(
+                "{id} sale row {}: $/share does not rescale exactly",
+                coord.row
+            ))?;
             notes.push(format!(
                 "sale {}!row {}: post-split-framed sale converted to pre-split frame ({} sh @ ${})",
-                coord.tab, coord.row, qty.0 as f64 / 1e6, dps
+                coord.tab,
+                coord.row,
+                qty.0 as f64 / 1e6,
+                dps
             ));
             s.qty = qty;
             s.dollars_per_share = dps;
@@ -376,11 +420,18 @@ pub fn render_report(report: &DryRunReport, parsed: &ParsedLegacy, notes: &[Stri
     if !parsed.skipped.is_empty() {
         let _ = writeln!(s, "\nSkipped rows (deliberate, non-blocking):");
         for sk in &parsed.skipped {
-            let _ = writeln!(s, "  - {}!row {}: {}", sk.coord.tab, sk.coord.row, sk.reason);
+            let _ = writeln!(
+                s,
+                "  - {}!row {}: {}",
+                sk.coord.tab, sk.coord.row, sk.reason
+            );
         }
     }
     if !notes.is_empty() {
-        let _ = writeln!(s, "\nOwner-mapping notes (exclusions / remaps / frame rewrites):");
+        let _ = writeln!(
+            s,
+            "\nOwner-mapping notes (exclusions / remaps / frame rewrites):"
+        );
         for n in notes {
             let _ = writeln!(s, "  - {n}");
         }
@@ -390,7 +441,10 @@ pub fn render_report(report: &DryRunReport, parsed: &ParsedLegacy, notes: &[Stri
     // cell failed) and the reconstruction's. (IMPORT-RUN-005, IMPORT-RECON-006)
     let malformed_total = parsed.malformed.len() + recon.malformed.len();
     if malformed_total > 0 {
-        let _ = writeln!(s, "\nMALFORMED SOURCE ROWS ({malformed_total} — block commit):");
+        let _ = writeln!(
+            s,
+            "\nMALFORMED SOURCE ROWS ({malformed_total} — block commit):"
+        );
         for m in parsed.malformed.iter().chain(&recon.malformed) {
             let _ = writeln!(s, "  - {}!row {}: {}", m.coord.tab, m.coord.row, m.reason);
         }
@@ -400,7 +454,13 @@ pub fn render_report(report: &DryRunReport, parsed: &ParsedLegacy, notes: &[Stri
     let _ = writeln!(
         s,
         "  {:<7} {:>14} {:>14}  {:>13} {:>13}  {:<10} {}",
-        "SYMBOL", "SHARES(new)", "SHARES(leg)", "REALIZED(new)", "REALIZED(leg)", "SHARES?", "DOLLARS?"
+        "SYMBOL",
+        "SHARES(new)",
+        "SHARES(leg)",
+        "REALIZED(new)",
+        "REALIZED(leg)",
+        "SHARES?",
+        "DOLLARS?"
     );
     for sym in &report.symbols {
         let shares = |m: pt_core::MicroShares| format!("{:.3}", m.0 as f64 / 1e6);
@@ -416,11 +476,20 @@ pub fn render_report(report: &DryRunReport, parsed: &ParsedLegacy, notes: &[Stri
         };
         let dollar_v = match &sym.verdict {
             Verdict::Matched => "ok".to_string(),
-            Verdict::IntendedDivergence { predicted_cents, explanation } => {
+            Verdict::IntendedDivergence {
+                predicted_cents,
+                explanation,
+            } => {
                 format!("intended ({}: {})", money(*predicted_cents), explanation)
             }
-            Verdict::OwnerAdjudicated { residual_cents, reason } => {
-                format!("adjudicated (residual {}: {reason})", money(*residual_cents))
+            Verdict::OwnerAdjudicated {
+                residual_cents,
+                reason,
+            } => {
+                format!(
+                    "adjudicated (residual {}: {reason})",
+                    money(*residual_cents)
+                )
             }
             Verdict::Unexplained { residual_cents, .. } => {
                 format!("UNEXPLAINED (residual {})", money(*residual_cents))

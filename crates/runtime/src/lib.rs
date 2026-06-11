@@ -52,23 +52,24 @@ pub mod testkit;
 
 // Re-exports of the public surface the entry points (`tui`, `summary`, `import`)
 // consume.
+pub use adapters::{ConfigSheetsAdapter, HistorySheetsAdapter, ViewSheetsAdapter};
+pub use boot::Boot;
+pub use cache::{
+    classify_divergence, detect_and_rebuild, detect_divergence, Divergence, RebuildStrategy,
+};
 pub use cycle::{
     load_and_run_cycle, load_run_and_capture, load_run_and_publish, per_symbol_freshness,
     reduce_trading_day_key, replay_with_cached_marks, run_cycle, run_cycle_publishing,
-    CapturedCycle, CycleError, CycleOutcome, MarksCache, PublishedCycle, Replayed,
-    SymbolFreshness,
+    CapturedCycle, CycleError, CycleOutcome, MarksCache, PublishedCycle, Replayed, SymbolFreshness,
 };
+pub use eventid::{assign_ledger_event_id, assign_tax_event_id, cross_tab_event_ids};
+pub use history::{capture_cycle, capture_with_retry, CaptureOutcome};
 pub use lock::{
     AdvisoryLock, Clock, Holder, LockHandle, LockOutcome, ManualClock, StoreLockAdapter,
     SystemClock, DEFAULT_TTL_SECS, LOCKFILE_NAME,
 };
-pub use adapters::{ConfigSheetsAdapter, HistorySheetsAdapter, ViewSheetsAdapter};
+pub use revalidate::{revalidate_ledger, revalidate_tax, RevalidateError};
 pub use sheets::{
     run_with_retry, BackoffPolicy, GoogleSheetsApi, Grid, SheetsApi, SheetsError,
     StoreSheetsAdapter,
 };
-pub use boot::Boot;
-pub use cache::{classify_divergence, detect_and_rebuild, detect_divergence, Divergence, RebuildStrategy};
-pub use eventid::{assign_ledger_event_id, assign_tax_event_id, cross_tab_event_ids};
-pub use history::{capture_cycle, capture_with_retry, CaptureOutcome};
-pub use revalidate::{revalidate_ledger, revalidate_tax, RevalidateError};

@@ -12,7 +12,10 @@ use runtime::auth::{AccessToken, AuthError, TokenCache};
 
 /// A token whose margined expiry is `expires_at` epoch-seconds.
 fn token(bearer: &str, expires_at: u64) -> AccessToken {
-    AccessToken { bearer: bearer.to_string(), expires_at_secs: expires_at }
+    AccessToken {
+        bearer: bearer.to_string(),
+        expires_at_secs: expires_at,
+    }
 }
 
 // @spec RUNTIME-SHEETS-005, RUNTIME-SHEETS-003
@@ -42,8 +45,15 @@ fn freshness_is_re_evaluated_per_call_and_a_fresh_token_short_circuits() {
             Ok(token("should-not-mint", 9_999))
         })
         .expect("reuse");
-    assert_eq!(b2, "fresh", "the cached fresh token is reused, not re-minted");
-    assert_eq!(mints.load(Ordering::SeqCst), 1, "a fresh token short-circuits the mint");
+    assert_eq!(
+        b2, "fresh",
+        "the cached fresh token is reused, not re-minted"
+    );
+    assert_eq!(
+        mints.load(Ordering::SeqCst),
+        1,
+        "a fresh token short-circuits the mint"
+    );
 }
 
 // @spec RUNTIME-SHEETS-005, RUNTIME-SHEETS-004
@@ -72,8 +82,15 @@ fn a_token_lapsing_mid_storm_is_re_minted_before_the_next_attempt() {
             Ok(token("second", 3_500))
         })
         .expect("re-mint after lapse");
-    assert_eq!(bearer, "second", "the lapsed token was re-minted before the attempt");
-    assert_eq!(mints.load(Ordering::SeqCst), 2, "exactly one re-mint on lapse");
+    assert_eq!(
+        bearer, "second",
+        "the lapsed token was re-minted before the attempt"
+    );
+    assert_eq!(
+        mints.load(Ordering::SeqCst),
+        2,
+        "exactly one re-mint on lapse"
+    );
 }
 
 // @spec RUNTIME-SHEETS-005
@@ -115,9 +132,16 @@ fn concurrent_refreshers_are_coalesced_to_a_single_in_flight_re_mint() {
 
     let bearers: Vec<String> = handles.into_iter().map(|h| h.join().unwrap()).collect();
     // Every caller got the SAME coalesced token.
-    assert!(bearers.iter().all(|b| b == "coalesced"), "all callers reuse the one minted token");
+    assert!(
+        bearers.iter().all(|b| b == "coalesced"),
+        "all callers reuse the one minted token"
+    );
     // And exactly ONE re-mint ran — no thundering herd. (RUNTIME-SHEETS-005)
-    assert_eq!(mints.load(Ordering::SeqCst), 1, "a retry storm triggers at most one in-flight re-mint");
+    assert_eq!(
+        mints.load(Ordering::SeqCst),
+        1,
+        "a retry storm triggers at most one in-flight re-mint"
+    );
 }
 
 // @spec RUNTIME-SHEETS-005
@@ -130,10 +154,18 @@ fn a_mint_failure_is_surfaced_and_clears_the_in_flight_gate_for_a_retry() {
 
     // First attempt: the mint fails.
     let err = cache.fresh_bearer(1_000, || Err(AuthError::TokenExchangeFailed("boom".into())));
-    assert!(matches!(err, Err(AuthError::TokenExchangeFailed(_))), "a mint failure surfaces");
+    assert!(
+        matches!(err, Err(AuthError::TokenExchangeFailed(_))),
+        "a mint failure surfaces"
+    );
 
     // The in-flight gate was cleared: a subsequent attempt can mint successfully.
-    let ok = cache.fresh_bearer(1_000, || Ok(token("recovered", 9_999))).expect("retry mints");
-    assert_eq!(ok, "recovered", "the next retry can re-mint (the gate was cleared)");
+    let ok = cache
+        .fresh_bearer(1_000, || Ok(token("recovered", 9_999)))
+        .expect("retry mints");
+    assert_eq!(
+        ok, "recovered",
+        "the next retry can re-mint (the gate was cleared)"
+    );
     assert_eq!(cache.cached_bearer(1_000), Some("recovered".to_string()));
 }

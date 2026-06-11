@@ -55,7 +55,10 @@ impl<A: SheetsApi> HistorySheetsAdapter<A> {
     /// Build the adapter over a low-level Sheets API client and a History tab name.
     /// (RUNTIME-SHEETS-002)
     pub fn new(api: A, tab: impl Into<String>) -> Self {
-        HistorySheetsAdapter { api, tab: tab.into() }
+        HistorySheetsAdapter {
+            api,
+            tab: tab.into(),
+        }
     }
 
     /// Borrow the underlying low-level API (diagnostics / tests).
@@ -92,7 +95,8 @@ impl<A: SheetsApi> reports::HistoryClient for HistorySheetsAdapter<A> {
             if cells.iter().all(|c| c.is_empty()) {
                 continue; // a blank residual row is not a History row
             }
-            let row = history_row_from_cells(&cells).ok_or(reports::HistoryError::UnparseableRow)?;
+            let row =
+                history_row_from_cells(&cells).ok_or(reports::HistoryError::UnparseableRow)?;
             out.push(row);
         }
         Ok(out)
@@ -180,7 +184,10 @@ impl<A: SheetsApi> ViewSheetsAdapter<A> {
     /// Build the adapter over a low-level Sheets API client and the Positions tab
     /// name (the marks read-back source). (RUNTIME-SHEETS-002)
     pub fn new(api: A, positions_tab: impl Into<String>) -> Self {
-        ViewSheetsAdapter { api, positions_tab: positions_tab.into() }
+        ViewSheetsAdapter {
+            api,
+            positions_tab: positions_tab.into(),
+        }
     }
 
     /// Borrow the underlying low-level API (diagnostics / tests).
@@ -195,7 +202,10 @@ impl<A: SheetsApi> ViewSheetsAdapter<A> {
 }
 
 impl<A: SheetsApi> sheets_view::SheetsViewClient for ViewSheetsAdapter<A> {
-    fn batch_update_view(&mut self, tab: &sheets_view::ViewTab) -> Result<(), sheets_view::ViewError> {
+    fn batch_update_view(
+        &mut self,
+        tab: &sheets_view::ViewTab,
+    ) -> Result<(), sheets_view::ViewError> {
         // Full-tab atomic batchUpdate + tail-truncate: write the data rows from the
         // anchored start row as ONE update_range. The frozen header (row 1) is never
         // rewritten here. The cell typing (Cell::Value vs Cell::Formula) is the
@@ -242,7 +252,11 @@ impl<A: SheetsApi> sheets_view::SheetsViewClient for ViewSheetsAdapter<A> {
         // Positions header order (Symbol col 0, Price col 4, with the companion quote
         // date carried alongside); a non-numeric Price cell is a transient/permanent
         // reading the settle loop interprets.
-        let range = format!("'{}'!A{}:Z", self.positions_tab, sheets_view::DATA_START_ROW);
+        let range = format!(
+            "'{}'!A{}:Z",
+            self.positions_tab,
+            sheets_view::DATA_START_ROW
+        );
         // A Positions tab that does not exist yet (a fresh workbook before the
         // first republish bootstraps it) holds no marks: an empty pass.
         let grid = match self.api.read_range(&range) {
@@ -261,7 +275,11 @@ impl<A: SheetsApi> sheets_view::SheetsViewClient for ViewSheetsAdapter<A> {
         Ok(pass)
     }
 
-    fn write_stale_banner(&mut self, tab: &str, banner: &str) -> Result<(), sheets_view::ViewError> {
+    fn write_stale_banner(
+        &mut self,
+        tab: &str,
+        banner: &str,
+    ) -> Result<(), sheets_view::ViewError> {
         // The best-effort single-cell STALE banner (SHEET-PUB-003): one cell write at
         // the tab's banner anchor through the primitive. Best-effort: a failure is
         // surfaced so the caller falls back to the TUI as the staleness surface.
@@ -300,7 +318,10 @@ fn price_reading_from_cells(cells: &[String]) -> sheets_view::PriceReading {
                 .get(QUOTE_DATE_COL)
                 .and_then(|s| s.trim().parse::<i32>().ok())
                 .unwrap_or(0);
-            PriceReading::Numeric { price_usd, quote_date: pt_core::Date(quote_days) }
+            PriceReading::Numeric {
+                price_usd,
+                quote_date: pt_core::Date(quote_days),
+            }
         }
         Err(_) => PriceReading::Permanent,
     }
@@ -334,7 +355,11 @@ impl<A: SheetsApi> ConfigSheetsAdapter<A> {
     /// Build the adapter over a low-level Sheets API client, the config tab name,
     /// and the local-file settings. (RUNTIME-SHEETS-002)
     pub fn new(api: A, tab: impl Into<String>, settings: Option<config::Settings>) -> Self {
-        ConfigSheetsAdapter { api, tab: tab.into(), settings }
+        ConfigSheetsAdapter {
+            api,
+            tab: tab.into(),
+            settings,
+        }
     }
 
     /// Borrow the underlying low-level API (diagnostics / tests).
@@ -496,7 +521,9 @@ fn encode_config(data: &config::ConfigData) -> String {
 }
 
 fn decode_config(s: &str) -> Option<config::ConfigData> {
-    serde_json::from_str::<ConfigWire>(s).ok().and_then(|w| w.into_data())
+    serde_json::from_str::<ConfigWire>(s)
+        .ok()
+        .and_then(|w| w.into_data())
 }
 
 /// A serde wire form of `SeriesPoint` (it has no serde derive — the trust seam is
@@ -632,7 +659,11 @@ struct BracketSetWire {
 
 fn bracket_set_wire(s: &config::BracketSet) -> BracketSetWire {
     BracketSetWire {
-        rows: s.rows.iter().map(|r| (r.lower_threshold_cents.0, r.rate_ppm.0)).collect(),
+        rows: s
+            .rows
+            .iter()
+            .map(|r| (r.lower_threshold_cents.0, r.rate_ppm.0))
+            .collect(),
         last_verified_days: s.last_verified.0,
         source_note: s.source_note.clone(),
     }

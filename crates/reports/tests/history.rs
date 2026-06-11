@@ -7,8 +7,8 @@ use common::*;
 use pt_core::Date;
 use reports::testkit::{InMemoryHistory, NoopLock};
 use reports::{
-    append_snapshot, build_series_point, point_checksum, read_history,
-    read_series_cache_checked, HistoryError, HistoryRow, SeriesPoint, TradingDayKey,
+    append_snapshot, build_series_point, point_checksum, read_history, read_series_cache_checked,
+    HistoryError, HistoryRow, SeriesPoint, TradingDayKey,
 };
 
 /// Build a series point for the small portfolio at a trading-day key.
@@ -18,12 +18,23 @@ fn point_at(key_day: i32, amzn_cents: i64) -> SeriesPoint {
     let as_of = Date(19_500);
     let ctx = ctx(2022);
     let est = estimates(&snap, as_of, &ctx);
-    build_series_point(&snap, &marks, &est, TradingDayKey(Date(key_day)), 1_700_000_000, Date(19_500))
+    build_series_point(
+        &snap,
+        &marks,
+        &est,
+        TradingDayKey(Date(key_day)),
+        1_700_000_000,
+        Date(19_500),
+    )
 }
 
 /// A well-formed History row for a point (checksum computed honestly).
 fn row(point: &SeriesPoint) -> HistoryRow {
-    HistoryRow { key: point.key, point: point.clone(), checksum: point_checksum(point) }
+    HistoryRow {
+        key: point.key,
+        point: point.clone(),
+        checksum: point_checksum(point),
+    }
 }
 
 // @spec REPORT-HIST-001
@@ -37,9 +48,14 @@ fn append_snapshot_writes_via_lock_and_read_back_verifies() {
 
     // The advisory write-lock was acquired INSIDE the primitive (a TUI and a cron
     // capture cannot race).
-    assert!(lock.acquire_count() >= 1, "append_snapshot must acquire the lock");
+    assert!(
+        lock.acquire_count() >= 1,
+        "append_snapshot must acquire the lock"
+    );
     // The point landed durably and reads back equal.
-    let stored = client.row_for(TradingDayKey(Date(19_490))).expect("row present");
+    let stored = client
+        .row_for(TradingDayKey(Date(19_490)))
+        .expect("row present");
     assert_eq!(stored.point, p);
 }
 
@@ -85,7 +101,11 @@ fn capture_for_existing_trading_day_overwrites_last_wins_no_duplicate() {
     let p2 = point_at(19_490, 215_00);
     append_snapshot(&mut client, &lock, &p2).unwrap();
 
-    assert_eq!(client.row_count(), 1, "re-run never duplicates the trading day");
+    assert_eq!(
+        client.row_count(),
+        1,
+        "re-run never duplicates the trading day"
+    );
     let stored = client.row_for(TradingDayKey(Date(19_490))).unwrap();
     assert_eq!(stored.point, p2, "last-wins by trading-day key");
 

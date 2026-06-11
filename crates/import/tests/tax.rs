@@ -15,8 +15,14 @@ fn each_historical_sell_is_stamped_from_residency_on_sale_date() {
     // A sale in 2021 over an NJ-then-DC timeline (DC from 2018) stamps DC; a sale
     // in 2012 stamps NJ.
     let tl = nj_then_dc();
-    assert_eq!(stamp_residency(&tl, date(2021, 6, 1)), Some("DC".to_string()));
-    assert_eq!(stamp_residency(&tl, date(2012, 6, 1)), Some("NJ".to_string()));
+    assert_eq!(
+        stamp_residency(&tl, date(2021, 6, 1)),
+        Some("DC".to_string())
+    );
+    assert_eq!(
+        stamp_residency(&tl, date(2012, 6, 1)),
+        Some("NJ".to_string())
+    );
 }
 
 // @spec IMPORT-TAX-001
@@ -30,10 +36,16 @@ fn reconstructed_sell_carries_the_residency_stamp() {
     wb.sales.push(goog_sale()); // 2021-06-01 → DC
 
     let recon = reconstruct(&wb).expect("reconstructs");
-    let sell = recon.ledger.iter().find_map(|e| match &e.event.kind {
-        LedgerEventKind::Sell { accrues_to_state, .. } => Some(accrues_to_state.clone()),
-        _ => None,
-    }).expect("a Sell event");
+    let sell = recon
+        .ledger
+        .iter()
+        .find_map(|e| match &e.event.kind {
+            LedgerEventKind::Sell {
+                accrues_to_state, ..
+            } => Some(accrues_to_state.clone()),
+            _ => None,
+        })
+        .expect("a Sell event");
     assert_eq!(sell, Some("DC".to_string()), "the 2021 sale stamps DC");
 }
 
@@ -51,9 +63,15 @@ fn owner_asserted_founding_state_is_recorded_when_oldest_sale_predates_recall() 
     };
     wb.actions.push(goog_buy());
     wb.sales.push(goog_sale()); // 2021-06-01 ≥ founding → DC
-    assert!(wb.founding_residency_asserted, "the founding state is flagged as asserted");
+    assert!(
+        wb.founding_residency_asserted,
+        "the founding state is flagged as asserted"
+    );
     let recon = reconstruct(&wb).expect("reconstructs over an asserted founding entry");
-    assert!(recon.ledger.iter().any(|e| matches!(e.event.kind, LedgerEventKind::Sell { .. })));
+    assert!(recon
+        .ledger
+        .iter()
+        .any(|e| matches!(e.event.kind, LedgerEventKind::Sell { .. })));
 }
 
 // @spec IMPORT-TAX-001
@@ -67,9 +85,28 @@ fn a_sale_predating_the_founding_residency_entry_is_a_hard_error() {
         residency: founding_residency("DC", date(2018, 1, 1)),
         ..LegacyWorkbook::default()
     };
-    wb.actions.push(buy_row("Stock Actions", 2, "B1", "GOOG", 100, "10.00", "0", date(2015, 1, 1), PLATFORM));
+    wb.actions.push(buy_row(
+        "Stock Actions",
+        2,
+        "B1",
+        "GOOG",
+        100,
+        "10.00",
+        "0",
+        date(2015, 1, 1),
+        PLATFORM,
+    ));
     wb.sales.push(import::testkit::sale_row(
-        "Stock Sales", 2, "S1", "B1", "GOOG", 10, "30.00", "0", date(2016, 6, 1), PLATFORM,
+        "Stock Sales",
+        2,
+        "S1",
+        "B1",
+        "GOOG",
+        10,
+        "30.00",
+        "0",
+        date(2016, 6, 1),
+        PLATFORM,
     ));
 
     match reconstruct(&wb) {
@@ -89,16 +126,41 @@ fn an_early_buy_with_later_sales_is_not_blocked_residency_keys_on_the_oldest_sal
         residency: founding_residency("DC", date(2018, 1, 1)),
         ..LegacyWorkbook::default()
     };
-    wb.actions.push(buy_row("Stock Actions", 2, "B1", "GOOG", 100, "10.00", "0", date(2016, 1, 1), PLATFORM));
+    wb.actions.push(buy_row(
+        "Stock Actions",
+        2,
+        "B1",
+        "GOOG",
+        100,
+        "10.00",
+        "0",
+        date(2016, 1, 1),
+        PLATFORM,
+    ));
     wb.sales.push(import::testkit::sale_row(
-        "Stock Sales", 2, "S1", "B1", "GOOG", 10, "30.00", "0", date(2020, 6, 1), PLATFORM,
+        "Stock Sales",
+        2,
+        "S1",
+        "B1",
+        "GOOG",
+        10,
+        "30.00",
+        "0",
+        date(2020, 6, 1),
+        PLATFORM,
     ));
 
     let recon = reconstruct(&wb).expect("an early Buy with on-timeline Sells reconstructs");
-    let stamp = recon.ledger.iter().find_map(|e| match &e.event.kind {
-        LedgerEventKind::Sell { accrues_to_state, .. } => Some(accrues_to_state.clone()),
-        _ => None,
-    }).expect("a Sell");
+    let stamp = recon
+        .ledger
+        .iter()
+        .find_map(|e| match &e.event.kind {
+            LedgerEventKind::Sell {
+                accrues_to_state, ..
+            } => Some(accrues_to_state.clone()),
+            _ => None,
+        })
+        .expect("a Sell");
     assert_eq!(stamp, Some("DC".to_string()), "the 2020 sale stamps DC");
 }
 
@@ -119,15 +181,38 @@ fn closed_year_seeds_one_combined_migration_accrual_via_override_allocate_move_p
         matches!(k, TaxEventKind::SeedMigration { jurisdiction: config::Jurisdiction::State(s), tax_year, .. }
             if s == "DC" && tax_year.0 == 2023)
     }).collect();
-    assert_eq!(seeds.len(), 1, "a single combined migration seed for DC 2023");
-    if let TaxEventKind::SeedMigration { applied_amount_cents, .. } = seeds[0] {
-        assert_eq!(*applied_amount_cents, Cents(720_000), "set to the legacy actual");
+    assert_eq!(
+        seeds.len(),
+        1,
+        "a single combined migration seed for DC 2023"
+    );
+    if let TaxEventKind::SeedMigration {
+        applied_amount_cents,
+        ..
+    } = seeds[0]
+    {
+        assert_eq!(
+            *applied_amount_cents,
+            Cents(720_000),
+            "set to the legacy actual"
+        );
     }
 
     // The full lifecycle is present: Allocate, Move, Pay for the same key.
-    assert!(kinds.iter().any(|k| matches!(k, TaxEventKind::Allocate { .. })), "Allocate present");
-    assert!(kinds.iter().any(|k| matches!(k, TaxEventKind::Move { .. })), "Move present");
-    assert!(kinds.iter().any(|k| matches!(k, TaxEventKind::Pay { .. })), "Pay present");
+    assert!(
+        kinds
+            .iter()
+            .any(|k| matches!(k, TaxEventKind::Allocate { .. })),
+        "Allocate present"
+    );
+    assert!(
+        kinds.iter().any(|k| matches!(k, TaxEventKind::Move { .. })),
+        "Move present"
+    );
+    assert!(
+        kinds.iter().any(|k| matches!(k, TaxEventKind::Pay { .. })),
+        "Pay present"
+    );
 
     // And the lifecycle drives the migration accrual to Paid (outstanding = 0):
     // build the migration AccrualKey and fold the events via `tax`.
@@ -138,8 +223,14 @@ fn closed_year_seeds_one_combined_migration_accrual_via_override_allocate_move_p
         tax_year: config::TaxYear(2023),
     };
     let accruals = tax::compute_accruals(&[], &recon.tax, &dc_2023_ctx());
-    let migration = accruals.iter().find(|a| a.key == key).expect("the migration accrual");
-    assert!(matches!(migration.state, AccrualState::Paid { .. }), "driven to Paid");
+    let migration = accruals
+        .iter()
+        .find(|a| a.key == key)
+        .expect("the migration accrual");
+    assert!(
+        matches!(migration.state, AccrualState::Paid { .. }),
+        "driven to Paid"
+    );
     assert_eq!(migration.applied_cents, Some(Cents(720_000)));
 }
 
@@ -185,7 +276,10 @@ fn dc_2023_ctx() -> tax::TaxContext {
     use config::{BracketRow, BracketSet, BracketState, Niit, Ppm};
     use pt_core::Date;
     let flat = |rate: i64| BracketSet {
-        rows: vec![BracketRow { lower_threshold_cents: Cents(0), rate_ppm: Ppm(rate) }],
+        rows: vec![BracketRow {
+            lower_threshold_cents: Cents(0),
+            rate_ppm: Ppm(rate),
+        }],
         last_verified: Date(0),
         source_note: "test".to_string(),
     };
@@ -193,7 +287,10 @@ fn dc_2023_ctx() -> tax::TaxContext {
         jurisdiction: config::Jurisdiction::Federal,
         ordinary: Some(flat(370_000)),
         federal_long_term: Some(flat(200_000)),
-        niit: Some(Niit { rate_ppm: Ppm(38_000), magi_threshold_cents: Cents(0) }),
+        niit: Some(Niit {
+            rate_ppm: Ppm(38_000),
+            magi_threshold_cents: Cents(0),
+        }),
         ordinary_income_cents: Cents(0),
         state: BracketState::Verified,
     };

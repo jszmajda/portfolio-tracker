@@ -122,7 +122,9 @@ pub struct ManualClock {
 impl ManualClock {
     /// A manual clock starting at `start` epoch-seconds.
     pub fn new(start: u64) -> Self {
-        ManualClock { now: Arc::new(Mutex::new(start)) }
+        ManualClock {
+            now: Arc::new(Mutex::new(start)),
+        }
     }
 
     /// Advance the clock by `secs` (so a held lock can be aged past its TTL).
@@ -190,8 +192,18 @@ impl AdvisoryLock<SystemClock> {
 impl<C: Clock> AdvisoryLock<C> {
     /// Construct over an explicit lockfile path, TTL, and clock (the testable
     /// constructor). (RUNTIME-LOCK-001)
-    pub fn with_clock(path: impl Into<PathBuf>, holder: impl Into<Holder>, ttl_secs: u64, clock: C) -> Self {
-        AdvisoryLock { path: path.into(), holder: holder.into(), ttl_secs, clock }
+    pub fn with_clock(
+        path: impl Into<PathBuf>,
+        holder: impl Into<Holder>,
+        ttl_secs: u64,
+        clock: C,
+    ) -> Self {
+        AdvisoryLock {
+            path: path.into(),
+            holder: holder.into(),
+            ttl_secs,
+            clock,
+        }
     }
 
     /// This lock's holder identity.

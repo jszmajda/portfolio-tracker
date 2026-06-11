@@ -94,7 +94,9 @@ pub struct Row {
 impl Row {
     /// An empty row.
     pub fn new() -> Self {
-        Row { cells: BTreeMap::new() }
+        Row {
+            cells: BTreeMap::new(),
+        }
     }
 
     /// Set a column's cell value.
@@ -262,7 +264,11 @@ pub struct Store<S: SheetsClient, L: Lock, C: Cache> {
 impl<S: SheetsClient, L: Lock, C: Cache> Store<S, L, C> {
     /// Construct a store over its three collaborators.
     pub fn new(sheets: S, lock: L, cache: C) -> Self {
-        Store { sheets, lock, cache }
+        Store {
+            sheets,
+            lock,
+            cache,
+        }
     }
 
     /// Borrow the cache (tests assert on the mirror).
@@ -396,7 +402,11 @@ impl<S: SheetsClient, L: Lock, C: Cache> Store<S, L, C> {
     fn find_row_by_id_global(&self, id: &str) -> Result<Option<(Tab, Row)>, StoreError> {
         for tab in [Tab::Ledger, Tab::Tax] {
             // A missing tab holds no rows (cold start, STORE-LOAD-007).
-            if let Some(row) = self.read_rows_cold(tab)?.into_iter().find(|r| r.get("EventId") == id) {
+            if let Some(row) = self
+                .read_rows_cold(tab)?
+                .into_iter()
+                .find(|r| r.get("EventId") == id)
+            {
                 return Ok(Some((tab, row)));
             }
         }
@@ -479,7 +489,11 @@ impl<S: SheetsClient, L: Lock, C: Cache> Store<S, L, C> {
         let logs = self.load_logs()?;
         self.rebuild_cache(&logs)?;
 
-        Ok(AppendOutcome { event_id: stamped.id, seq, idempotent_skip: false })
+        Ok(AppendOutcome {
+            event_id: stamped.id,
+            seq,
+            idempotent_skip: false,
+        })
     }
 
     /// Append a single, kernel-validated `TaxEvent`; same path as
@@ -507,14 +521,21 @@ impl<S: SheetsClient, L: Lock, C: Cache> Store<S, L, C> {
         }
 
         let seq = Seq(self.live_max_seq(Tab::Tax)? + 1);
-        let stamped = TaxEvent { seq, kind: event.kind.clone() };
+        let stamped = TaxEvent {
+            seq,
+            kind: event.kind.clone(),
+        };
         let row = serde_rows::tax_to_row(&stamped, &event_id);
         self.append_row_bootstrapping(Tab::Tax, &row)?;
         self.read_back_verify(Tab::Tax, &event_id, &row)?;
         let logs = self.load_logs()?;
         self.rebuild_cache(&logs)?;
 
-        Ok(AppendOutcome { event_id, seq, idempotent_skip: false })
+        Ok(AppendOutcome {
+            event_id,
+            seq,
+            idempotent_skip: false,
+        })
     }
 
     /// Append a contiguous BLOCK of `LedgerEvent`s (e.g. a Vest plus its
@@ -556,7 +577,11 @@ impl<S: SheetsClient, L: Lock, C: Cache> Store<S, L, C> {
             let row = serde_rows::ledger_to_row(&stamped);
             self.append_row_bootstrapping(Tab::Ledger, &row)?;
             self.read_back_verify(Tab::Ledger, &stamped.id, &row)?;
-            outs.push(AppendOutcome { event_id: stamped.id, seq, idempotent_skip: false });
+            outs.push(AppendOutcome {
+                event_id: stamped.id,
+                seq,
+                idempotent_skip: false,
+            });
             next += 1;
         }
 
@@ -598,7 +623,11 @@ impl<S: SheetsClient, L: Lock, C: Cache> Store<S, L, C> {
         candidate.cells.remove("Seq");
         stored_norm.cells.remove("Seq");
         if candidate == stored_norm {
-            Ok(AppendOutcome { event_id: event.id.clone(), seq: stored_seq, idempotent_skip: true })
+            Ok(AppendOutcome {
+                event_id: event.id.clone(),
+                seq: stored_seq,
+                idempotent_skip: true,
+            })
         } else {
             Err(StoreError::WriteVerifyMismatch)
         }
@@ -614,7 +643,10 @@ impl<S: SheetsClient, L: Lock, C: Cache> Store<S, L, C> {
     ) -> Result<AppendOutcome, StoreError> {
         // Deserialize once (rejects a malformed stored row, and yields its Seq).
         let stored_seq = serde_rows::row_to_tax(stored)?.0.seq;
-        let stamped = TaxEvent { seq: stored_seq, kind: event.kind.clone() };
+        let stamped = TaxEvent {
+            seq: stored_seq,
+            kind: event.kind.clone(),
+        };
         let mut candidate = serde_rows::tax_to_row(&stamped, &event_id.to_string());
         let mut stored_norm = stored.clone();
         candidate.cells.remove("Seq");
@@ -675,7 +707,10 @@ impl<S: SheetsClient, L: Lock, C: Cache> Store<S, L, C> {
         let ledger_now = Fingerprint::content_hash_ledger(&loaded.logs.ledger);
         let tax_now = Fingerprint::content_hash_tax(&loaded.tax_pairs());
 
-        let stored_matches = match (self.cache.ledger_fingerprint(), self.cache.tax_fingerprint()) {
+        let stored_matches = match (
+            self.cache.ledger_fingerprint(),
+            self.cache.tax_fingerprint(),
+        ) {
             (Some(l), Some(t)) => l.content_hash == ledger_now && t.content_hash == tax_now,
             _ => false, // a cold/partial cache never "matches" — force a rebuild.
         };
@@ -768,12 +803,18 @@ fn with_ledger_seq(event: &LedgerEvent, seq: Seq) -> LedgerEvent {
 /// @spec STORE-SCHEMA-004, STORE-WRITE-008
 pub fn tax_event_id(event: &TaxEvent) -> EventId {
     // Canonical content projection: the kind/field cells, id- and seq-independent.
-    let row = serde_rows::tax_to_row(&TaxEvent { seq: Seq(0), kind: event.kind.clone() }, &String::new());
+    let row = serde_rows::tax_to_row(
+        &TaxEvent {
+            seq: Seq(0),
+            kind: event.kind.clone(),
+        },
+        &String::new(),
+    );
     let mut cells = row.to_cells(Tab::Tax);
     // Drop the Seq + EventId cells so the id is purely content-addressed.
     cells[0] = String::new(); // Seq column (header order: Seq is index 0)
     cells[1] = String::new(); // EventId column (index 1)
-    // A single unit-separator-joined byte stream, then a fixed FNV-1a.
+                              // A single unit-separator-joined byte stream, then a fixed FNV-1a.
     let mut bytes: Vec<u8> = Vec::new();
     for (i, c) in cells.iter().enumerate() {
         if i > 0 {

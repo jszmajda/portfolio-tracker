@@ -91,7 +91,10 @@ fn each_rule_set_records_last_verified_and_source_note() {
     assert_eq!(r.federal_ordinary.last_verified, Date(19_700));
     assert_eq!(r.federal_ordinary.source_note, "test source");
     assert_eq!(r.federal_long_term.last_verified, Date(19_700));
-    assert_eq!(r.state_ordinary.get("DC").unwrap().last_verified, Date(19_700));
+    assert_eq!(
+        r.state_ordinary.get("DC").unwrap().last_verified,
+        Date(19_700)
+    );
 }
 
 // @spec CONFIG-TAXRULES-005
@@ -107,11 +110,17 @@ fn records_one_filing_status_per_year() {
 
     let data = store.load().expect("load");
     assert_eq!(
-        data.rules_by_year.get(&TaxYear(2024)).unwrap().filing_status,
+        data.rules_by_year
+            .get(&TaxYear(2024))
+            .unwrap()
+            .filing_status,
         FilingStatus::Single,
     );
     assert_eq!(
-        data.rules_by_year.get(&TaxYear(2025)).unwrap().filing_status,
+        data.rules_by_year
+            .get(&TaxYear(2025))
+            .unwrap()
+            .filing_status,
         FilingStatus::MarriedFilingJointly,
     );
 }
@@ -146,7 +155,8 @@ fn populated_store_round_trips_full_config_data() {
     let loaded = store.load().expect("load populated");
     assert_eq!(loaded.de_minimis, de_minimis_dollar());
     assert_eq!(
-        config::resolve_brackets(&loaded.rules_by_year, &Jurisdiction::Federal, TaxYear(2025)).state,
+        config::resolve_brackets(&loaded.rules_by_year, &Jurisdiction::Federal, TaxYear(2025))
+            .state,
         BracketState::Verified,
     );
 }

@@ -43,8 +43,20 @@ fn runtime_loads_the_event_log_via_store_then_replays_and_reads_marks_back() {
     let settle = SettleConfig { max_polls: 4 };
     let client = InMemorySheetsView::new();
     client.set_prices(pass(&[
-        ("AMZN", PriceReading::Numeric { price_usd: 170.0, quote_date: Date(19_180) }),
-        ("GOOG", PriceReading::Numeric { price_usd: 125.0, quote_date: Date(19_181) }),
+        (
+            "AMZN",
+            PriceReading::Numeric {
+                price_usd: 170.0,
+                quote_date: Date(19_180),
+            },
+        ),
+        (
+            "GOOG",
+            PriceReading::Numeric {
+                price_usd: 125.0,
+                quote_date: Date(19_181),
+            },
+        ),
     ]));
 
     // runtime loads via store, then runs the full cycle.
@@ -53,9 +65,18 @@ fn runtime_loads_the_event_log_via_store_then_replays_and_reads_marks_back() {
 
     // The Snapshot replayed from the LOADED log: AMZN open (3 shares), the GOOG sale
     // realized a gain (so accruals exist), and this run's marks were read back.
-    assert!(out.snapshot.positions.contains_key("AMZN"), "the loaded log replayed");
-    assert!(!out.accruals.is_empty(), "tax replayed over the loaded realized gains");
-    assert_eq!(out.marks.marks.get("AMZN").unwrap().price_cents, Cents(170_00));
+    assert!(
+        out.snapshot.positions.contains_key("AMZN"),
+        "the loaded log replayed"
+    );
+    assert!(
+        !out.accruals.is_empty(),
+        "tax replayed over the loaded realized gains"
+    );
+    assert_eq!(
+        out.marks.marks.get("AMZN").unwrap().price_cents,
+        Cents(170_00)
+    );
 
     // A store load failure surfaces as CycleError::Load (the workbook unreachable).
     store.sheets_mut().set_unreachable(true);
@@ -76,24 +97,52 @@ fn runtime_is_the_replay_caller_holding_snapshot_accruals_and_estimates() {
 
     // The prior cycle's cached marks (AMZN priced; GOOG priced).
     let mut prior = MarksCache::new();
-    prior.marks.insert("AMZN".to_string(), Mark { price_cents: Cents(160_00), quote_date: Date(19_150) });
-    prior.marks.insert("GOOG".to_string(), Mark { price_cents: Cents(120_00), quote_date: Date(19_150) });
+    prior.marks.insert(
+        "AMZN".to_string(),
+        Mark {
+            price_cents: Cents(160_00),
+            quote_date: Date(19_150),
+        },
+    );
+    prior.marks.insert(
+        "GOOG".to_string(),
+        Mark {
+            price_cents: Cents(120_00),
+            quote_date: Date(19_150),
+        },
+    );
 
     let replayed = replay_with_cached_marks(&logs, &prior, &ctx, AS_OF);
 
     // The Snapshot replayed: AMZN (3 shares open), GOOG (1 share open after the sale).
-    let amzn = replayed.snapshot.positions.get("AMZN").expect("AMZN position");
+    let amzn = replayed
+        .snapshot
+        .positions
+        .get("AMZN")
+        .expect("AMZN position");
     assert_eq!(amzn.total_qty, pt_core::MicroShares(3_000_000));
     // The injected mark valued AMZN's unrealized (160 - 150 = 10/share over 3 shares).
     assert_eq!(amzn.unrealized_cents, Some(Cents(30_00)));
 
     // The realized GOOG sale produced a realized gain → tax accruals exist.
-    assert!(!replayed.snapshot.realized_gains.is_empty(), "the GOOG sale realizes a gain");
-    assert!(!replayed.accruals.is_empty(), "tax holds accruals over the realized gains");
-    assert!(!replayed.annual_rows.is_empty(), "tax holds the annual reserve rows");
+    assert!(
+        !replayed.snapshot.realized_gains.is_empty(),
+        "the GOOG sale realizes a gain"
+    );
+    assert!(
+        !replayed.accruals.is_empty(),
+        "tax holds accruals over the realized gains"
+    );
+    assert!(
+        !replayed.annual_rows.is_empty(),
+        "tax holds the annual reserve rows"
+    );
 
     // The per-symbol unrealized estimate is held for the open positions.
-    assert!(replayed.estimates.contains_key("AMZN"), "an unrealized estimate is held per open symbol");
+    assert!(
+        replayed.estimates.contains_key("AMZN"),
+        "an unrealized estimate is held per open symbol"
+    );
 }
 
 // @spec RUNTIME-CYCLE-001
@@ -107,12 +156,27 @@ fn degraded_prior_mark_is_absent_from_injected_replay_never_zero() {
 
     let mut prior = MarksCache::new();
     // Only GOOG priced; AMZN degraded (absent + recorded degraded).
-    prior.marks.insert("GOOG".to_string(), Mark { price_cents: Cents(120_00), quote_date: Date(19_150) });
-    prior.degraded.insert("AMZN".to_string(), DegradeReason::TimedOut);
+    prior.marks.insert(
+        "GOOG".to_string(),
+        Mark {
+            price_cents: Cents(120_00),
+            quote_date: Date(19_150),
+        },
+    );
+    prior
+        .degraded
+        .insert("AMZN".to_string(), DegradeReason::TimedOut);
 
     let replayed = replay_with_cached_marks(&logs, &prior, &ctx, AS_OF);
-    let amzn = replayed.snapshot.positions.get("AMZN").expect("AMZN position");
-    assert_eq!(amzn.unrealized_cents, None, "a degraded symbol is unvalued (None), never zero");
+    let amzn = replayed
+        .snapshot
+        .positions
+        .get("AMZN")
+        .expect("AMZN position");
+    assert_eq!(
+        amzn.unrealized_cents, None,
+        "a degraded symbol is unvalued (None), never zero"
+    );
 }
 
 // @spec RUNTIME-CYCLE-002
@@ -130,15 +194,33 @@ fn marks_read_back_are_cached_and_injected_into_the_next_replay() {
     // Cycle 1: no prior marks; sheets-view reads back AMZN=170, GOOG=125.
     let client = InMemorySheetsView::new();
     client.set_prices(pass(&[
-        ("AMZN", PriceReading::Numeric { price_usd: 170.0, quote_date: Date(19_180) }),
-        ("GOOG", PriceReading::Numeric { price_usd: 125.0, quote_date: Date(19_181) }),
+        (
+            "AMZN",
+            PriceReading::Numeric {
+                price_usd: 170.0,
+                quote_date: Date(19_180),
+            },
+        ),
+        (
+            "GOOG",
+            PriceReading::Numeric {
+                price_usd: 125.0,
+                quote_date: Date(19_181),
+            },
+        ),
     ]));
     let prior = MarksCache::new();
     let out1 = run_cycle(&logs, &prior, &ctx, AS_OF, &client, settle).expect("cycle 1");
 
     // The read-back marks are cached on the outcome.
-    assert_eq!(out1.marks.marks.get("AMZN").unwrap().price_cents, Cents(170_00));
-    assert_eq!(out1.marks.marks.get("GOOG").unwrap().price_cents, Cents(125_00));
+    assert_eq!(
+        out1.marks.marks.get("AMZN").unwrap().price_cents,
+        Cents(170_00)
+    );
+    assert_eq!(
+        out1.marks.marks.get("GOOG").unwrap().price_cents,
+        Cents(125_00)
+    );
 
     // Cycle 2: inject cycle-1's cached marks. AMZN stays TRANSIENT past the window;
     // the injected prior cache carries its 170 mark forward (never a null), while
@@ -146,13 +228,25 @@ fn marks_read_back_are_cached_and_injected_into_the_next_replay() {
     let client2 = InMemorySheetsView::new();
     client2.set_prices(pass(&[
         ("AMZN", PriceReading::Transient),
-        ("GOOG", PriceReading::Numeric { price_usd: 130.0, quote_date: Date(19_190) }),
+        (
+            "GOOG",
+            PriceReading::Numeric {
+                price_usd: 130.0,
+                quote_date: Date(19_190),
+            },
+        ),
     ]));
     let out2 = run_cycle(&logs, &out1.marks, &ctx, AS_OF, &client2, settle).expect("cycle 2");
 
     // AMZN kept cycle-1's injected mark (170, with its quote stamp) — the loop closed.
-    assert_eq!(out2.marks.marks.get("AMZN").unwrap().price_cents, Cents(170_00));
-    assert_eq!(out2.marks.marks.get("AMZN").unwrap().quote_date, Date(19_180));
+    assert_eq!(
+        out2.marks.marks.get("AMZN").unwrap().price_cents,
+        Cents(170_00)
+    );
+    assert_eq!(
+        out2.marks.marks.get("AMZN").unwrap().quote_date,
+        Date(19_180)
+    );
     // The held snapshot is valued at THIS run's cache (RUNTIME-CYCLE-006): AMZN at
     // the carried 170 → (170 − 150) × 3 = 60.00 unrealized.
     let amzn = out2.snapshot.positions.get("AMZN").unwrap();
@@ -162,7 +256,10 @@ fn marks_read_back_are_cached_and_injected_into_the_next_replay() {
         "the transiently-unknown symbol is valued at the carried prior mark"
     );
     // And cycle 2 read back GOOG's NEW mark (130) for cycle 3.
-    assert_eq!(out2.marks.marks.get("GOOG").unwrap().price_cents, Cents(130_00));
+    assert_eq!(
+        out2.marks.marks.get("GOOG").unwrap().price_cents,
+        Cents(130_00)
+    );
 }
 
 // @spec RUNTIME-CYCLE-006
@@ -178,8 +275,20 @@ fn one_shot_run_outcome_is_valued_at_this_runs_read_back_marks() {
     let settle = SettleConfig { max_polls: 4 };
     let client = InMemorySheetsView::new();
     client.set_prices(pass(&[
-        ("AMZN", PriceReading::Numeric { price_usd: 170.0, quote_date: Date(19_180) }),
-        ("GOOG", PriceReading::Numeric { price_usd: 125.0, quote_date: Date(19_181) }),
+        (
+            "AMZN",
+            PriceReading::Numeric {
+                price_usd: 170.0,
+                quote_date: Date(19_180),
+            },
+        ),
+        (
+            "GOOG",
+            PriceReading::Numeric {
+                price_usd: 125.0,
+                quote_date: Date(19_181),
+            },
+        ),
     ]));
 
     let out = run_cycle(&logs, &MarksCache::new(), &ctx, AS_OF, &client, settle).expect("cycle");
@@ -212,13 +321,22 @@ fn offline_read_back_propagates_so_caller_retains_prior_marks() {
     let settle = SettleConfig { max_polls: 4 };
 
     let mut prior = MarksCache::new();
-    prior.marks.insert("AMZN".to_string(), Mark { price_cents: Cents(160_00), quote_date: Date(19_150) });
+    prior.marks.insert(
+        "AMZN".to_string(),
+        Mark {
+            price_cents: Cents(160_00),
+            quote_date: Date(19_150),
+        },
+    );
 
     let client = InMemorySheetsView::new();
     client.set_read_fails(true); // the workbook is unreachable / offline.
 
     let result = run_cycle(&logs, &prior, &ctx, AS_OF, &client, settle);
-    assert!(result.is_err(), "offline read-back propagates; no empty marks set is emitted");
+    assert!(
+        result.is_err(),
+        "offline read-back propagates; no empty marks set is emitted"
+    );
 
     // The caller still holds its prior marks (run_cycle did not consume/clear them),
     // so it can re-inject them next cycle.
@@ -240,22 +358,39 @@ fn a_fully_closed_symbol_is_not_priced_nor_recorded_degraded() {
 
     // Confirm GOOG is in the snapshot at qty 0 (the precondition the bug rode on).
     let replayed = replay_with_cached_marks(&logs, &MarksCache::new(), &ctx, AS_OF);
-    let goog = replayed.snapshot.positions.get("GOOG").expect("GOOG kept in positions");
-    assert_eq!(goog.total_qty, pt_core::MicroShares(0), "GOOG is fully disposed");
+    let goog = replayed
+        .snapshot
+        .positions
+        .get("GOOG")
+        .expect("GOOG kept in positions");
+    assert_eq!(
+        goog.total_qty,
+        pt_core::MicroShares(0),
+        "GOOG is fully disposed"
+    );
 
     // The settle pass prices only AMZN. GOOG is absent from the script entirely; if
     // the cycle erroneously requested GOOG, read_marks would degrade it (TimedOut).
     let client = InMemorySheetsView::new();
     client.set_prices(pass(&[(
         "AMZN",
-        PriceReading::Numeric { price_usd: 170.0, quote_date: Date(19_180) },
+        PriceReading::Numeric {
+            price_usd: 170.0,
+            quote_date: Date(19_180),
+        },
     )]));
 
     let out = run_cycle(&logs, &MarksCache::new(), &ctx, AS_OF, &client, settle).expect("cycle");
 
     // The closed GOOG is neither priced nor recorded degraded.
-    assert!(out.marks.marks.contains_key("AMZN"), "the open symbol is priced");
-    assert!(!out.marks.marks.contains_key("GOOG"), "a closed symbol is not priced");
+    assert!(
+        out.marks.marks.contains_key("AMZN"),
+        "the open symbol is priced"
+    );
+    assert!(
+        !out.marks.marks.contains_key("GOOG"),
+        "a closed symbol is not priced"
+    );
     assert!(
         !out.marks.degraded.contains_key("GOOG"),
         "a closed symbol is not recorded degraded — it was never requested"
@@ -263,7 +398,10 @@ fn a_fully_closed_symbol_is_not_priced_nor_recorded_degraded() {
 
     // It does not appear in per-symbol freshness.
     let fresh = per_symbol_freshness(&out.marks);
-    assert!(!fresh.contains_key("GOOG"), "a closed symbol is absent from per-symbol freshness");
+    assert!(
+        !fresh.contains_key("GOOG"),
+        "a closed symbol is absent from per-symbol freshness"
+    );
 
     // The trading-day key is AMZN's quote-epoch only (a closed symbol contributes
     // nothing to the reduction).
@@ -276,12 +414,33 @@ fn quote_epochs_reduce_to_one_trading_day_key_most_recent_across_priced() {
     // runtime reduces the per-symbol GOOGLEFINANCE quote dates to ONE trading-day
     // key: the most-recent quote-epoch across priced symbols. (RUNTIME-CYCLE-003)
     let mut cache = MarksCache::new();
-    cache.marks.insert("AMZN".to_string(), Mark { price_cents: Cents(170_00), quote_date: Date(19_180) });
-    cache.marks.insert("GOOG".to_string(), Mark { price_cents: Cents(125_00), quote_date: Date(19_181) });
-    cache.marks.insert("MSFT".to_string(), Mark { price_cents: Cents(300_00), quote_date: Date(19_179) });
+    cache.marks.insert(
+        "AMZN".to_string(),
+        Mark {
+            price_cents: Cents(170_00),
+            quote_date: Date(19_180),
+        },
+    );
+    cache.marks.insert(
+        "GOOG".to_string(),
+        Mark {
+            price_cents: Cents(125_00),
+            quote_date: Date(19_181),
+        },
+    );
+    cache.marks.insert(
+        "MSFT".to_string(),
+        Mark {
+            price_cents: Cents(300_00),
+            quote_date: Date(19_179),
+        },
+    );
 
     // The single key is the MOST-RECENT quote-epoch (19_181), not the earliest.
-    assert_eq!(reduce_trading_day_key(&cache), Some(TradingDayKey(Date(19_181))));
+    assert_eq!(
+        reduce_trading_day_key(&cache),
+        Some(TradingDayKey(Date(19_181)))
+    );
 }
 
 // @spec RUNTIME-CYCLE-003
@@ -291,8 +450,12 @@ fn no_priced_symbol_keys_nothing_rather_than_fabricating_a_day() {
     // key — runtime returns None rather than fabricating the run's calendar day.
     // (RUNTIME-CYCLE-003)
     let mut cache = MarksCache::new();
-    cache.degraded.insert("AMZN".to_string(), DegradeReason::Permanent);
-    cache.degraded.insert("GOOG".to_string(), DegradeReason::TimedOut);
+    cache
+        .degraded
+        .insert("AMZN".to_string(), DegradeReason::Permanent);
+    cache
+        .degraded
+        .insert("GOOG".to_string(), DegradeReason::TimedOut);
     assert_eq!(reduce_trading_day_key(&cache), None);
 }
 
@@ -303,9 +466,23 @@ fn per_symbol_stamp_and_degraded_flag_are_preserved_through_the_reduction() {
     // stamp and degraded flag survive for per-symbol freshness display.
     // (RUNTIME-CYCLE-003)
     let mut cache = MarksCache::new();
-    cache.marks.insert("AMZN".to_string(), Mark { price_cents: Cents(170_00), quote_date: Date(19_180) });
-    cache.marks.insert("GOOG".to_string(), Mark { price_cents: Cents(125_00), quote_date: Date(19_181) });
-    cache.degraded.insert("MSFT".to_string(), DegradeReason::Permanent);
+    cache.marks.insert(
+        "AMZN".to_string(),
+        Mark {
+            price_cents: Cents(170_00),
+            quote_date: Date(19_180),
+        },
+    );
+    cache.marks.insert(
+        "GOOG".to_string(),
+        Mark {
+            price_cents: Cents(125_00),
+            quote_date: Date(19_181),
+        },
+    );
+    cache
+        .degraded
+        .insert("MSFT".to_string(), DegradeReason::Permanent);
 
     let reduced = reduce_trading_day_key(&cache).unwrap();
     assert_eq!(reduced, TradingDayKey(Date(19_181)));
@@ -314,17 +491,23 @@ fn per_symbol_stamp_and_degraded_flag_are_preserved_through_the_reduction() {
     // AMZN keeps its OWN (earlier) stamp even though the reduced key is GOOG's.
     assert_eq!(
         fresh.get("AMZN"),
-        Some(&SymbolFreshness::Priced { quote_epoch: Date(19_180) }),
+        Some(&SymbolFreshness::Priced {
+            quote_epoch: Date(19_180)
+        }),
         "AMZN's own stamp survives the reduction"
     );
     assert_eq!(
         fresh.get("GOOG"),
-        Some(&SymbolFreshness::Priced { quote_epoch: Date(19_181) })
+        Some(&SymbolFreshness::Priced {
+            quote_epoch: Date(19_181)
+        })
     );
     // MSFT's degraded flag is preserved.
     assert_eq!(
         fresh.get("MSFT"),
-        Some(&SymbolFreshness::Degraded { reason: DegradeReason::Permanent }),
+        Some(&SymbolFreshness::Degraded {
+            reason: DegradeReason::Permanent
+        }),
         "MSFT's degraded flag survives the reduction"
     );
 }
@@ -338,8 +521,8 @@ fn priced_marks_projection_feeds_history_keyed_by_the_reduced_trading_day_key() 
     // its OWN per-symbol quote_epoch. This proves the projection is live and that
     // reports keys the snapshot by the runtime-reduced trading-day key, carrying the
     // per-symbol stamps. (RUNTIME-CYCLE-003)
-    use reports::{append_snapshot, build_series_point, read_history, TradingDayKey};
     use reports::testkit::{InMemoryHistory, NoopLock};
+    use reports::{append_snapshot, build_series_point, read_history, TradingDayKey};
 
     let logs = small_logs();
     let ctx = ctx(2022);
@@ -349,8 +532,20 @@ fn priced_marks_projection_feeds_history_keyed_by_the_reduced_trading_day_key() 
     // trading-day key is the most-recent (19_183).
     let client = InMemorySheetsView::new();
     client.set_prices(pass(&[
-        ("AMZN", PriceReading::Numeric { price_usd: 170.0, quote_date: Date(19_180) }),
-        ("GOOG", PriceReading::Numeric { price_usd: 125.0, quote_date: Date(19_183) }),
+        (
+            "AMZN",
+            PriceReading::Numeric {
+                price_usd: 170.0,
+                quote_date: Date(19_180),
+            },
+        ),
+        (
+            "GOOG",
+            PriceReading::Numeric {
+                price_usd: 125.0,
+                quote_date: Date(19_183),
+            },
+        ),
     ]));
     let out = run_cycle(&logs, &MarksCache::new(), &ctx, AS_OF, &client, settle).expect("cycle");
     let key = out.trading_day_key.expect("a priced cycle has a key");
@@ -383,7 +578,10 @@ fn priced_marks_projection_feeds_history_keyed_by_the_reduced_trading_day_key() 
     append_snapshot(&mut history, &lock, &point).expect("History capture");
     let series = read_history(&history).expect("read the durable series");
     assert_eq!(series.len(), 1);
-    assert_eq!(series[0].key, key, "History keys the point by the runtime-reduced trading-day key");
+    assert_eq!(
+        series[0].key, key,
+        "History keys the point by the runtime-reduced trading-day key"
+    );
     assert_eq!(
         series[0].marks.get("AMZN").unwrap().quote_epoch,
         Date(19_180),
@@ -403,8 +601,20 @@ fn run_cycle_reduces_the_read_back_quote_epochs_to_the_trading_day_key() {
 
     let client = InMemorySheetsView::new();
     client.set_prices(pass(&[
-        ("AMZN", PriceReading::Numeric { price_usd: 170.0, quote_date: Date(19_180) }),
-        ("GOOG", PriceReading::Numeric { price_usd: 125.0, quote_date: Date(19_183) }),
+        (
+            "AMZN",
+            PriceReading::Numeric {
+                price_usd: 170.0,
+                quote_date: Date(19_180),
+            },
+        ),
+        (
+            "GOOG",
+            PriceReading::Numeric {
+                price_usd: 125.0,
+                quote_date: Date(19_183),
+            },
+        ),
     ]));
     let out = run_cycle(&logs, &MarksCache::new(), &ctx, AS_OF, &client, settle).expect("cycle");
 

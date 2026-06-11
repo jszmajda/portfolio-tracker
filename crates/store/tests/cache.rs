@@ -61,7 +61,9 @@ fn probe_catches_an_append() {
     store.load().expect("load primes the cache + fingerprint");
 
     // An append shifts MAX(Seq) and the count → the probe must see a change.
-    store.sheets().push_raw(Tab::Ledger, ledger_to_row(&buy(2, "b2")));
+    store
+        .sheets()
+        .push_raw(Tab::Ledger, ledger_to_row(&buy(2, "b2")));
     assert!(
         store.cache_is_stale(Tab::Ledger).expect("probe"),
         "an append must be detected by the cheap probe"
@@ -78,7 +80,9 @@ fn probe_catches_a_deletion() {
     store.load().expect("load");
 
     // A human deletes a row: the count moves → detected.
-    store.sheets().set_rows(Tab::Ledger, vec![ledger_to_row(&buy(1, "b1"))]);
+    store
+        .sheets()
+        .set_rows(Tab::Ledger, vec![ledger_to_row(&buy(1, "b1"))]);
     assert!(store.cache_is_stale(Tab::Ledger).expect("probe"));
 }
 
@@ -159,7 +163,10 @@ fn full_read_stores_the_content_hash_in_the_cache_fingerprint() {
     sheets.push_raw(Tab::Ledger, ledger_to_row(&buy(1, "b1")));
     let mut store = Store::new(sheets, NoopLock::new(), InMemoryCache::new());
     store.load().expect("load is a full read");
-    let fp = store.cache().ledger_fingerprint().expect("fingerprint stored");
+    let fp = store
+        .cache()
+        .ledger_fingerprint()
+        .expect("fingerprint stored");
     let logs = store.cache().read().unwrap();
     assert_eq!(
         fp.content_hash,
@@ -182,7 +189,9 @@ fn probe_change_rebuilds_the_cache_from_the_workbook() {
     store.load().expect("load");
 
     // Out-of-band append, then a currency-confirming refresh: the workbook wins.
-    store.sheets().push_raw(Tab::Ledger, ledger_to_row(&sell(2, "s2")));
+    store
+        .sheets()
+        .push_raw(Tab::Ledger, ledger_to_row(&sell(2, "s2")));
     let refreshed = store.refresh().expect("refresh rebuilds on a probe change");
     assert_eq!(refreshed.ledger.len(), 2);
     let cached = store.cache().read().unwrap();
@@ -213,11 +222,16 @@ fn on_demand_integrity_verify_catches_an_edit_outside_the_cheap_checksum() {
 
     // The on-demand content-hash verification DOES catch it and rebuilds.
     let drifted = store.verify_integrity().expect("integrity verify");
-    assert!(drifted, "the content hash caught the out-of-band edit and rebuilt");
+    assert!(
+        drifted,
+        "the content hash caught the out-of-band edit and rebuilt"
+    );
     let cached = store.cache().read().unwrap();
     assert_eq!(
         cached.ledger[0].kind,
-        store::serde_rows::row_to_ledger(&store.sheets().rows(Tab::Ledger)[0]).unwrap().kind,
+        store::serde_rows::row_to_ledger(&store.sheets().rows(Tab::Ledger)[0])
+            .unwrap()
+            .kind,
         "the cache was rebuilt to match the workbook (the workbook wins)"
     );
 }
@@ -241,7 +255,10 @@ fn content_hash_covers_an_out_of_band_tax_event_id_edit() {
     // The tax content hash folds each row's real EventId, so an out-of-band edit to
     // a Tax row's EventId cell shifts the hash (STORE-CACHE-003 — the hash is over
     // each row's Seq, EventId, and field cells, including the EventId on the tax tab).
-    let a = vec![(allocate(1), "tx-1".to_string()), (pay(2), "tx-2".to_string())];
+    let a = vec![
+        (allocate(1), "tx-1".to_string()),
+        (pay(2), "tx-2".to_string()),
+    ];
     let mut b = a.clone();
     b[0].1 = "tx-TAMPERED".to_string(); // only the EventId cell changed
     assert_ne!(

@@ -31,7 +31,12 @@ fn run_summary_with_a_prior_stored_point_reads_before_append_and_reconciles() {
         SummaryRun::Produced(report) => {
             assert!(!report.stale, "a fresh captured run is not stale");
             match report.delta {
-                Delta::PointToPoint { baseline_key, current_key, total_delta_cents, .. } => {
+                Delta::PointToPoint {
+                    baseline_key,
+                    current_key,
+                    total_delta_cents,
+                    ..
+                } => {
                     // Baseline = the prior stored point (read BEFORE the append), not
                     // today's just-appended point. (SUMMARY-DELTA-001)
                     assert_eq!(baseline_key, TradingDayKey(Date(19_485)));
@@ -92,7 +97,11 @@ fn a_stale_lock_held_summary_is_still_produced_and_exits_0() {
 
     let run = run_summary(&mut client, &lock, &probe, TrustState::Ok, &inputs);
 
-    assert_eq!(run.exit_code(), ExitCode::Produced, "offline/lock-held still exits 0");
+    assert_eq!(
+        run.exit_code(),
+        ExitCode::Produced,
+        "offline/lock-held still exits 0"
+    );
     match run {
         SummaryRun::Produced(report) => {
             assert!(report.stale, "lock-held run is stale-marked in-band");
@@ -133,7 +142,13 @@ fn bad_credentials_exits_2() {
     let probe = FakeLockProbe::free();
     let inputs = inputs_at(19_490, 200_00);
 
-    let run = run_summary(&mut client, &lock, &probe, TrustState::BadCredentials, &inputs);
+    let run = run_summary(
+        &mut client,
+        &lock,
+        &probe,
+        TrustState::BadCredentials,
+        &inputs,
+    );
 
     assert_eq!(run.exit_code(), ExitCode::NoTrustworthySummary);
     assert!(matches!(run, SummaryRun::Fatal(FatalError::BadCredentials)));
@@ -147,10 +162,19 @@ fn an_unreadable_cache_exits_2() {
     let probe = FakeLockProbe::free();
     let inputs = inputs_at(19_490, 200_00);
 
-    let run = run_summary(&mut client, &lock, &probe, TrustState::UnreadableCache, &inputs);
+    let run = run_summary(
+        &mut client,
+        &lock,
+        &probe,
+        TrustState::UnreadableCache,
+        &inputs,
+    );
 
     assert_eq!(run.exit_code(), ExitCode::NoTrustworthySummary);
-    assert!(matches!(run, SummaryRun::Fatal(FatalError::UnreadableCache)));
+    assert!(matches!(
+        run,
+        SummaryRun::Fatal(FatalError::UnreadableCache)
+    ));
 }
 
 // @spec SUMMARY-EXIT-003
@@ -167,7 +191,11 @@ fn a_capture_append_that_fails_mid_run_is_non_fatal_and_exits_0() {
 
     let run = run_summary(&mut client, &lock, &probe, TrustState::Ok, &inputs);
 
-    assert_eq!(run.exit_code(), ExitCode::Produced, "a failed append is non-fatal (exit 0)");
+    assert_eq!(
+        run.exit_code(),
+        ExitCode::Produced,
+        "a failed append is non-fatal (exit 0)"
+    );
     match run {
         SummaryRun::Produced(report) => {
             assert!(report.stale, "an uncaptured run is stale-marked");
@@ -216,7 +244,11 @@ fn no_priced_symbol_produces_a_stale_uncaptured_report_with_no_trading_day_key()
 
     let run = run_summary(&mut client, &lock, &probe, TrustState::Ok, &inputs);
 
-    assert_eq!(run.exit_code(), ExitCode::Produced, "still produces a summary, exit 0");
+    assert_eq!(
+        run.exit_code(),
+        ExitCode::Produced,
+        "still produces a summary, exit 0"
+    );
     match run {
         SummaryRun::Produced(report) => {
             assert!(report.stale, "a no-priced (uncaptured) run is stale-marked");

@@ -107,7 +107,10 @@ fn ttl_reclaims_a_stale_crashed_holder_lock() {
 
     // Before the TTL elapses, the lock is still Held (the holder might be alive).
     let cron = AdvisoryLock::with_clock(&path, "cron-summary", ttl, clock.clone());
-    assert!(cron.try_acquire().is_held(), "within TTL the lock is still held");
+    assert!(
+        cron.try_acquire().is_held(),
+        "within TTL the lock is still held"
+    );
 
     // After the TTL elapses, the stale lock is reclaimable — cron acquires it, so a
     // crashed TUI cannot wedge the cron summary forever.
@@ -185,7 +188,8 @@ fn exactly_one_of_many_concurrent_acquirers_wins() {
         let barrier = Arc::clone(&barrier);
         handles.push(std::thread::spawn(move || {
             let clock = runtime::SystemClock;
-            let lock = AdvisoryLock::with_clock(&path, format!("racer-{i}"), DEFAULT_TTL_SECS, clock);
+            let lock =
+                AdvisoryLock::with_clock(&path, format!("racer-{i}"), DEFAULT_TTL_SECS, clock);
             // Line every thread up so they hit `try_acquire` as simultaneously as the
             // scheduler allows — maximizing the chance to expose a TOCTOU race.
             barrier.wait();
@@ -203,7 +207,10 @@ fn exactly_one_of_many_concurrent_acquirers_wins() {
     }
 
     let winners: usize = handles.into_iter().map(|h| h.join().unwrap()).sum();
-    assert_eq!(winners, 1, "exactly one concurrent acquirer wins the free lock");
+    assert_eq!(
+        winners, 1,
+        "exactly one concurrent acquirer wins the free lock"
+    );
     let _ = std::fs::remove_file(&path);
 }
 
@@ -223,12 +230,20 @@ fn store_lock_adapter_acquires_inside_a_write_primitive() {
     let concurrent = AdvisoryLock::with_clock(&path, "cron-summary", DEFAULT_TTL_SECS, clock);
 
     {
-        let _guard = adapter.acquire().expect("store-side acquire succeeds when free");
+        let _guard = adapter
+            .acquire()
+            .expect("store-side acquire succeeds when free");
         // While the guard is alive, the lockfile is held (a concurrent process sees Held).
-        assert!(concurrent.try_acquire().is_held(), "the in-primitive guard holds the lock");
+        assert!(
+            concurrent.try_acquire().is_held(),
+            "the in-primitive guard holds the lock"
+        );
     }
     // After the guard drops (the critical section ends), the lock is free again.
-    assert!(concurrent.try_acquire().is_acquired(), "guard Drop releases the in-primitive lock");
+    assert!(
+        concurrent.try_acquire().is_acquired(),
+        "guard Drop releases the in-primitive lock"
+    );
 }
 
 // @spec RUNTIME-LOCK-003, RUNTIME-LOCK-005
@@ -252,22 +267,37 @@ fn same_holder_reacquire_is_reentrant_so_import_holds_across_nested_writes() {
     {
         // A nested in-primitive write re-acquires the SAME lock as the SAME holder.
         let adapter = StoreLockAdapter::new(&lock);
-        let nested = adapter.acquire().expect("a same-holder re-acquire is re-entrant");
+        let nested = adapter
+            .acquire()
+            .expect("a same-holder re-acquire is re-entrant");
         // A DIFFERENT holder still sees the lock Held meanwhile.
-        let other = AdvisoryLock::with_clock(&path, "cron-summary", DEFAULT_TTL_SECS, clock.clone());
-        assert!(other.try_acquire().is_held(), "another process is locked out during the commit");
+        let other =
+            AdvisoryLock::with_clock(&path, "cron-summary", DEFAULT_TTL_SECS, clock.clone());
+        assert!(
+            other.try_acquire().is_held(),
+            "another process is locked out during the commit"
+        );
         drop(nested); // the inner write finishes.
     }
 
     // After the nested write's guard dropped, the OUTER hold is intact: the lockfile
     // still exists and a different holder is still locked out.
-    assert!(path.exists(), "the re-entrant inner release did not drop import's outer hold");
+    assert!(
+        path.exists(),
+        "the re-entrant inner release did not drop import's outer hold"
+    );
     let other = AdvisoryLock::with_clock(&path, "cron-summary", DEFAULT_TTL_SECS, clock.clone());
-    assert!(other.try_acquire().is_held(), "import still holds the lock for the whole commit");
+    assert!(
+        other.try_acquire().is_held(),
+        "import still holds the lock for the whole commit"
+    );
 
     // Only when import's ORIGINAL handle drops is the lock free.
     drop(outer);
-    assert!(!path.exists(), "the original acquisition's release frees the lock");
+    assert!(
+        !path.exists(),
+        "the original acquisition's release frees the lock"
+    );
     let _ = std::fs::remove_file(&path);
 }
 
@@ -323,7 +353,11 @@ fn in_primitive_acquisition_through_a_real_store_write_blocks_a_concurrent_holde
     // StoreLockAdapter over the TUI's advisory lock (a DIFFERENT holder).
     let tui_lock = AdvisoryLock::with_clock(&path, "tui-1", DEFAULT_TTL_SECS, clock);
     let sheets = StoreSheetsAdapter::new(FakeSheetsApi::new());
-    let mut store = Store::new(sheets, StoreLockAdapter::new(&tui_lock), InMemoryCache::new());
+    let mut store = Store::new(
+        sheets,
+        StoreLockAdapter::new(&tui_lock),
+        InMemoryCache::new(),
+    );
 
     let event = LedgerEvent {
         id: "e1".to_string(),
@@ -377,12 +411,18 @@ fn held_outcome_drives_per_writer_policy() {
         }
         LockOutcome::Error { reason } => panic!("unexpected acquisition error: {reason}"),
     };
-    assert!(!entry_can_write, "entry must fail non-destructively while import holds");
+    assert!(
+        !entry_can_write,
+        "entry must fail non-destructively while import holds"
+    );
 
     // summary's policy: on Held, run read-only (skip the capture, print from cache).
     let summary_lock = AdvisoryLock::with_clock(&path, "cron-summary", DEFAULT_TTL_SECS, clock);
     let summary_runs_readonly = summary_lock.try_acquire().is_held();
-    assert!(summary_runs_readonly, "summary runs read-only while import holds");
+    assert!(
+        summary_runs_readonly,
+        "summary runs read-only while import holds"
+    );
 }
 
 // ===========================================================================
@@ -479,7 +519,13 @@ fn an_unwritable_lock_path_surfaces_an_acquisition_error_not_a_silent_acquire() 
         outcome.is_error(),
         "an unwritable lock path must surface an acquisition error, got {outcome:?}"
     );
-    assert!(!outcome.is_acquired(), "an unwritable path must NEVER read as Acquired");
-    assert!(!outcome.is_held(), "an unwritable path is NOT contention (not Held)");
+    assert!(
+        !outcome.is_acquired(),
+        "an unwritable path must NEVER read as Acquired"
+    );
+    assert!(
+        !outcome.is_held(),
+        "an unwritable path is NOT contention (not Held)"
+    );
     let _ = std::fs::remove_file(&file_as_dir);
 }

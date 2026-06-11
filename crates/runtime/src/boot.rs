@@ -79,7 +79,9 @@ fn lock_dir(settings: &Settings) -> PathBuf {
     // If the cache path looks like a file (has an extension), use its parent dir;
     // otherwise treat it as the cache directory itself.
     if p.extension().is_some() {
-        p.parent().map(PathBuf::from).unwrap_or_else(std::env::temp_dir)
+        p.parent()
+            .map(PathBuf::from)
+            .unwrap_or_else(std::env::temp_dir)
     } else {
         p
     }
@@ -130,7 +132,11 @@ impl Boot {
         lock: L,
     ) -> Result<Store<StoreSheetsAdapter<GoogleSheetsApi>, L, InMemoryCache>, SheetsError> {
         let api = self.sheets_api()?;
-        Ok(Store::new(StoreSheetsAdapter::new(api), lock, InMemoryCache::new()))
+        Ok(Store::new(
+            StoreSheetsAdapter::new(api),
+            lock,
+            InMemoryCache::new(),
+        ))
     }
 
     /// Construct the live `sheets-view` client over the SAME low-level layer
@@ -168,7 +174,9 @@ impl Boot {
         settings: Option<Settings>,
     ) -> Result<crate::adapters::ConfigSheetsAdapter<GoogleSheetsApi>, SheetsError> {
         let api = self.sheets_api()?;
-        Ok(crate::adapters::ConfigSheetsAdapter::new(api, config_tab, settings))
+        Ok(crate::adapters::ConfigSheetsAdapter::new(
+            api, config_tab, settings,
+        ))
     }
 }
 

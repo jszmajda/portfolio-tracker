@@ -37,7 +37,11 @@ fn put_acquires_the_lock_before_mutating() {
         .put_tax_rules(valid_rules(2025, 19_700), &lock)
         .expect("a valid write through a free lock succeeds");
 
-    assert_eq!(lock.acquire_count(), 1, "put_* acquires the advisory lock once");
+    assert_eq!(
+        lock.acquire_count(),
+        1,
+        "put_* acquires the advisory lock once"
+    );
     let data = store.load().expect("load after write");
     assert!(
         data.rules_by_year.contains_key(&TaxYear(2025)),
@@ -52,8 +56,12 @@ fn every_put_threads_and_acquires_the_lock() {
     let mut store = InMemoryConfig::cold_start();
     let lock = NoopLock::new();
 
-    store.put_tax_rules(valid_rules(2025, 19_700), &lock).expect("tax rules");
-    store.put_de_minimis(DeMinimis(Cents(100)), &lock).expect("de-minimis");
+    store
+        .put_tax_rules(valid_rules(2025, 19_700), &lock)
+        .expect("tax rules");
+    store
+        .put_de_minimis(DeMinimis(Cents(100)), &lock)
+        .expect("de-minimis");
     store.put_platforms(platforms(), &lock).expect("platforms");
     store
         .put_residency(

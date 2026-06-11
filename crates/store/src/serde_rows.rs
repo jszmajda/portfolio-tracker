@@ -242,7 +242,12 @@ pub fn row_to_ledger(row: &Row) -> Result<LedgerEvent, StoreError> {
         _ => return Err(StoreError::UnknownKind),
     };
 
-    Ok(LedgerEvent { id, seq, date, kind })
+    Ok(LedgerEvent {
+        id,
+        seq,
+        date,
+        kind,
+    })
 }
 
 // ===========================================================================
@@ -496,8 +501,12 @@ fn unesc(s: &str) -> Result<String, StoreError> {
             if i + 2 >= bytes.len() {
                 return Err(StoreError::MissingField);
             }
-            let hi = (bytes[i + 1] as char).to_digit(16).ok_or(StoreError::MissingField)?;
-            let lo = (bytes[i + 2] as char).to_digit(16).ok_or(StoreError::MissingField)?;
+            let hi = (bytes[i + 1] as char)
+                .to_digit(16)
+                .ok_or(StoreError::MissingField)?;
+            let lo = (bytes[i + 2] as char)
+                .to_digit(16)
+                .ok_or(StoreError::MissingField)?;
             out.push((hi * 16 + lo) as u8);
             i += 3;
         } else {

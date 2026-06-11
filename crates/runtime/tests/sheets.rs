@@ -30,22 +30,36 @@ fn backoff_schedule_is_capped_exponential() {
         base_delay: Duration::from_millis(500),
         max_delay: Duration::from_secs(4),
     };
-    assert_eq!(policy.delay_for(1), Duration::ZERO, "the first attempt waits nothing");
+    assert_eq!(
+        policy.delay_for(1),
+        Duration::ZERO,
+        "the first attempt waits nothing"
+    );
     assert_eq!(policy.delay_for(2), Duration::from_millis(500));
     assert_eq!(policy.delay_for(3), Duration::from_secs(1));
     assert_eq!(policy.delay_for(4), Duration::from_secs(2));
     // Capped at max_delay (would be 4s then 8s; capped to 4s).
     assert_eq!(policy.delay_for(5), Duration::from_secs(4));
-    assert_eq!(policy.delay_for(6), Duration::from_secs(4), "delay is capped");
+    assert_eq!(
+        policy.delay_for(6),
+        Duration::from_secs(4),
+        "delay is capped"
+    );
 }
 
 // @spec RUNTIME-SHEETS-001
 #[test]
 fn retry_budget_bounds_attempts() {
-    let policy = BackoffPolicy { max_attempts: 3, ..BackoffPolicy::default() };
+    let policy = BackoffPolicy {
+        max_attempts: 3,
+        ..BackoffPolicy::default()
+    };
     assert!(policy.may_retry(1), "may retry after 1 attempt");
     assert!(policy.may_retry(2));
-    assert!(!policy.may_retry(3), "no retry once the attempt cap is reached");
+    assert!(
+        !policy.may_retry(3),
+        "no retry once the attempt cap is reached"
+    );
 }
 
 // @spec RUNTIME-SHEETS-001
@@ -78,8 +92,14 @@ fn retry_loop_retries_a_429_then_5xx_then_succeeds() {
     };
     // The programmed transport responses, consumed in order.
     let responses: RefCell<Vec<Result<&str, SheetsError>>> = RefCell::new(vec![
-        Err(SheetsError::Api { status: 429, message: "rate limited".into() }),
-        Err(SheetsError::Api { status: 503, message: "transient".into() }),
+        Err(SheetsError::Api {
+            status: 429,
+            message: "rate limited".into(),
+        }),
+        Err(SheetsError::Api {
+            status: 503,
+            message: "transient".into(),
+        }),
         Ok("body"),
     ]);
     let attempts = RefCell::new(0u32);
@@ -94,13 +114,29 @@ fn retry_loop_retries_a_429_then_5xx_then_succeeds() {
         |d| slept.borrow_mut().push(d),
     );
 
-    assert_eq!(result, Ok("body"), "the loop returns the final success body");
-    assert_eq!(*attempts.borrow(), 3, "the loop made exactly 3 attempts (429, 503, 200)");
+    assert_eq!(
+        result,
+        Ok("body"),
+        "the loop returns the final success body"
+    );
+    assert_eq!(
+        *attempts.borrow(),
+        3,
+        "the loop made exactly 3 attempts (429, 503, 200)"
+    );
     // Two retries happened, so two backoff sleeps were scheduled, exponentially.
     let slept = slept.borrow();
     assert_eq!(slept.len(), 2, "two retries → two backoff sleeps");
-    assert_eq!(slept[0], Duration::from_millis(10), "first retry waits base");
-    assert_eq!(slept[1], Duration::from_millis(20), "second retry waits 2·base");
+    assert_eq!(
+        slept[0],
+        Duration::from_millis(10),
+        "first retry waits base"
+    );
+    assert_eq!(
+        slept[1],
+        Duration::from_millis(20),
+        "second retry waits 2·base"
+    );
 }
 
 // @spec RUNTIME-SHEETS-001
@@ -118,7 +154,10 @@ fn retry_loop_fails_fast_on_a_4xx_without_retrying() {
         &policy,
         || {
             *attempts.borrow_mut() += 1;
-            Err(SheetsError::Api { status: 403, message: "forbidden".into() })
+            Err(SheetsError::Api {
+                status: 403,
+                message: "forbidden".into(),
+            })
         },
         |d| slept.borrow_mut().push(d),
     );
@@ -148,7 +187,10 @@ fn retry_loop_exhausts_the_budget_then_surfaces_unreachable() {
         &policy,
         || {
             *attempts.borrow_mut() += 1;
-            Err(SheetsError::Api { status: 429, message: "still limited".into() })
+            Err(SheetsError::Api {
+                status: 429,
+                message: "still limited".into(),
+            })
         },
         |_| {},
     );
@@ -157,7 +199,11 @@ fn retry_loop_exhausts_the_budget_then_surfaces_unreachable() {
         matches!(result, Err(SheetsError::Unreachable(_))),
         "an exhausted budget surfaces Unreachable, got {result:?}"
     );
-    assert_eq!(*attempts.borrow(), 3, "the loop tried exactly max_attempts times");
+    assert_eq!(
+        *attempts.borrow(),
+        3,
+        "the loop tried exactly max_attempts times"
+    );
 }
 
 // @spec RUNTIME-SHEETS-001
@@ -181,7 +227,11 @@ fn retry_loop_retries_a_transient_transport_error_then_gives_up() {
         |_| {},
     );
     assert!(matches!(result, Err(SheetsError::Unreachable(_))));
-    assert_eq!(*attempts.borrow(), 2, "a transient transport error is retried to the budget");
+    assert_eq!(
+        *attempts.borrow(),
+        2,
+        "a transient transport error is retried to the budget"
+    );
 }
 
 // @spec RUNTIME-SHEETS-001
@@ -223,7 +273,11 @@ fn service_account_mints_a_signed_jwt_from_credentials_json() {
 
     let jwt = account.mint_assertion().expect("mint a signed JWT");
     // A JWS is three base64url segments separated by dots.
-    assert_eq!(jwt.split('.').count(), 3, "a signed JWT has header.payload.signature");
+    assert_eq!(
+        jwt.split('.').count(),
+        3,
+        "a signed JWT has header.payload.signature"
+    );
     // The scope is the Sheets scope (the assertion authorizes the Sheets API).
     assert_eq!(SHEETS_SCOPE, "https://www.googleapis.com/auth/spreadsheets");
 }
@@ -239,7 +293,10 @@ fn malformed_credentials_surface_a_loud_auth_error() {
     // A well-formed JSON but an unusable private key fails at signing time.
     let bad_key = r#"{"client_email":"x@y.iam","private_key":"-----BEGIN PRIVATE KEY-----\nnope\n-----END PRIVATE KEY-----\n","token_uri":"https://oauth2.googleapis.com/token"}"#;
     let account = ServiceAccount::from_json(bad_key).expect("parse");
-    assert!(account.mint_assertion().is_err(), "an unusable RSA key fails to sign");
+    assert!(
+        account.mint_assertion().is_err(),
+        "an unusable RSA key fails to sign"
+    );
 }
 
 // @spec RUNTIME-SHEETS-003, RUNTIME-SHEETS-004
@@ -259,13 +316,25 @@ fn cached_token_is_reused_until_expiry_then_treated_expired_at_the_margin_bounda
 
     // A token whose (already-margined) stored expiry is comfortably in the future is
     // NOT expired: the cached token is reused, no re-mint. (RUNTIME-SHEETS-003)
-    let fresh = AccessToken { bearer: "fresh".to_string(), expires_at_secs: now + 300 };
-    assert!(!fresh.is_expired(), "a token before its margined expiry is reused, not re-minted");
+    let fresh = AccessToken {
+        bearer: "fresh".to_string(),
+        expires_at_secs: now + 300,
+    };
+    assert!(
+        !fresh.is_expired(),
+        "a token before its margined expiry is reused, not re-minted"
+    );
 
     // A token whose margined stored expiry has already passed reads as expired: the
     // client refreshes before issuing. (RUNTIME-SHEETS-004)
-    let stale = AccessToken { bearer: "stale".to_string(), expires_at_secs: now.saturating_sub(1) };
-    assert!(stale.is_expired(), "a token at/after its margined expiry is treated as expired");
+    let stale = AccessToken {
+        bearer: "stale".to_string(),
+        expires_at_secs: now.saturating_sub(1),
+    };
+    assert!(
+        stale.is_expired(),
+        "a token at/after its margined expiry is treated as expired"
+    );
 }
 
 // @spec RUNTIME-SHEETS-002
@@ -301,17 +370,32 @@ fn store_write_discipline_is_built_on_the_one_low_level_primitive() {
         },
     };
     let row = serde_rows::ledger_to_row(&ev);
-    adapter.append_row(Tab::Ledger, &row).expect("append through the primitive");
+    adapter
+        .append_row(Tab::Ledger, &row)
+        .expect("append through the primitive");
 
     // The append went through the ONE low-level append (count incremented).
-    assert_eq!(adapter.api().append_count(), 1, "store's append rode the low-level primitive");
+    assert_eq!(
+        adapter.api().append_count(),
+        1,
+        "store's append rode the low-level primitive"
+    );
 
     // A read through the adapter sees the appended row (header skipped), proving the
     // segment's write discipline reads back through the SAME primitive.
-    let back = adapter.read_rows(Tab::Ledger).expect("read through the primitive");
-    assert_eq!(back.len(), 1, "the appended row is read back through the primitive");
+    let back = adapter
+        .read_rows(Tab::Ledger)
+        .expect("read through the primitive");
+    assert_eq!(
+        back.len(),
+        1,
+        "the appended row is read back through the primitive"
+    );
     assert_eq!(back[0].get("EventId"), "e1");
-    assert!(adapter.api().read_count() >= 1, "the read rode the low-level primitive");
+    assert!(
+        adapter.api().read_count() >= 1,
+        "the read rode the low-level primitive"
+    );
 }
 
 // @spec RUNTIME-SHEETS-002
@@ -326,16 +410,25 @@ fn read_probe_reads_and_parses_the_fixed_fingerprint_metadata_range() {
     // Seed the probe row at the exact metadata range the adapter reads.
     fake.seed(
         &format!("'{}'!AA1:AC1", Tab::Ledger.name()),
-        vec![vec!["7".to_string(), "42".to_string(), "123456".to_string()]],
+        vec![vec![
+            "7".to_string(),
+            "42".to_string(),
+            "123456".to_string(),
+        ]],
     );
     let adapter = StoreSheetsAdapter::new(fake);
 
-    let probe = adapter.read_probe(Tab::Ledger).expect("read the probe through the primitive");
+    let probe = adapter
+        .read_probe(Tab::Ledger)
+        .expect("read the probe through the primitive");
     assert_eq!(probe.count, Some(7), "count parses from AA1");
     assert_eq!(probe.max_seq, Some(42), "max_seq parses from AB1");
     assert_eq!(probe.checksum, Some(123456), "checksum parses from AC1");
     assert!(probe.is_present(), "a well-formed probe row is present");
-    assert!(adapter.api().read_count() >= 1, "the probe rode the low-level read primitive");
+    assert!(
+        adapter.api().read_count() >= 1,
+        "the probe rode the low-level read primitive"
+    );
 }
 
 // @spec RUNTIME-SHEETS-002
@@ -345,11 +438,16 @@ fn read_probe_treats_missing_fingerprint_cells_as_a_change() {
     // which the store probe treats as a change. (RUNTIME-SHEETS-002, STORE-CACHE-002)
     let fake = FakeSheetsApi::new();
     let adapter = StoreSheetsAdapter::new(fake);
-    let probe = adapter.read_probe(Tab::Ledger).expect("read an absent probe");
+    let probe = adapter
+        .read_probe(Tab::Ledger)
+        .expect("read an absent probe");
     assert_eq!(probe.count, None);
     assert_eq!(probe.max_seq, None);
     assert_eq!(probe.checksum, None);
-    assert!(!probe.is_present(), "an absent probe is not present (treated as a change)");
+    assert!(
+        !probe.is_present(),
+        "an absent probe is not present (treated as a change)"
+    );
 }
 
 // @spec RUNTIME-SHEETS-002
@@ -367,23 +465,49 @@ fn batch_update_and_clear_ride_the_one_primitive_with_tail_truncate() {
     adapter.api().seed(&full, vec![header.clone()]);
     let stale_row = ledger_row("stale-1", 1);
     let r2 = serde_rows::ledger_to_row(&stale_row);
-    adapter.append_row(Tab::Ledger, &r2).expect("seed a stale data row");
-    adapter.append_row(Tab::Ledger, &r2).expect("seed a stale data row");
-    adapter.append_row(Tab::Ledger, &r2).expect("seed a stale data row");
+    adapter
+        .append_row(Tab::Ledger, &r2)
+        .expect("seed a stale data row");
+    adapter
+        .append_row(Tab::Ledger, &r2)
+        .expect("seed a stale data row");
+    adapter
+        .append_row(Tab::Ledger, &r2)
+        .expect("seed a stale data row");
 
     // batch_update with a SINGLE row must tail-truncate the residual 2 stale rows.
     let fresh = serde_rows::ledger_to_row(&ledger_row("fresh-1", 2));
-    adapter.batch_update(Tab::Ledger, std::slice::from_ref(&fresh)).expect("batch_update");
-    assert_eq!(adapter.api().update_count(), 1, "batch_update rode the low-level update");
+    adapter
+        .batch_update(Tab::Ledger, std::slice::from_ref(&fresh))
+        .expect("batch_update");
+    assert_eq!(
+        adapter.api().update_count(),
+        1,
+        "batch_update rode the low-level update"
+    );
 
     let back = adapter.read_rows(Tab::Ledger).expect("read back");
-    assert_eq!(back.len(), 1, "tail-truncate: the residual stale rows are gone");
-    assert_eq!(back[0].get("EventId"), "fresh-1", "the full-tab content is exactly the new row");
+    assert_eq!(
+        back.len(),
+        1,
+        "tail-truncate: the residual stale rows are gone"
+    );
+    assert_eq!(
+        back[0].get("EventId"),
+        "fresh-1",
+        "the full-tab content is exactly the new row"
+    );
 
     // clear removes all data rows (the data range from row 2 down).
     adapter.clear(Tab::Ledger).expect("clear");
-    assert_eq!(adapter.api().clear_count(), 1, "clear rode the low-level clear");
-    let back = adapter.read_rows(Tab::Ledger).expect("read back after clear");
+    assert_eq!(
+        adapter.api().clear_count(),
+        1,
+        "clear rode the low-level clear"
+    );
+    let back = adapter
+        .read_rows(Tab::Ledger)
+        .expect("read back after clear");
     assert!(back.is_empty(), "clear leaves no data rows");
 }
 

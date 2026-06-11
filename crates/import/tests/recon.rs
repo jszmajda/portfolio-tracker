@@ -29,10 +29,24 @@ fn dry_run_reconstructs_validates_reconciles_and_reports_without_writing() {
     marks.insert("GOOG".to_string(), Cents(6000));
 
     let report = dry_run(&wb, &marks).expect("dry-run succeeds");
-    let goog = report.symbols.iter().find(|s| s.symbol == "GOOG").expect("GOOG line");
-    assert!(matches!(goog.verdict, Verdict::Matched), "clean GOOG reconciles matched");
-    assert_eq!(goog.reconstructed_realized_cents, Cents(10_000), "20 × ($55−$50) = $100");
-    assert!(report.commit_allowed, "a fully-matched dry-run permits commit");
+    let goog = report
+        .symbols
+        .iter()
+        .find(|s| s.symbol == "GOOG")
+        .expect("GOOG line");
+    assert!(
+        matches!(goog.verdict, Verdict::Matched),
+        "clean GOOG reconciles matched"
+    );
+    assert_eq!(
+        goog.reconstructed_realized_cents,
+        Cents(10_000),
+        "20 × ($55−$50) = $100"
+    );
+    assert!(
+        report.commit_allowed,
+        "a fully-matched dry-run permits commit"
+    );
 }
 
 // @spec IMPORT-RECON-002
@@ -47,16 +61,24 @@ fn amzn_rsu_basis_divergence_is_classified_intended_at_symbol_aggregate() {
     marks.insert("AMZN".to_string(), Cents(12_000)); // $120 post-split
 
     let report = dry_run(&wb, &marks).expect("dry-run succeeds");
-    let amzn = report.symbols.iter().find(|s| s.symbol == "AMZN").expect("AMZN line");
+    let amzn = report
+        .symbols
+        .iter()
+        .find(|s| s.symbol == "AMZN")
+        .expect("AMZN line");
     match &amzn.verdict {
-        Verdict::IntendedDivergence { predicted_cents, .. } => {
+        Verdict::IntendedDivergence {
+            predicted_cents, ..
+        } => {
             // The predicted delta is computed independently of the residual.
             let independent = predict_intended_delta_cents(
                 &import::reconstruct(&wb).unwrap(),
                 &"AMZN".to_string(),
             );
-            assert_eq!(*predicted_cents, independent,
-                "the verdict's predicted delta equals the independently predicted one");
+            assert_eq!(
+                *predicted_cents, independent,
+                "the verdict's predicted delta equals the independently predicted one"
+            );
         }
         other => panic!("expected IntendedDivergence for AMZN, got {other:?}"),
     }
@@ -73,13 +95,26 @@ fn split_delta_is_exactly_zero_and_predicted_independently_of_the_residual() {
         ..LegacyWorkbook::default()
     };
     wb.actions.push(buy_row(
-        "Stock Actions", 2, "TSLA-B1", "TSLA", 10, "900.00", "0", date(2020, 1, 1), PLATFORM,
+        "Stock Actions",
+        2,
+        "TSLA-B1",
+        "TSLA",
+        10,
+        "900.00",
+        "0",
+        date(2020, 1, 1),
+        PLATFORM,
     ));
-    wb.corporate_actions.push(import::testkit::split_20_for_1("TSLA", date(2020, 8, 31)));
+    wb.corporate_actions
+        .push(import::testkit::split_20_for_1("TSLA", date(2020, 8, 31)));
 
     let recon = import::reconstruct(&wb).expect("reconstructs");
     let predicted = predict_intended_delta_cents(&recon, &"TSLA".to_string());
-    assert_eq!(predicted, Cents(0), "a split is basis-neutral: predicted delta is exactly $0");
+    assert_eq!(
+        predicted,
+        Cents(0),
+        "a split is basis-neutral: predicted delta is exactly $0"
+    );
 }
 
 // @spec IMPORT-RECON-002
@@ -99,19 +134,41 @@ fn realized_only_reconciliation_without_a_mark_uses_the_consumed_vest_basis_delt
         ..LegacyWorkbook::default()
     };
     wb.actions.push(vest_row(
-        "Stock Actions", 2, "RV1", "NVDA", 10, "100.00", date(2021, 1, 1), PLATFORM,
+        "Stock Actions",
+        2,
+        "RV1",
+        "NVDA",
+        10,
+        "100.00",
+        date(2021, 1, 1),
+        PLATFORM,
     ));
     wb.sales.push(sale_row(
-        "Stock Sales", 2, "RV1-S1", "RV1", "NVDA", 4, "150.00", "0", date(2022, 6, 1), PLATFORM,
+        "Stock Sales",
+        2,
+        "RV1-S1",
+        "RV1",
+        "NVDA",
+        4,
+        "150.00",
+        "0",
+        date(2022, 6, 1),
+        PLATFORM,
     ));
     // Legacy realized on the $0 RSU basis = $600; legacy unrealized irrelevant here.
     wb.positions.push(position_row("NVDA", 6, 60_000, 0));
 
     // NO mark for NVDA → realized-only comparison.
     let report = dry_run(&wb, &Marks::new()).expect("dry-run");
-    let nvda = report.symbols.iter().find(|s| s.symbol == "NVDA").expect("NVDA line");
+    let nvda = report
+        .symbols
+        .iter()
+        .find(|s| s.symbol == "NVDA")
+        .expect("NVDA line");
     match &nvda.verdict {
-        Verdict::IntendedDivergence { predicted_cents, .. } => {
+        Verdict::IntendedDivergence {
+            predicted_cents, ..
+        } => {
             assert_eq!(
                 *predicted_cents,
                 Cents(-40_000),
@@ -120,8 +177,15 @@ fn realized_only_reconciliation_without_a_mark_uses_the_consumed_vest_basis_delt
         }
         other => panic!("expected IntendedDivergence (realized-only), got {other:?}"),
     }
-    assert_eq!(nvda.reconstructed_realized_cents, Cents(20_000), "new realized $200");
-    assert!(report.commit_allowed, "the realized-only RSU divergence is intended, not blocking");
+    assert_eq!(
+        nvda.reconstructed_realized_cents,
+        Cents(20_000),
+        "new realized $200"
+    );
+    assert!(
+        report.commit_allowed,
+        "the realized-only RSU divergence is intended, not blocking"
+    );
 }
 
 // @spec IMPORT-RECON-003
@@ -144,18 +208,38 @@ fn an_unexplained_divergence_blocks_commit() {
     marks.insert("GOOG".to_string(), Cents(6000));
 
     let report = dry_run(&wb, &marks).expect("dry-run still produces a report");
-    let goog = report.symbols.iter().find(|s| s.symbol == "GOOG").expect("GOOG line");
-    assert!(matches!(goog.verdict, Verdict::Unexplained { .. }), "a real residual is Unexplained");
-    assert!(!report.commit_allowed, "an unexplained divergence blocks commit");
+    let goog = report
+        .symbols
+        .iter()
+        .find(|s| s.symbol == "GOOG")
+        .expect("GOOG line");
+    assert!(
+        matches!(goog.verdict, Verdict::Unexplained { .. }),
+        "a real residual is Unexplained"
+    );
+    assert!(
+        !report.commit_allowed,
+        "an unexplained divergence blocks commit"
+    );
 
     // And `commit()` on a blocked report is REFUSED with the dedicated
     // CommitBlockedByReconciliation variant (NOT TargetNotEmpty), naming the
     // unexplained symbol — and writes NOTHING. (IMPORT-RECON-003)
     let mut store = fresh_store();
     match commit(&mut store, &report.accept()) {
-        Err(ImportError::CommitBlockedByReconciliation { unexplained_symbols, flagged_symbols, malformed_rows }) => {
-            assert!(unexplained_symbols.contains(&"GOOG".to_string()), "GOOG is the blocking symbol");
-            assert!(flagged_symbols.is_empty(), "no share residual is flagged here");
+        Err(ImportError::CommitBlockedByReconciliation {
+            unexplained_symbols,
+            flagged_symbols,
+            malformed_rows,
+        }) => {
+            assert!(
+                unexplained_symbols.contains(&"GOOG".to_string()),
+                "GOOG is the blocking symbol"
+            );
+            assert!(
+                flagged_symbols.is_empty(),
+                "no share residual is flagged here"
+            );
             assert!(malformed_rows.is_empty(), "no malformed row here");
         }
         other => panic!("expected CommitBlockedByReconciliation, got {other:?}"),
@@ -182,16 +266,28 @@ fn a_flagged_share_residual_blocks_commit_with_the_reconciliation_variant() {
     wb.positions.push(position_row("GOOG", 90, 10_000, 90_000));
 
     let report = dry_run(&wb, &Marks::new()).expect("dry-run");
-    assert!(!report.commit_allowed, "a flagged share residual blocks commit");
+    assert!(
+        !report.commit_allowed,
+        "a flagged share residual blocks commit"
+    );
 
     let mut store = fresh_store();
     match commit(&mut store, &report.accept()) {
-        Err(ImportError::CommitBlockedByReconciliation { flagged_symbols, .. }) => {
-            assert!(flagged_symbols.contains(&"GOOG".to_string()), "GOOG share residual is flagged");
+        Err(ImportError::CommitBlockedByReconciliation {
+            flagged_symbols, ..
+        }) => {
+            assert!(
+                flagged_symbols.contains(&"GOOG".to_string()),
+                "GOOG share residual is flagged"
+            );
         }
         other => panic!("expected CommitBlockedByReconciliation, got {other:?}"),
     }
-    assert_eq!(store.sheets().read_rows(Tab::Ledger).unwrap().len(), 0, "writes nothing");
+    assert_eq!(
+        store.sheets().read_rows(Tab::Ledger).unwrap().len(),
+        0,
+        "writes nothing"
+    );
 }
 
 // @spec IMPORT-RECON-004
@@ -207,10 +303,17 @@ fn shares_reconcile_per_symbol_within_micro_share_tolerance() {
     wb.positions.push(goog_position_legacy());
 
     let report = dry_run(&wb, &Marks::new()).expect("dry-run succeeds");
-    let goog = report.symbols.iter().find(|s| s.symbol == "GOOG").expect("GOOG line");
+    let goog = report
+        .symbols
+        .iter()
+        .find(|s| s.symbol == "GOOG")
+        .expect("GOOG line");
     assert_eq!(goog.reconstructed_shares, MicroShares(80_000_000));
     assert_eq!(goog.legacy_shares, MicroShares(80_000_000));
-    assert!(matches!(goog.share_verdict, ShareVerdict::Matched), "shares reconcile matched");
+    assert!(
+        matches!(goog.share_verdict, ShareVerdict::Matched),
+        "shares reconcile matched"
+    );
 }
 
 // @spec IMPORT-RECON-004
@@ -223,10 +326,27 @@ fn sub_threshold_residual_on_a_closed_position_snaps_via_closing_adjustment() {
         ..LegacyWorkbook::default()
     };
     wb.actions.push(buy_row(
-        "Stock Actions", 2, "C-B1", "CLSD", 100, "10.00", "0", date(2020, 1, 1), PLATFORM,
+        "Stock Actions",
+        2,
+        "C-B1",
+        "CLSD",
+        100,
+        "10.00",
+        "0",
+        date(2020, 1, 1),
+        PLATFORM,
     ));
     wb.sales.push(sale_row(
-        "Stock Sales", 2, "C-S1", "C-B1", "CLSD", 100, "12.00", "0", date(2021, 1, 1), PLATFORM,
+        "Stock Sales",
+        2,
+        "C-S1",
+        "C-B1",
+        "CLSD",
+        100,
+        "12.00",
+        "0",
+        date(2021, 1, 1),
+        PLATFORM,
     ));
     // Legacy Positions has a tiny residual (0.0005 share) on the closed position.
     wb.positions.push(import::LegacyPositionRow {
@@ -237,10 +357,18 @@ fn sub_threshold_residual_on_a_closed_position_snaps_via_closing_adjustment() {
     });
 
     let report = dry_run(&wb, &Marks::new()).expect("dry-run succeeds");
-    let clsd = report.symbols.iter().find(|s| s.symbol == "CLSD").expect("CLSD line");
+    let clsd = report
+        .symbols
+        .iter()
+        .find(|s| s.symbol == "CLSD")
+        .expect("CLSD line");
     match &clsd.share_verdict {
         ShareVerdict::SnappedClosingAdjustment { adjustment } => {
-            assert_eq!(*adjustment, MicroShares(500), "the sub-threshold residual is snapped");
+            assert_eq!(
+                *adjustment,
+                MicroShares(500),
+                "the sub-threshold residual is snapped"
+            );
         }
         other => panic!("expected a snapped closing adjustment, got {other:?}"),
     }
@@ -260,9 +388,19 @@ fn a_larger_share_residual_is_flagged() {
     wb.positions.push(position_row("GOOG", 90, 10_000, 90_000));
 
     let report = dry_run(&wb, &Marks::new()).expect("dry-run succeeds");
-    let goog = report.symbols.iter().find(|s| s.symbol == "GOOG").expect("GOOG line");
-    assert!(matches!(goog.share_verdict, ShareVerdict::Flagged { .. }), "a large residual is flagged");
-    assert!(!report.commit_allowed, "a flagged share residual blocks commit");
+    let goog = report
+        .symbols
+        .iter()
+        .find(|s| s.symbol == "GOOG")
+        .expect("GOOG line");
+    assert!(
+        matches!(goog.share_verdict, ShareVerdict::Flagged { .. }),
+        "a large residual is flagged"
+    );
+    assert!(
+        !report.commit_allowed,
+        "a flagged share residual blocks commit"
+    );
 }
 
 // @spec IMPORT-RECON-005
@@ -282,7 +420,10 @@ fn commit_is_refused_without_the_accepted_report_token_even_when_commit_allowed(
     wb.positions.push(goog_position_legacy());
 
     let report = dry_run(&wb, &Marks::new()).expect("dry-run");
-    assert!(report.commit_allowed, "the clean GOOG reconciliation clears the safety gate");
+    assert!(
+        report.commit_allowed,
+        "the clean GOOG reconciliation clears the safety gate"
+    );
 
     // The auto gate is clear, but the owner has NOT accepted: a review token without
     // acceptance must refuse the commit, independently of `commit_allowed`.
@@ -303,7 +444,8 @@ fn commit_is_refused_without_the_accepted_report_token_even_when_commit_allowed(
     // With the SAME clean report explicitly accepted by the owner, the commit goes
     // through: both gates now independently satisfied.
     let accepted = report.accept();
-    let commit_report = commit(&mut store, &accepted).expect("an accepted, gate-clear report commits");
+    let commit_report =
+        commit(&mut store, &accepted).expect("an accepted, gate-clear report commits");
     assert_eq!(commit_report.appended.len(), 2, "the Buy and the Sell land");
     assert_eq!(store.sheets().read_rows(Tab::Ledger).unwrap().len(), 2);
 }
@@ -328,7 +470,10 @@ fn owner_acceptance_never_bypasses_the_safety_gate() {
     marks.insert("GOOG".to_string(), Cents(6000));
 
     let report = dry_run(&wb, &marks).expect("dry-run");
-    assert!(!report.commit_allowed, "the unexplained divergence blocks the safety gate");
+    assert!(
+        !report.commit_allowed,
+        "the unexplained divergence blocks the safety gate"
+    );
 
     // Even with the owner's explicit acceptance, the blocked gate refuses the commit.
     let accepted = report.accept();
@@ -339,7 +484,11 @@ fn owner_acceptance_never_bypasses_the_safety_gate() {
         }
         other => panic!("expected CommitBlockedByReconciliation (acceptance never bypasses the gate), got {other:?}"),
     }
-    assert_eq!(store.sheets().read_rows(Tab::Ledger).unwrap().len(), 0, "writes nothing");
+    assert_eq!(
+        store.sheets().read_rows(Tab::Ledger).unwrap().len(),
+        0,
+        "writes nothing"
+    );
 }
 
 // @spec IMPORT-RECON-006
@@ -362,11 +511,17 @@ fn commit_allowed_clears_only_when_no_blocking_condition_is_present() {
         "no malformed source rows in the clean combined workbook"
     );
     assert!(
-        !report.symbols.iter().any(|s| matches!(s.verdict, Verdict::Unexplained { .. })),
+        !report
+            .symbols
+            .iter()
+            .any(|s| matches!(s.verdict, Verdict::Unexplained { .. })),
         "no Unexplained dollar verdict"
     );
     assert!(
-        !report.symbols.iter().any(|s| matches!(s.share_verdict, ShareVerdict::Flagged { .. })),
+        !report
+            .symbols
+            .iter()
+            .any(|s| matches!(s.share_verdict, ShareVerdict::Flagged { .. })),
         "no Flagged share residual"
     );
     assert!(
@@ -389,28 +544,50 @@ fn an_owner_adjudicated_divergence_is_recorded_and_does_not_block() {
     wb.actions.push(goog_buy());
     wb.sales.push(goog_sale());
     wb.positions.push(position_row("GOOG", 80, 99_900, 80_000));
-    wb.adjudicated
-        .insert("GOOG".to_string(), "known-wrong legacy Profit cell".to_string());
+    wb.adjudicated.insert(
+        "GOOG".to_string(),
+        "known-wrong legacy Profit cell".to_string(),
+    );
 
     let mut marks = Marks::new();
     marks.insert("GOOG".to_string(), Cents(6000));
 
     let report = dry_run(&wb, &marks).expect("dry-run succeeds");
-    let goog = report.symbols.iter().find(|s| s.symbol == "GOOG").expect("GOOG line");
+    let goog = report
+        .symbols
+        .iter()
+        .find(|s| s.symbol == "GOOG")
+        .expect("GOOG line");
     match &goog.verdict {
-        Verdict::OwnerAdjudicated { residual_cents, reason } => {
-            assert_eq!(*residual_cents, Cents(-89_900), "the real residual is carried");
-            assert_eq!(reason, "known-wrong legacy Profit cell", "the reason, verbatim");
+        Verdict::OwnerAdjudicated {
+            residual_cents,
+            reason,
+        } => {
+            assert_eq!(
+                *residual_cents,
+                Cents(-89_900),
+                "the real residual is carried"
+            );
+            assert_eq!(
+                reason, "known-wrong legacy Profit cell",
+                "the reason, verbatim"
+            );
         }
         other => panic!("expected OwnerAdjudicated, got {other:?}"),
     }
-    assert!(report.commit_allowed, "an adjudicated divergence does not block");
+    assert!(
+        report.commit_allowed,
+        "an adjudicated divergence does not block"
+    );
 
     // The adjudicated report (residual + reason in its verdict) is what the owner
     // accepts and `commit` consumes — the commit record carries why.
     let mut store = fresh_store();
     let commit_report = commit(&mut store, &report.accept()).expect("commit proceeds");
-    assert!(!commit_report.appended.is_empty(), "the accepted import writes through");
+    assert!(
+        !commit_report.appended.is_empty(),
+        "the accepted import writes through"
+    );
 }
 
 // @spec IMPORT-RECON-008
@@ -425,13 +602,18 @@ fn an_undeclared_symbols_unexplained_verdict_still_blocks() {
     wb.actions.push(goog_buy());
     wb.sales.push(goog_sale());
     wb.positions.push(position_row("GOOG", 80, 99_900, 80_000));
-    wb.adjudicated.insert("AMZN".to_string(), "some other symbol's ruling".to_string());
+    wb.adjudicated
+        .insert("AMZN".to_string(), "some other symbol's ruling".to_string());
 
     let mut marks = Marks::new();
     marks.insert("GOOG".to_string(), Cents(6000));
 
     let report = dry_run(&wb, &marks).expect("dry-run succeeds");
-    let goog = report.symbols.iter().find(|s| s.symbol == "GOOG").expect("GOOG line");
+    let goog = report
+        .symbols
+        .iter()
+        .find(|s| s.symbol == "GOOG")
+        .expect("GOOG line");
     assert!(
         matches!(goog.verdict, Verdict::Unexplained { .. }),
         "an undeclared symbol's residual stays Unexplained"
@@ -452,14 +634,23 @@ fn an_adjudication_never_applies_to_a_share_residual() {
     wb.actions.push(goog_buy());
     wb.sales.push(goog_sale());
     wb.positions.push(position_row("GOOG", 90, 10_000, 90_000));
-    wb.adjudicated
-        .insert("GOOG".to_string(), "adjudications rule on dollars, not shares".to_string());
+    wb.adjudicated.insert(
+        "GOOG".to_string(),
+        "adjudications rule on dollars, not shares".to_string(),
+    );
 
     let report = dry_run(&wb, &Marks::new()).expect("dry-run succeeds");
-    let goog = report.symbols.iter().find(|s| s.symbol == "GOOG").expect("GOOG line");
+    let goog = report
+        .symbols
+        .iter()
+        .find(|s| s.symbol == "GOOG")
+        .expect("GOOG line");
     assert!(
         matches!(goog.share_verdict, ShareVerdict::Flagged { .. }),
         "the share residual stays flagged"
     );
-    assert!(!report.commit_allowed, "a flagged share residual blocks regardless of adjudication");
+    assert!(
+        !report.commit_allowed,
+        "a flagged share residual blocks regardless of adjudication"
+    );
 }

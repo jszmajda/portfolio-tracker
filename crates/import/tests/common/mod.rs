@@ -7,8 +7,8 @@
 
 use config::ResidencyTimeline;
 use import::testkit::{
-    buy_row, closed_year, founding_residency, position_row, residency, sale_row,
-    split_20_for_1, vest_row,
+    buy_row, closed_year, founding_residency, position_row, residency, sale_row, split_20_for_1,
+    vest_row,
 };
 use import::{
     ClosedYear, KnownCorporateAction, LegacyActionRow, LegacyPositionRow, LegacySaleRow,
@@ -44,7 +44,16 @@ pub const PLATFORM: &str = "Schwab";
 
 /// The AMZN vest row (100 shares @ $2,000 FMV, 2021-03-01).
 pub fn amzn_vest() -> LegacyActionRow {
-    vest_row("Stock Actions", 2, "AMZN-V1", "AMZN", 100, "2000.00", date(2021, 3, 1), PLATFORM)
+    vest_row(
+        "Stock Actions",
+        2,
+        "AMZN-V1",
+        "AMZN",
+        100,
+        "2000.00",
+        date(2021, 3, 1),
+        PLATFORM,
+    )
 }
 
 /// The AMZN 20:1 split (2022-06-06).
@@ -57,8 +66,16 @@ pub fn amzn_split() -> KnownCorporateAction {
 /// post-split row-date share-frame.)
 pub fn amzn_sale_post_split() -> LegacySaleRow {
     sale_row(
-        "Stock Sales", 2, "AMZN-S1", "AMZN-V1", "AMZN", 400, "120.00", "0",
-        date(2023, 4, 1), PLATFORM,
+        "Stock Sales",
+        2,
+        "AMZN-S1",
+        "AMZN-V1",
+        "AMZN",
+        400,
+        "120.00",
+        "0",
+        date(2023, 4, 1),
+        PLATFORM,
     )
 }
 
@@ -92,13 +109,31 @@ pub fn amzn_only_workbook() -> LegacyWorkbook {
 // ---------------------------------------------------------------------------
 
 pub fn goog_buy() -> LegacyActionRow {
-    buy_row("Stock Actions", 3, "GOOG-B1", "GOOG", 100, "50.00", "0", date(2020, 1, 15), PLATFORM)
+    buy_row(
+        "Stock Actions",
+        3,
+        "GOOG-B1",
+        "GOOG",
+        100,
+        "50.00",
+        "0",
+        date(2020, 1, 15),
+        PLATFORM,
+    )
 }
 
 pub fn goog_sale() -> LegacySaleRow {
     sale_row(
-        "Stock Sales", 3, "GOOG-S1", "GOOG-B1", "GOOG", 20, "55.00", "0",
-        date(2021, 6, 1), PLATFORM,
+        "Stock Sales",
+        3,
+        "GOOG-S1",
+        "GOOG-B1",
+        "GOOG",
+        20,
+        "55.00",
+        "0",
+        date(2021, 6, 1),
+        PLATFORM,
     )
 }
 
@@ -115,7 +150,12 @@ pub fn goog_position_legacy() -> LegacyPositionRow {
 
 pub fn closed_year_dc_2023() -> ClosedYear {
     // The legacy actual DC tax paid for 2023, e.g. $7,200 = 720_000 cents.
-    closed_year(config::Jurisdiction::State("DC".to_string()), 2023, 720_000, "DC Reserve")
+    closed_year(
+        config::Jurisdiction::State("DC".to_string()),
+        2023,
+        720_000,
+        "DC Reserve",
+    )
 }
 
 /// The full combined workbook (GOOG + AMZN + the DC 2023 closed year).

@@ -123,7 +123,11 @@ impl FakeSheetsApi {
     /// name.
     pub fn rows_at(&self, range: &str) -> Grid {
         let (sheet, _) = parse_range(range);
-        self.sheets.borrow().get(&sheet).cloned().unwrap_or_default()
+        self.sheets
+            .borrow()
+            .get(&sheet)
+            .cloned()
+            .unwrap_or_default()
     }
 
     /// Mark the workbook unreachable (every call returns `Unreachable`).
@@ -221,7 +225,10 @@ impl SheetsApi for FakeSheetsApi {
         // Creating the sheet clears its missing marker; a no-op when it exists
         // (the real addSheet-if-absent). (STORE-WRITE-009)
         self.missing.borrow_mut().remove(title);
-        self.sheets.borrow_mut().entry(title.to_string()).or_default();
+        self.sheets
+            .borrow_mut()
+            .entry(title.to_string())
+            .or_default();
         Ok(())
     }
 

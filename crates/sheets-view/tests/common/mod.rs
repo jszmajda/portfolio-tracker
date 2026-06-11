@@ -6,9 +6,7 @@
 
 use std::collections::BTreeMap;
 
-use config::{
-    BracketRow, BracketSet, BracketState, Jurisdiction, Niit, Ppm, StateCode, TaxYear,
-};
+use config::{BracketRow, BracketSet, BracketState, Jurisdiction, Niit, Ppm, StateCode, TaxYear};
 use ledger_core::{LedgerEvent, LedgerEventKind, Marks, Snapshot, Symbol};
 use pt_core::{Cents, Date, MicroShares, Seq};
 use tax::{
@@ -16,7 +14,14 @@ use tax::{
 };
 
 /// A `Buy` event opening a lot.
-pub fn buy(seq: u64, date: i32, lot: &str, symbol: &str, qty_micro: i64, unit_cents: i64) -> LedgerEvent {
+pub fn buy(
+    seq: u64,
+    date: i32,
+    lot: &str,
+    symbol: &str,
+    qty_micro: i64,
+    unit_cents: i64,
+) -> LedgerEvent {
     LedgerEvent {
         id: format!("e{seq}"),
         seq: Seq(seq),
@@ -63,7 +68,10 @@ pub fn sell(
 
 /// A marks map for replay (symbol → per-share Cents).
 pub fn marks(entries: &[(&str, i64)]) -> Marks {
-    entries.iter().map(|(s, c)| (Symbol::from(*s), Cents(*c))).collect()
+    entries
+        .iter()
+        .map(|(s, c)| (Symbol::from(*s), Cents(*c)))
+        .collect()
 }
 
 /// Replay a log with marks into a `Snapshot`.
@@ -88,7 +96,10 @@ pub fn small_snapshot(marks_in: &Marks) -> Snapshot {
 
 fn flat_set(rate: i64) -> BracketSet {
     BracketSet {
-        rows: vec![BracketRow { lower_threshold_cents: Cents(0), rate_ppm: Ppm(rate) }],
+        rows: vec![BracketRow {
+            lower_threshold_cents: Cents(0),
+            rate_ppm: Ppm(rate),
+        }],
         last_verified: Date(19_000),
         source_note: "test".to_string(),
     }
@@ -98,15 +109,18 @@ fn flat_set(rate: i64) -> BracketSet {
 pub fn ctx(tax_year: i32) -> TaxContext {
     let federal = ResolvedJurisdiction {
         jurisdiction: Jurisdiction::Federal,
-        ordinary: Some(flat_set(370_000)),       // 37%
+        ordinary: Some(flat_set(370_000)),          // 37%
         federal_long_term: Some(flat_set(200_000)), // 20%
-        niit: Some(Niit { rate_ppm: Ppm(38_000), magi_threshold_cents: Cents(0) }),
+        niit: Some(Niit {
+            rate_ppm: Ppm(38_000),
+            magi_threshold_cents: Cents(0),
+        }),
         ordinary_income_cents: Cents(0),
         state: BracketState::Verified,
     };
     let nj = ResolvedJurisdiction {
         jurisdiction: Jurisdiction::State("NJ".to_string()),
-        ordinary: Some(flat_set(55_250)),       // 5.525%
+        ordinary: Some(flat_set(55_250)), // 5.525%
         federal_long_term: None,
         niit: None,
         ordinary_income_cents: Cents(0),
@@ -146,7 +160,11 @@ pub fn annual_rows(snapshot: &Snapshot, events: &[TaxEvent], ctx: &TaxContext) -
 /// Compute the per-position effective unrealized tax rates (symbol → Ppm) via
 /// `tax::unrealized_estimate`, as `sheets-view` consumes them for the Positions
 /// `Est. Tax Rate` column.
-pub fn effective_rates(snapshot: &Snapshot, as_of: Date, ctx: &TaxContext) -> BTreeMap<Symbol, Ppm> {
+pub fn effective_rates(
+    snapshot: &Snapshot,
+    as_of: Date,
+    ctx: &TaxContext,
+) -> BTreeMap<Symbol, Ppm> {
     let mut out: BTreeMap<Symbol, Ppm> = BTreeMap::new();
     for symbol in snapshot.positions.keys() {
         let est: UnrealizedEstimate = tax::unrealized_estimate(

@@ -45,7 +45,11 @@ fn views_mode_routes_keys_to_the_global_bindings() {
     let m = views_model();
     // At the landing frame, `q`/`esc` quit; `tab` toggles mode; `r` refreshes.
     assert_eq!(route(&m, ShellKey::Char('q')), KeyRoute::Quit);
-    assert_eq!(route(&m, ShellKey::Esc), KeyRoute::Quit, "esc at the landing frame quits");
+    assert_eq!(
+        route(&m, ShellKey::Esc),
+        KeyRoute::Quit,
+        "esc at the landing frame quits"
+    );
     assert_eq!(route(&m, ShellKey::Tab), KeyRoute::ToggleMode);
     assert_eq!(route(&m, ShellKey::Char('r')), KeyRoute::Refresh);
     // An unbound key is a no-op in Views.
@@ -58,14 +62,32 @@ fn views_mode_binds_one_through_five_to_the_screens_everywhere_in_views() {
     use tui::views::Screen;
     let mut m = views_model();
     // `1`–`5` reach each screen from the landing frame...
-    assert_eq!(route(&m, ShellKey::Char('1')), KeyRoute::SwitchScreen(Screen::Positions));
-    assert_eq!(route(&m, ShellKey::Char('2')), KeyRoute::SwitchScreen(Screen::OpenLots));
-    assert_eq!(route(&m, ShellKey::Char('3')), KeyRoute::SwitchScreen(Screen::History));
-    assert_eq!(route(&m, ShellKey::Char('4')), KeyRoute::SwitchScreen(Screen::TaxReserves));
-    assert_eq!(route(&m, ShellKey::Char('5')), KeyRoute::SwitchScreen(Screen::Realized));
+    assert_eq!(
+        route(&m, ShellKey::Char('1')),
+        KeyRoute::SwitchScreen(Screen::Positions)
+    );
+    assert_eq!(
+        route(&m, ShellKey::Char('2')),
+        KeyRoute::SwitchScreen(Screen::OpenLots)
+    );
+    assert_eq!(
+        route(&m, ShellKey::Char('3')),
+        KeyRoute::SwitchScreen(Screen::History)
+    );
+    assert_eq!(
+        route(&m, ShellKey::Char('4')),
+        KeyRoute::SwitchScreen(Screen::TaxReserves)
+    );
+    assert_eq!(
+        route(&m, ShellKey::Char('5')),
+        KeyRoute::SwitchScreen(Screen::Realized)
+    );
     // ...and from a drilled frame too (the switch drops the drill scope).
     assert!(m.drill(&tui::views::RowIdentity::Symbol("AMZN".to_string())));
-    assert_eq!(route(&m, ShellKey::Char('5')), KeyRoute::SwitchScreen(Screen::Realized));
+    assert_eq!(
+        route(&m, ShellKey::Char('5')),
+        KeyRoute::SwitchScreen(Screen::Realized)
+    );
     // `6`+ stays unbound.
     assert_eq!(route(&m, ShellKey::Char('6')), KeyRoute::Noop);
 }
@@ -77,7 +99,10 @@ fn digits_do_not_switch_screens_inside_an_entry_composer_or_text_input() {
     // Inside an open composer, a digit starts typing into the field — it must
     // never be swallowed as a screen switch.
     let m = entry_model();
-    assert_eq!(route(&m, ShellKey::Char('3')), KeyRoute::EntryStartTyping('3'));
+    assert_eq!(
+        route(&m, ShellKey::Char('3')),
+        KeyRoute::EntryStartTyping('3')
+    );
     // In text-input mode a digit types into the field.
     let mut m = entry_model();
     m.entry_enter_field();
@@ -98,7 +123,11 @@ fn esc_ascends_a_drilled_frame_but_quits_only_at_the_landing_frame() {
     let drilled = m.drill(&tui::views::RowIdentity::Symbol("AMZN".to_string()));
     if drilled {
         assert!(m.stack.len() > 1, "the drill pushed a frame");
-        assert_eq!(route(&m, ShellKey::Esc), KeyRoute::Ascend, "esc on a drilled frame ascends");
+        assert_eq!(
+            route(&m, ShellKey::Esc),
+            KeyRoute::Ascend,
+            "esc on a drilled frame ascends"
+        );
     }
 }
 
@@ -117,9 +146,18 @@ fn an_open_entry_composer_owns_the_field_navigation_keymap() {
     assert_eq!(route(&m, ShellKey::Esc), KeyRoute::EntryEscape);
     // A printable key starts editing the focused field (NOT a global accelerator) —
     // so `r`/`q` in Entry field-nav begin typing, never refresh/quit.
-    assert_eq!(route(&m, ShellKey::Char('A')), KeyRoute::EntryStartTyping('A'));
-    assert_eq!(route(&m, ShellKey::Char('r')), KeyRoute::EntryStartTyping('r'));
-    assert_eq!(route(&m, ShellKey::Char('q')), KeyRoute::EntryStartTyping('q'));
+    assert_eq!(
+        route(&m, ShellKey::Char('A')),
+        KeyRoute::EntryStartTyping('A')
+    );
+    assert_eq!(
+        route(&m, ShellKey::Char('r')),
+        KeyRoute::EntryStartTyping('r')
+    );
+    assert_eq!(
+        route(&m, ShellKey::Char('q')),
+        KeyRoute::EntryStartTyping('q')
+    );
 }
 
 // @spec TUI-ENTRY-FLOW-008
@@ -132,13 +170,29 @@ fn text_input_mode_suppresses_global_accelerators_and_routes_to_the_field() {
     // Printables type into the field; tab does NOT toggle mode (suppressed); backspace
     // and enter/esc route to the field. (TUI-ENTRY-FLOW-008)
     assert_eq!(route(&m, ShellKey::Char('1')), KeyRoute::EntryType('1'));
-    assert_eq!(route(&m, ShellKey::Char('q')), KeyRoute::EntryType('q'), "a typed 'q' is text, not quit");
-    assert_eq!(route(&m, ShellKey::Char('r')), KeyRoute::EntryType('r'), "a typed 'r' is text, not refresh");
+    assert_eq!(
+        route(&m, ShellKey::Char('q')),
+        KeyRoute::EntryType('q'),
+        "a typed 'q' is text, not quit"
+    );
+    assert_eq!(
+        route(&m, ShellKey::Char('r')),
+        KeyRoute::EntryType('r'),
+        "a typed 'r' is text, not refresh"
+    );
     assert_eq!(route(&m, ShellKey::Backspace), KeyRoute::EntryBackspace);
     assert_eq!(route(&m, ShellKey::Enter), KeyRoute::EntryEnter);
-    assert_eq!(route(&m, ShellKey::Esc), KeyRoute::EntryEscape, "esc leaves the field");
+    assert_eq!(
+        route(&m, ShellKey::Esc),
+        KeyRoute::EntryEscape,
+        "esc leaves the field"
+    );
     // Tab is suppressed in text-input mode (a no-op, not a mode toggle).
-    assert_eq!(route(&m, ShellKey::Tab), KeyRoute::Noop, "tab is suppressed while typing");
+    assert_eq!(
+        route(&m, ShellKey::Tab),
+        KeyRoute::Noop,
+        "tab is suppressed while typing"
+    );
 }
 
 // @spec TUI-ENTRY-FLOW-008
@@ -154,7 +208,11 @@ fn enter_advances_then_submits_on_the_last_field_via_the_routed_model_method() {
         assert_eq!(route(&m, ShellKey::Enter), KeyRoute::EntryEnter);
         last_action = m.entry_enter();
     }
-    assert_eq!(last_action, tui::form::FormAction::Submit, "enter on the last field submits");
+    assert_eq!(
+        last_action,
+        tui::form::FormAction::Submit,
+        "enter on the last field submits"
+    );
 }
 
 // @spec TUI-ENTRY-FLOW-008
@@ -167,7 +225,11 @@ fn a_views_key_in_entry_mode_with_no_open_composer_falls_through_to_global() {
     m.toggle_mode(); // Entry mode, but `entry` is empty (no open context)
     assert_eq!(m.mode, Mode::Entry);
     assert!(m.entry_top().is_none());
-    assert_eq!(route(&m, ShellKey::Tab), KeyRoute::ToggleMode, "no open composer ⇒ global keymap");
+    assert_eq!(
+        route(&m, ShellKey::Tab),
+        KeyRoute::ToggleMode,
+        "no open composer ⇒ global keymap"
+    );
     assert_eq!(route(&m, ShellKey::Char('r')), KeyRoute::Refresh);
 }
 
@@ -196,10 +258,26 @@ fn question_mark_toggles_the_help_overlay_outside_text_input_mode() {
     assert_eq!(route(&m, ShellKey::Char('?')), KeyRoute::ToggleHelp);
     m.toggle_help();
     assert!(m.help_open);
-    assert_eq!(route(&m, ShellKey::Char('r')), KeyRoute::Noop, "the modal swallows keys");
-    assert_eq!(route(&m, ShellKey::Char('q')), KeyRoute::Noop, "q never quits through the modal");
-    assert_eq!(route(&m, ShellKey::Esc), KeyRoute::ToggleHelp, "esc dismisses");
-    assert_eq!(route(&m, ShellKey::Char('?')), KeyRoute::ToggleHelp, "? dismisses");
+    assert_eq!(
+        route(&m, ShellKey::Char('r')),
+        KeyRoute::Noop,
+        "the modal swallows keys"
+    );
+    assert_eq!(
+        route(&m, ShellKey::Char('q')),
+        KeyRoute::Noop,
+        "q never quits through the modal"
+    );
+    assert_eq!(
+        route(&m, ShellKey::Esc),
+        KeyRoute::ToggleHelp,
+        "esc dismisses"
+    );
+    assert_eq!(
+        route(&m, ShellKey::Char('?')),
+        KeyRoute::ToggleHelp,
+        "? dismisses"
+    );
 
     // The idle Entry panel binds ? too.
     let mut idle = Model::new();
@@ -301,10 +379,17 @@ fn dispatch(model: &mut Model, port: &mut FakeRuntime, key: ShellKey) {
         KeyRoute::SwitchScreen(screen) => model.switch_screen(screen),
         KeyRoute::OpenFlow(flow) => match flow {
             LaunchFlow::Buy => model.open_buy(port, "L1".to_string(), "", &platforms(), &aliases()),
-            LaunchFlow::Vest => model.open_vest(port, "V1".to_string(), "", &platforms(), &aliases()),
-            LaunchFlow::Sell => {
-                model.open_sell(port, "S1".to_string(), "", &residency_dc(), &platforms(), &aliases())
+            LaunchFlow::Vest => {
+                model.open_vest(port, "V1".to_string(), "", &platforms(), &aliases())
             }
+            LaunchFlow::Sell => model.open_sell(
+                port,
+                "S1".to_string(),
+                "",
+                &residency_dc(),
+                &platforms(),
+                &aliases(),
+            ),
             LaunchFlow::Split => model.open_split("", port.today()),
         },
         KeyRoute::EntryFocusNext => {
@@ -365,7 +450,10 @@ fn overtype(model: &mut Model, port: &mut FakeRuntime, s: &str) {
 
 fn empty_runtime() -> FakeRuntime {
     let snap = ledger_core::Snapshot::default();
-    FakeRuntime::new(ViewBuilder::new(snap).build(), flat_federal_ctx(2026, 220_000))
+    FakeRuntime::new(
+        ViewBuilder::new(snap).build(),
+        flat_federal_ctx(2026, 220_000),
+    )
 }
 
 // @spec TUI-VIEW-NAV-011
@@ -381,7 +469,10 @@ fn a_dispatched_question_mark_opens_and_closes_the_overlay_without_touching_stat
     assert!(model.help_open, "? opened the overlay");
     let refreshes = port.refresh_count;
     dispatch(&mut model, &mut port, ShellKey::Char('r'));
-    assert_eq!(port.refresh_count, refreshes, "the modal swallowed the refresh key");
+    assert_eq!(
+        port.refresh_count, refreshes,
+        "the modal swallowed the refresh key"
+    );
     dispatch(&mut model, &mut port, ShellKey::Esc);
     assert!(!model.help_open, "esc closed the overlay");
     assert_eq!(model, before, "the round trip mutated nothing");
@@ -401,16 +492,28 @@ fn a_key_sequence_from_the_landing_screen_opens_a_buy_composer() {
     assert_eq!(route(&model, ShellKey::Tab), KeyRoute::ToggleMode);
     dispatch(&mut model, &mut port, ShellKey::Tab);
     assert_eq!(model.mode, Mode::Entry);
-    assert!(model.entry_top().is_none(), "no composer is open yet — the idle panel");
+    assert!(
+        model.entry_top().is_none(),
+        "no composer is open yet — the idle panel"
+    );
 
     // `b` on the idle panel routes to OpenFlow(Buy) and opens the composer.
-    assert_eq!(route(&model, ShellKey::Char('b')), KeyRoute::OpenFlow(LaunchFlow::Buy));
+    assert_eq!(
+        route(&model, ShellKey::Char('b')),
+        KeyRoute::OpenFlow(LaunchFlow::Buy)
+    );
     dispatch(&mut model, &mut port, ShellKey::Char('b'));
     let ctx = model.entry_top().expect("a Buy composer is now open");
     assert_eq!(ctx.form.kind, FlowKind::Buy, "the open composer is a Buy");
-    assert!(ctx.composer.is_some(), "the composer carries a typed Buy form for submit");
+    assert!(
+        ctx.composer.is_some(),
+        "the composer carries a typed Buy form for submit"
+    );
     // The composer now owns the keymap: a printable starts typing the symbol field.
-    assert_eq!(route(&model, ShellKey::Char('A')), KeyRoute::EntryStartTyping('A'));
+    assert_eq!(
+        route(&model, ShellKey::Char('A')),
+        KeyRoute::EntryStartTyping('A')
+    );
 }
 
 // @spec TUI-ENTRY-FLOW-008
@@ -458,13 +561,30 @@ fn a_full_key_run_opens_buy_edits_fields_and_submits_confirmed() {
         dispatch(&mut model, &mut port, ShellKey::Enter);
     }
     // The first submit holds on the new-symbol guard (AMZN unknown on the empty snap).
-    assert!(model.entry_phase_confirm_new_symbol(), "the new-symbol guard holds the submit");
-    assert_eq!(route(&model, ShellKey::Char('c')), KeyRoute::EntryConfirmNewSymbol);
+    assert!(
+        model.entry_phase_confirm_new_symbol(),
+        "the new-symbol guard holds the submit"
+    );
+    assert_eq!(
+        route(&model, ShellKey::Char('c')),
+        KeyRoute::EntryConfirmNewSymbol
+    );
     dispatch(&mut model, &mut port, ShellKey::Char('c')); // confirm + re-submit
 
-    assert!(model.entry_top().is_none(), "the confirmed submit cleared the composer");
-    assert_eq!(model.mode, Mode::Views, "the empty entry stack fell back to Views");
-    assert_eq!(port.ledger_log.len(), 1, "the Buy landed durably through the routed submit");
+    assert!(
+        model.entry_top().is_none(),
+        "the confirmed submit cleared the composer"
+    );
+    assert_eq!(
+        model.mode,
+        Mode::Views,
+        "the empty entry stack fell back to Views"
+    );
+    assert_eq!(
+        port.ledger_log.len(),
+        1,
+        "the Buy landed durably through the routed submit"
+    );
 }
 
 // @spec TUI-ENTRY-LOT-001, TUI-ENTRY-LOT-002, TUI-ENTRY-LOT-006, TUI-ENTRY-FLOW-008
@@ -479,7 +599,10 @@ fn the_picker_keymap_routes_focus_take_and_fifo_fill() {
         buy(2, 19_000, "new", "AMZN", 100, 17_200, "Robinhood"),
     ];
     let snap = replay(&log, &[("AMZN", 26_126)]);
-    let mut port = FakeRuntime::new(ViewBuilder::new(snap.clone()).build(), flat_federal_ctx(2026, 220_000));
+    let mut port = FakeRuntime::new(
+        ViewBuilder::new(snap.clone()).build(),
+        flat_federal_ctx(2026, 220_000),
+    );
     let mut model = Model::new();
     model.toggle_mode();
     // Open the Sell with a sale qty of 150 so the picker has a target (the qty field
@@ -494,10 +617,19 @@ fn the_picker_keymap_routes_focus_take_and_fifo_fill() {
         platform: "Robinhood".to_string(),
         tracking_code: None,
         accrues_to_state: Some("DC".to_string()),
-        picker: tui::entry::LotPicker::build(&snap, &"AMZN".to_string(), "Robinhood", ms(150), Date(20_000)),
+        picker: tui::entry::LotPicker::build(
+            &snap,
+            &"AMZN".to_string(),
+            "Robinhood",
+            ms(150),
+            Date(20_000),
+        ),
     };
     model.open_composer(tui::entry::Composer::Sell(sell));
-    assert!(model.entry_has_picker(), "the Sell context has an operable picker");
+    assert!(
+        model.entry_has_picker(),
+        "the Sell context has an operable picker"
+    );
 
     // The picker owns ↓ (routes to PickerFocusNext, not the form's field nav).
     assert_eq!(route(&model, ShellKey::Down), KeyRoute::PickerFocusNext);
@@ -507,7 +639,10 @@ fn the_picker_keymap_routes_focus_take_and_fifo_fill() {
     assert_eq!(model.entry_top().unwrap().picker_focus, 0);
 
     // A digit on the focused row routes to PickerStartTake + sets the take.
-    assert_eq!(route(&model, ShellKey::Char('5')), KeyRoute::PickerStartTake('5'));
+    assert_eq!(
+        route(&model, ShellKey::Char('5')),
+        KeyRoute::PickerStartTake('5')
+    );
     dispatch(&mut model, &mut port, ShellKey::Char('5'));
     let old_take = model
         .entry_top()
@@ -519,7 +654,11 @@ fn the_picker_keymap_routes_focus_take_and_fifo_fill() {
         .find(|l| l.lot_id == "old")
         .unwrap()
         .take;
-    assert_eq!(old_take, ms(5), "a routed digit set a take on the active row");
+    assert_eq!(
+        old_take,
+        ms(5),
+        "a routed digit set a take on the active row"
+    );
 
     // `[F]` routes to FIFO-fill and allocates oldest-first to the sale qty.
     assert_eq!(route(&model, ShellKey::Char('F')), KeyRoute::PickerFillFifo);
@@ -527,7 +666,14 @@ fn the_picker_keymap_routes_focus_take_and_fifo_fill() {
     let picker = model.entry_top().unwrap().picker_ref().unwrap();
     assert_eq!(picker.allocated(), ms(150), "FIFO filled to the sale qty");
     assert!(
-        picker.lots.iter().find(|l| l.lot_id == "old").unwrap().take.0 >= ms(100).0,
+        picker
+            .lots
+            .iter()
+            .find(|l| l.lot_id == "old")
+            .unwrap()
+            .take
+            .0
+            >= ms(100).0,
         "the oldest lot fills first"
     );
 }
@@ -537,11 +683,17 @@ fn the_picker_keymap_routes_focus_take_and_fifo_fill() {
 fn a_routed_submit_disagreement_rerenders_inline_and_keeps_the_composer_open() {
     // The routed submit folds a live kernel disagreement back into the inline slot —
     // the composer stays open (not cleared). (TUI-ENTRY-FLOW-002)
-    let snap = replay(&[buy(1, 18_000, "L0", "AMZN", 5, 10_000, "Robinhood")], &[("AMZN", 26_126)]);
-    let mut port = FakeRuntime::new(ViewBuilder::new(snap).build(), flat_federal_ctx(2026, 220_000))
-        .with_behavior(tui::testkit::SubmitBehavior::SubmitRejectLedger(
-            ledger_core::LedgerError::InsufficientShares,
-        ));
+    let snap = replay(
+        &[buy(1, 18_000, "L0", "AMZN", 5, 10_000, "Robinhood")],
+        &[("AMZN", 26_126)],
+    );
+    let mut port = FakeRuntime::new(
+        ViewBuilder::new(snap).build(),
+        flat_federal_ctx(2026, 220_000),
+    )
+    .with_behavior(tui::testkit::SubmitBehavior::SubmitRejectLedger(
+        ledger_core::LedgerError::InsufficientShares,
+    ));
     let mut model = Model::new();
     dispatch(&mut model, &mut port, ShellKey::Tab);
     dispatch(&mut model, &mut port, ShellKey::Char('b'));
@@ -553,10 +705,15 @@ fn a_routed_submit_disagreement_rerenders_inline_and_keeps_the_composer_open() {
     for _ in 0..5 {
         dispatch(&mut model, &mut port, ShellKey::Enter);
     }
-    let ctx = model.entry_top().expect("the composer stays open on a submit disagreement");
+    let ctx = model
+        .entry_top()
+        .expect("the composer stays open on a submit disagreement");
     match &ctx.form.phase {
         Phase::Rejected(e) => assert!(e.text().contains("InsufficientShares")),
         other => panic!("expected an inline kernel rejection, got {other:?}"),
     }
-    assert!(ctx.form.error.is_some(), "the kernel error is pinned in the inline slot beside a field");
+    assert!(
+        ctx.form.error.is_some(),
+        "the kernel error is pinned in the inline slot beside a field"
+    );
 }

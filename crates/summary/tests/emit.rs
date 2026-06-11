@@ -14,7 +14,10 @@ use summary::{build_report, compute_delta, CaptureOutcome, Report, TaxQualifier}
 /// the header carries a real point-to-point delta.
 fn report_for(inputs: &summary::SummaryInputs, baseline_amzn: i64) -> Report {
     let current = summary::build_current_point(inputs).expect("a priced point");
-    let stored = vec![point_at(inputs.trading_day_key.unwrap().0 .0 - 5, baseline_amzn)];
+    let stored = vec![point_at(
+        inputs.trading_day_key.unwrap().0 .0 - 5,
+        baseline_amzn,
+    )];
     let capture = CaptureOutcome::Appended(current.clone());
     let delta = compute_delta(&capture, &stored, &[]);
     build_report(inputs, &capture, delta, stored.first())
@@ -33,7 +36,10 @@ fn report_is_headlined_by_the_trading_day_with_the_run_time_secondary() {
     assert_eq!(report.run_at_epoch_secs, inputs.run_at_epoch_secs);
     // Header + per-symbol positions + a current-year tax-reserve line all present.
     assert!(!report.positions.is_empty(), "per-symbol positions present");
-    assert_eq!(report.tax_line.year, 2022, "current-year tax-reserve line present");
+    assert_eq!(
+        report.tax_line.year, 2022,
+        "current-year tax-reserve line present"
+    );
     // Total value = the priced market value (AMZN 3@$200 + GOOG 1@$120 = $720).
     assert_eq!(report.header.total_value_cents.0, 200_00 * 3 + 120_00);
 }
@@ -45,14 +51,23 @@ fn net_uses_the_same_priced_set_as_total_value_and_is_partial_when_total_is() {
     // on unrealized gains is subtracted), using the SAME priced set.
     let priced = report_for(&inputs_at(19_490, 200_00), 190_00);
     assert!(!priced.header.partial, "fully priced → not partial");
-    let net = priced.header.net_post_tax_cents.expect("net present when priced");
-    assert!(net.0 <= priced.header.total_value_cents.0, "net ≤ total (tax subtracted)");
+    let net = priced
+        .header
+        .net_post_tax_cents
+        .expect("net present when priced");
+    assert!(
+        net.0 <= priced.header.total_value_cents.0,
+        "net ≤ total (tax subtracted)"
+    );
 
     // Degraded: GOOG unpriced. Total value is partial → Net is flagged partial too,
     // and Net is computed over the SAME priced/degraded set as Total value.
     // (SUMMARY-EMIT-002)
     let degraded = report_for(&inputs_degraded(19_490, 200_00), 190_00);
-    assert!(degraded.header.partial, "an unpriced symbol makes totals partial");
+    assert!(
+        degraded.header.partial,
+        "an unpriced symbol makes totals partial"
+    );
     // Total value counts only AMZN (the priced symbol): 3 @ $200 = $600.
     assert_eq!(degraded.header.total_value_cents.0, 200_00 * 3);
     // Net is present (Verified brackets) and over the same priced set.
@@ -69,13 +84,24 @@ fn unpriced_symbols_are_named_and_totals_marked_partial() {
     // Totals are marked partial. (SUMMARY-EMIT-003)
     assert!(report.header.partial);
     // GOOG's position row is degraded (no price/value, delta unavailable).
-    let goog = report.positions.iter().find(|p| p.symbol == "GOOG").expect("GOOG row");
+    let goog = report
+        .positions
+        .iter()
+        .find(|p| p.symbol == "GOOG")
+        .expect("GOOG row");
     assert!(goog.degraded);
     assert!(goog.price_cents.is_none());
     assert!(goog.value_cents.is_none());
-    assert!(goog.delta_cents.is_none(), "a degraded symbol's delta is never fabricated");
+    assert!(
+        goog.delta_cents.is_none(),
+        "a degraded symbol's delta is never fabricated"
+    );
     // AMZN is priced and not degraded.
-    let amzn = report.positions.iter().find(|p| p.symbol == "AMZN").expect("AMZN row");
+    let amzn = report
+        .positions
+        .iter()
+        .find(|p| p.symbol == "AMZN")
+        .expect("AMZN row");
     assert!(!amzn.degraded);
     assert!(amzn.price_cents.is_some());
 }
@@ -95,14 +121,24 @@ fn priced_symbol_with_no_folded_tax_estimate_marks_partial_without_naming_it() {
     let report = report_for(&inputs, 190_00);
 
     // Totals are partial (the point is incomplete from the missing estimate).
-    assert!(report.header.partial, "a missing folded estimate makes totals partial");
+    assert!(
+        report.header.partial,
+        "a missing folded estimate makes totals partial"
+    );
     // GOOG is NOT named as degraded (it is priced — it has a value/price row).
     assert!(
         !report.degraded_symbols.iter().any(|s| s == "GOOG"),
         "a priced-but-no-estimate symbol is not named in degraded_symbols"
     );
-    let goog = report.positions.iter().find(|p| p.symbol == "GOOG").expect("GOOG row");
-    assert!(!goog.degraded, "GOOG is priced (a value), so its row is not degraded");
+    let goog = report
+        .positions
+        .iter()
+        .find(|p| p.symbol == "GOOG")
+        .expect("GOOG row");
+    assert!(
+        !goog.degraded,
+        "GOOG is priced (a value), so its row is not degraded"
+    );
     assert!(goog.value_cents.is_some(), "GOOG carries a priced value");
     assert!(goog.price_cents.is_some(), "GOOG carries a per-share price");
 }
@@ -125,22 +161,30 @@ fn stale_brackets_mark_net_and_tax_line_estimated_stale() {
     // Numbers are still shown, marked stale (nudging a refresh). (SUMMARY-EMIT-004)
     assert_eq!(report.header.net_qualifier, TaxQualifier::Stale);
     assert_eq!(report.tax_line.qualifier, TaxQualifier::Stale);
-    assert!(report.header.net_post_tax_cents.is_some(), "stale still shows a number");
+    assert!(
+        report.header.net_post_tax_cents.is_some(),
+        "stale still shows a number"
+    );
     assert!(report.tax_line.accrued_cents.is_some());
 }
 
 // @spec SUMMARY-EMIT-004
 #[test]
 fn cold_start_no_brackets_shows_na_never_a_fabricated_net_or_reserve() {
-    let inputs =
-        with_bracket_state(inputs_at(19_490, 200_00), BracketState::NoBracketsAvailable);
+    let inputs = with_bracket_state(inputs_at(19_490, 200_00), BracketState::NoBracketsAvailable);
     let report = report_for(&inputs, 190_00);
     // Net shows n/a (no brackets); the tax line says set up brackets — never a
     // fabricated reserve or net. (SUMMARY-EMIT-004)
     assert_eq!(report.header.net_qualifier, TaxQualifier::NoBrackets);
     assert_eq!(report.tax_line.qualifier, TaxQualifier::NoBrackets);
-    assert!(report.header.net_post_tax_cents.is_none(), "no fabricated net on cold-start");
-    assert!(report.tax_line.accrued_cents.is_none(), "no fabricated reserve on cold-start");
+    assert!(
+        report.header.net_post_tax_cents.is_none(),
+        "no fabricated net on cold-start"
+    );
+    assert!(
+        report.tax_line.accrued_cents.is_none(),
+        "no fabricated reserve on cold-start"
+    );
     assert!(report.tax_line.outstanding_cents.is_none());
     // Total value (mark-based, bracket-independent) is still shown.
     assert_eq!(report.header.total_value_cents.0, 200_00 * 3 + 120_00);
@@ -159,15 +203,34 @@ fn tax_line_carries_distinct_accrued_moved_and_outstanding_with_reserve_events()
     let inputs = inputs_with_reserve_events(19_490, 200_00, moved, paid);
     let report = report_for(&inputs, 190_00);
 
-    let accrued = report.tax_line.accrued_cents.expect("accrued present (Verified)").0;
-    assert_eq!(report.tax_line.moved_cents, Some(pt_core::Cents(moved)), "moved = Σ Move");
-    let outstanding = report.tax_line.outstanding_cents.expect("outstanding present").0;
+    let accrued = report
+        .tax_line
+        .accrued_cents
+        .expect("accrued present (Verified)")
+        .0;
+    assert_eq!(
+        report.tax_line.moved_cents,
+        Some(pt_core::Cents(moved)),
+        "moved = Σ Move"
+    );
+    let outstanding = report
+        .tax_line
+        .outstanding_cents
+        .expect("outstanding present")
+        .0;
     // outstanding is tax's canonical accrued − paid (NOT accrued − moved).
-    assert_eq!(outstanding, accrued - paid, "outstanding = accrued − paid (tax's definition)");
+    assert_eq!(
+        outstanding,
+        accrued - paid,
+        "outstanding = accrued − paid (tax's definition)"
+    );
     // The reserve actually has a real (non-zero) accrual from the GOOG sale, so the
     // three figures are genuinely distinct and the test is not vacuous.
     assert!(accrued != 0, "the GOOG sale accrues a real reserve");
-    assert_ne!(outstanding, accrued, "paid != 0 → outstanding distinct from accrued");
+    assert_ne!(
+        outstanding, accrued,
+        "paid != 0 → outstanding distinct from accrued"
+    );
 
     // The rendered text surfaces all three figures (the design example shows moved
     // alongside accrued and outstanding). (SUMMARY-EMIT-001)
@@ -178,7 +241,10 @@ fn tax_line_carries_distinct_accrued_moved_and_outstanding_with_reserve_events()
 
     // The versioned JSON carries moved and outstanding distinctly.
     let json = summary::render_json(&report);
-    assert!(json.contains(&format!("\"moved\":{moved}")), "json moved = Σ Move");
+    assert!(
+        json.contains(&format!("\"moved\":{moved}")),
+        "json moved = Σ Move"
+    );
     assert!(
         json.contains(&format!("\"outstanding\":{}", accrued - paid)),
         "json outstanding = accrued − paid"
@@ -205,9 +271,15 @@ fn tax_line_emits_the_next_estimated_payment_period_from_quarter_of_today() {
 
     // It is surfaced in the rendered text and JSON.
     let text = summary::render_text(&report);
-    assert!(text.contains("Q2"), "text surfaces the next estimated-payment period");
+    assert!(
+        text.contains("Q2"),
+        "text surfaces the next estimated-payment period"
+    );
     let json = summary::render_json(&report);
-    assert!(json.contains("\"next_period\":\"Q2\""), "json carries tax.next_period");
+    assert!(
+        json.contains("\"next_period\":\"Q2\""),
+        "json carries tax.next_period"
+    );
 }
 
 // @spec SUMMARY-EMIT-006
@@ -236,17 +308,25 @@ fn next_period_tracks_quarter_of_today_not_the_tax_year() {
 fn cold_start_emits_no_fabricated_next_period() {
     // On cold-start (NoBracketsAvailable) there is no period: the field is None and
     // the JSON carries null — never a fabricated period. (SUMMARY-EMIT-006)
-    let inputs =
-        with_bracket_state(inputs_at(19_490, 200_00), BracketState::NoBracketsAvailable);
+    let inputs = with_bracket_state(inputs_at(19_490, 200_00), BracketState::NoBracketsAvailable);
     let report = report_for(&inputs, 190_00);
 
-    assert_eq!(report.tax_line.next_period, None, "no fabricated period on cold-start");
+    assert_eq!(
+        report.tax_line.next_period, None,
+        "no fabricated period on cold-start"
+    );
 
     let json = summary::render_json(&report);
-    assert!(json.contains("\"next_period\":null"), "json next_period is null on cold-start");
+    assert!(
+        json.contains("\"next_period\":null"),
+        "json next_period is null on cold-start"
+    );
     // The text tax line says set up brackets and surfaces no period.
     let text = summary::render_text(&report);
-    assert!(!text.contains("Next est. payment period"), "no period line on cold-start");
+    assert!(
+        !text.contains("Next est. payment period"),
+        "no period line on cold-start"
+    );
 }
 
 // @spec SUMMARY-DELTA-005

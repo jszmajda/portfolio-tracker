@@ -36,7 +36,9 @@ fn settings_live_in_a_local_file_with_eastern_timezone_default() {
         reporting_timezone: "US/Eastern".to_string(),
     };
     let store = InMemoryConfig::new(ConfigData::default(), settings.clone());
-    let loaded = store.load_settings().expect("settings read from the local file");
+    let loaded = store
+        .load_settings()
+        .expect("settings read from the local file");
     assert_eq!(loaded.workbook_id, "wb-123");
     assert_eq!(loaded.credentials_path, "/secrets/sa.json");
     assert_eq!(loaded.reporting_timezone, "US/Eastern");
@@ -59,8 +61,12 @@ fn settings_are_not_part_of_domain_config_data() {
 fn domain_config_persists_and_mirrors_for_read_back() {
     let mut store = InMemoryConfig::cold_start();
     let lock = pt_core::NoopLock::new();
-    store.put_tax_rules(valid_rules(2025, 19_700), &lock).expect("write");
-    store.put_de_minimis(de_minimis_dollar(), &lock).expect("write");
+    store
+        .put_tax_rules(valid_rules(2025, 19_700), &lock)
+        .expect("write");
+    store
+        .put_de_minimis(de_minimis_dollar(), &lock)
+        .expect("write");
     store.put_platforms(platforms(), &lock).expect("write");
 
     // A subsequent load reflects the persisted/mirrored domain config.
@@ -78,18 +84,21 @@ fn residency_timeline_persists_and_round_trips_through_the_store() {
     // domain tables — de-minimis, platforms, aliases, tax-rules — have their own
     // round-trip tests; residency's was the gap.)
     let mut store = InMemoryConfig::cold_start();
-    let timeline = config::ResidencyTimeline::from_entries(vec![
-        res(18_000, "DC"),
-        res(19_000, "NJ"),
-    ])
-    .expect("a valid founding-and-move timeline");
-    store.put_residency(timeline.clone(), &pt_core::NoopLock::new()).expect("residency write");
+    let timeline =
+        config::ResidencyTimeline::from_entries(vec![res(18_000, "DC"), res(19_000, "NJ")])
+            .expect("a valid founding-and-move timeline");
+    store
+        .put_residency(timeline.clone(), &pt_core::NoopLock::new())
+        .expect("residency write");
 
     let data = store.load().expect("load");
     assert_eq!(data.residency, timeline);
     assert_eq!(data.residency.entries().len(), 2);
     // The stored timeline still resolves residency (the move is inclusive).
-    assert_eq!(data.residency.residency_on(Date(19_000)), Some("NJ".to_string()));
+    assert_eq!(
+        data.residency.residency_on(Date(19_000)),
+        Some("NJ".to_string())
+    );
 }
 
 // @spec CONFIG-SETTINGS-003
@@ -98,7 +107,9 @@ fn fresh_workbook_with_no_config_tabs_reads_as_cold_start() {
     // A cold-start store models a fresh workbook (no config tabs): empty domain
     // config, so bracket resolution yields NoBracketsAvailable (the seed prompt).
     let store = InMemoryConfig::cold_start();
-    let data = store.load().expect("cold-start load is empty, not an error");
+    let data = store
+        .load()
+        .expect("cold-start load is empty, not an error");
     assert!(data.rules_by_year.is_empty());
     let r = resolve_brackets(&data.rules_by_year, &Jurisdiction::Federal, TaxYear(2025));
     assert_eq!(r.state, BracketState::NoBracketsAvailable);
@@ -145,7 +156,10 @@ fn workbook_wins_over_diverging_cache_on_load() {
         aliases: config::AliasMap::default(),
         display_names: config::DisplayNameMap::default(),
     };
-    assert_ne!(workbook, diverging_cache, "the scenario must actually diverge");
+    assert_ne!(
+        workbook, diverging_cache,
+        "the scenario must actually diverge"
+    );
 
     let store = InMemoryConfig::with_diverging_cache(workbook.clone(), diverging_cache);
 

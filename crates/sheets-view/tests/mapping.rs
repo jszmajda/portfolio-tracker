@@ -5,7 +5,7 @@ mod common;
 
 use std::collections::BTreeMap;
 
-use sheets_view::{price_formula, render_positions, resolve_ticker, POSITIONS_HEADER, ViewError};
+use sheets_view::{price_formula, render_positions, resolve_ticker, ViewError, POSITIONS_HEADER};
 
 use config::AliasMap;
 use pt_core::Date;
@@ -40,7 +40,9 @@ fn resolves_symbol_to_ticker_via_alias_identity_when_unset() {
 fn positions_price_formula_uses_resolved_ticker() {
     let marks = common::marks(&[("BRK", 500_000_00)]);
     // A single-symbol portfolio for BRK.
-    let events = vec![common::buy(1, 19_000, "lot-brk", "BRK", 1_000_000, 400_000_00)];
+    let events = vec![common::buy(
+        1, 19_000, "lot-brk", "BRK", 1_000_000, 400_000_00,
+    )];
     let snap = common::replay(&events, &marks);
 
     let mut map = BTreeMap::new();
@@ -51,8 +53,14 @@ fn positions_price_formula_uses_resolved_ticker() {
 
     let positions = render_positions(&snap, &rates, &aliases).unwrap();
     let price = positions.rows[0][col("Price")].text();
-    assert!(price.contains("BRK.B"), "Price formula must use resolved ticker: {price}");
-    assert!(!price.contains("\"BRK\""), "Price must NOT use the raw symbol: {price}");
+    assert!(
+        price.contains("BRK.B"),
+        "Price formula must use resolved ticker: {price}"
+    );
+    assert!(
+        !price.contains("\"BRK\""),
+        "Price must NOT use the raw symbol: {price}"
+    );
 }
 
 // @spec SHEET-MAP-002
@@ -78,7 +86,11 @@ fn read_back_keyed_by_row_identity_errors_loud_on_duplicate_symbol() {
     let n = symbols.len();
     symbols.sort();
     symbols.dedup();
-    assert_eq!(symbols.len(), n, "every row carries a distinct symbol (1-per-symbol)");
+    assert_eq!(
+        symbols.len(),
+        n,
+        "every row carries a distinct symbol (1-per-symbol)"
+    );
 }
 
 // @spec SHEET-MAP-002

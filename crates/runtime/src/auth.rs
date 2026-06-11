@@ -229,8 +229,8 @@ impl ServiceAccount {
 
     /// Parse a service account from the credentials JSON string. (RUNTIME-SHEETS-001)
     pub fn from_json(json: &str) -> Result<Self, AuthError> {
-        let key: ServiceAccountKey =
-            serde_json::from_str(json).map_err(|e| AuthError::CredentialsMalformed(e.to_string()))?;
+        let key: ServiceAccountKey = serde_json::from_str(json)
+            .map_err(|e| AuthError::CredentialsMalformed(e.to_string()))?;
         Ok(ServiceAccount { key })
     }
 
@@ -283,7 +283,9 @@ impl ServiceAccount {
         let status = resp.status().as_u16();
         if !(200..300).contains(&status) {
             let body = resp.text().unwrap_or_default();
-            return Err(AuthError::TokenExchangeFailed(format!("status {status}: {body}")));
+            return Err(AuthError::TokenExchangeFailed(format!(
+                "status {status}: {body}"
+            )));
         }
         let body: TokenResponse = resp
             .json()

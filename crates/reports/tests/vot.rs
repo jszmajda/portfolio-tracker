@@ -12,11 +12,7 @@ use reports::{
 
 /// Build a series point for the small portfolio at a given trading-day key, with
 /// the given priced marks and a capture timestamp.
-fn point_at(
-    key_day: i32,
-    marks: &reports::PricedMarks,
-    captured_at: i64,
-) -> reports::SeriesPoint {
+fn point_at(key_day: i32, marks: &reports::PricedMarks, captured_at: i64) -> reports::SeriesPoint {
     // Replay with ledger marks matching the priced marks (so per-lot unrealized
     // is consistent), then build the point.
     let lm: Vec<(&str, i64)> = marks
@@ -77,7 +73,10 @@ fn consecutive_captures_sharing_quote_epoch_resolve_to_one_point_last_wins() {
         })
         .collect();
     assert_eq!(points.len(), 1, "one point per trading day");
-    assert_eq!(points[0].total_market_value_cents, second.total_market_value_cents);
+    assert_eq!(
+        points[0].total_market_value_cents,
+        second.total_market_value_cents
+    );
 }
 
 // @spec REPORT-VOT-002
@@ -90,8 +89,14 @@ fn per_symbol_value_is_recorded_and_shares_are_metadata_only() {
     assert_eq!(p.per_symbol_value_cents.get("AMZN"), Some(&Cents(600_00)));
     assert_eq!(p.per_symbol_value_cents.get("GOOG"), Some(&Cents(120_00)));
     // Share counts are recorded only as point-in-time metadata (AMZN 3, GOOG 1).
-    assert_eq!(p.per_symbol_shares.get("AMZN"), Some(&MicroShares(3_000_000)));
-    assert_eq!(p.per_symbol_shares.get("GOOG"), Some(&MicroShares(1_000_000)));
+    assert_eq!(
+        p.per_symbol_shares.get("AMZN"),
+        Some(&MicroShares(3_000_000))
+    );
+    assert_eq!(
+        p.per_symbol_shares.get("GOOG"),
+        Some(&MicroShares(1_000_000))
+    );
 }
 
 // @spec REPORT-VOT-002
@@ -108,11 +113,17 @@ fn per_symbol_value_is_compared_across_time_never_share_counts() {
 
     let deltas = per_symbol_value_delta(&earlier, &later);
 
-    let amzn = deltas.iter().find(|d| d.symbol == "AMZN").expect("AMZN delta");
+    let amzn = deltas
+        .iter()
+        .find(|d| d.symbol == "AMZN")
+        .expect("AMZN delta");
     assert_eq!(amzn.from_value_cents, Some(Cents(600_00)));
     assert_eq!(amzn.to_value_cents, Some(Cents(630_00)));
     assert_eq!(amzn.delta_value_cents, Some(Cents(30_00)));
-    let goog = deltas.iter().find(|d| d.symbol == "GOOG").expect("GOOG delta");
+    let goog = deltas
+        .iter()
+        .find(|d| d.symbol == "GOOG")
+        .expect("GOOG delta");
     assert_eq!(goog.delta_value_cents, Some(Cents(10_00)));
 
     // Share counts are identical across the two points (no split) and are not used
@@ -134,9 +145,18 @@ fn per_symbol_value_delta_is_none_when_an_endpoint_is_degraded() {
     let later = point_at(19_491, &m_part, 1_700_086_400);
 
     let deltas = per_symbol_value_delta(&earlier, &later);
-    let goog = deltas.iter().find(|d| d.symbol == "GOOG").expect("GOOG row");
-    assert_eq!(goog.to_value_cents, None, "GOOG has no priced value at the later point");
-    assert_eq!(goog.delta_value_cents, None, "no fabricated delta across a degraded endpoint");
+    let goog = deltas
+        .iter()
+        .find(|d| d.symbol == "GOOG")
+        .expect("GOOG row");
+    assert_eq!(
+        goog.to_value_cents, None,
+        "GOOG has no priced value at the later point"
+    );
+    assert_eq!(
+        goog.delta_value_cents, None,
+        "no fabricated delta across a degraded endpoint"
+    );
 }
 
 // @spec REPORT-VOT-003
@@ -161,7 +181,12 @@ fn trading_days_with_no_capture_show_explicit_gaps_no_interpolation() {
     assert_eq!(series.elements.len(), 3);
     assert!(matches!(series.elements[0], SeriesElement::Point(_)));
     // The middle trading day is an EXPLICIT gap — never an interpolated value.
-    assert_eq!(series.elements[1], SeriesElement::Gap { key: TradingDayKey(Date(19_491)) });
+    assert_eq!(
+        series.elements[1],
+        SeriesElement::Gap {
+            key: TradingDayKey(Date(19_491))
+        }
+    );
     assert!(matches!(series.elements[2], SeriesElement::Point(_)));
 }
 
@@ -190,7 +215,10 @@ fn delta_across_incomplete_point_is_flagged_not_silently_shown() {
     let incomplete = point_at(19_491, &m_part, 1_700_086_400);
 
     let d = series_delta(&complete, &incomplete);
-    assert!(d.flagged_incomplete, "delta across an incomplete point is flagged");
+    assert!(
+        d.flagged_incomplete,
+        "delta across an incomplete point is flagged"
+    );
 
     // A delta between two COMPLETE points is not flagged.
     let m2 = priced_marks(&[("AMZN", 210_00, 19_491), ("GOOG", 130_00, 19_491)]);
@@ -219,8 +247,18 @@ fn series_begins_at_first_capture_no_pre_capture_values_fabricated() {
         ],
     );
     // Days before the first capture are gaps, not fabricated points.
-    assert_eq!(series.elements[0], SeriesElement::Gap { key: TradingDayKey(Date(19_490)) });
-    assert_eq!(series.elements[1], SeriesElement::Gap { key: TradingDayKey(Date(19_491)) });
+    assert_eq!(
+        series.elements[0],
+        SeriesElement::Gap {
+            key: TradingDayKey(Date(19_490))
+        }
+    );
+    assert_eq!(
+        series.elements[1],
+        SeriesElement::Gap {
+            key: TradingDayKey(Date(19_491))
+        }
+    );
     assert!(matches!(series.elements[2], SeriesElement::Point(_)));
 }
 
@@ -235,9 +273,15 @@ fn per_symbol_value_delta_carries_percent_change_relative_to_earlier() {
     let later = point_at(19_491, &m1, 1_700_086_400);
 
     let deltas = per_symbol_value_delta(&earlier, &later);
-    let amzn = deltas.iter().find(|d| d.symbol == "AMZN").expect("AMZN delta");
+    let amzn = deltas
+        .iter()
+        .find(|d| d.symbol == "AMZN")
+        .expect("AMZN delta");
     assert_eq!(amzn.delta_pct_ppm, Some(config::Ppm(50_000)));
-    let goog = deltas.iter().find(|d| d.symbol == "GOOG").expect("GOOG delta");
+    let goog = deltas
+        .iter()
+        .find(|d| d.symbol == "GOOG")
+        .expect("GOOG delta");
     assert_eq!(goog.delta_pct_ppm, Some(config::Ppm(83_333)));
 }
 
@@ -251,8 +295,14 @@ fn per_symbol_percent_change_is_na_without_a_meaningful_base() {
     let m_part = priced_marks(&[("AMZN", 210_00, 19_491)]); // GOOG degraded later
     let later = point_at(19_491, &m_part, 1_700_086_400);
     let deltas = per_symbol_value_delta(&earlier, &later);
-    let goog = deltas.iter().find(|d| d.symbol == "GOOG").expect("GOOG row");
-    assert_eq!(goog.delta_pct_ppm, None, "no percent across a degraded endpoint");
+    let goog = deltas
+        .iter()
+        .find(|d| d.symbol == "GOOG")
+        .expect("GOOG row");
+    assert_eq!(
+        goog.delta_pct_ppm, None,
+        "no percent across a degraded endpoint"
+    );
 
     // An earlier value of exactly 0 (a zero-priced mark) is no base to divide by.
     let m_zero = priced_marks(&[("AMZN", 0, 19_490), ("GOOG", 120_00, 19_490)]);
@@ -260,7 +310,10 @@ fn per_symbol_percent_change_is_na_without_a_meaningful_base() {
     let m_next = priced_marks(&[("AMZN", 210_00, 19_491), ("GOOG", 120_00, 19_491)]);
     let next = point_at(19_491, &m_next, 1_700_086_400);
     let deltas = per_symbol_value_delta(&zero_earlier, &next);
-    let amzn = deltas.iter().find(|d| d.symbol == "AMZN").expect("AMZN row");
+    let amzn = deltas
+        .iter()
+        .find(|d| d.symbol == "AMZN")
+        .expect("AMZN row");
     assert_eq!(amzn.from_value_cents, Some(Cents(0)));
     assert!(amzn.delta_value_cents.is_some(), "the $ delta is real");
     assert_eq!(amzn.delta_pct_ppm, None, "earlier ≤ 0 → no percent base");

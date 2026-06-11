@@ -13,7 +13,9 @@ use runtime::SymbolFreshness;
 use store::AppendOutcome;
 use tax::{Accrual, TaxContext, TaxError, TaxEvent};
 
-use crate::port::{Connection, RuntimePort, SubmitOutcome, SubmitRejection, ViewState, WriteFailure};
+use crate::port::{
+    Connection, RuntimePort, SubmitOutcome, SubmitRejection, ViewState, WriteFailure,
+};
 
 /// How the fake's authoritative submit behaves — so a test exercises the
 /// confirmed / lock-held / write-failed write-loop branches deterministically.
@@ -137,7 +139,12 @@ impl RuntimePort for FakeRuntime {
         // Validate against the accepted TaxEvent log so the accrual lifecycle states
         // (Allocate → Move → Pay) are in scope — an empty `accepted` would replay
         // every accrual as Accrued, making Move/Pay always reject. (TUI-ENTRY-TAX-*)
-        tax::validate_event(&self.view.snapshot.realized_gains, &self.tax_log, candidate, &self.ctx)
+        tax::validate_event(
+            &self.view.snapshot.realized_gains,
+            &self.tax_log,
+            candidate,
+            &self.ctx,
+        )
     }
 
     fn submit_ledger(&mut self, candidate: &LedgerEvent) -> SubmitOutcome {
@@ -151,8 +158,12 @@ impl RuntimePort for FakeRuntime {
                 // write-verify mismatch. Nothing written. (TUI-ENTRY-FLOW-002)
                 SubmitOutcome::Rejected(SubmitRejection::Ledger(e.clone()))
             }
-            SubmitBehavior::LockHeld { holder } => SubmitOutcome::LockHeld { holder: holder.clone() },
-            SubmitBehavior::VerifyMismatch => SubmitOutcome::WriteFailed(WriteFailure::VerifyMismatch),
+            SubmitBehavior::LockHeld { holder } => SubmitOutcome::LockHeld {
+                holder: holder.clone(),
+            },
+            SubmitBehavior::VerifyMismatch => {
+                SubmitOutcome::WriteFailed(WriteFailure::VerifyMismatch)
+            }
             SubmitBehavior::Unreachable => SubmitOutcome::WriteFailed(WriteFailure::Unreachable),
             SubmitBehavior::Confirm | SubmitBehavior::SubmitRejectTax(_) => {
                 if let Err(_e) = ledger_core::validate(&self.ledger_log, candidate) {
@@ -180,8 +191,12 @@ impl RuntimePort for FakeRuntime {
     fn submit_tax(&mut self, candidate: &TaxEvent) -> SubmitOutcome {
         self.submit_count += 1;
         match &self.behavior {
-            SubmitBehavior::LockHeld { holder } => SubmitOutcome::LockHeld { holder: holder.clone() },
-            SubmitBehavior::VerifyMismatch => SubmitOutcome::WriteFailed(WriteFailure::VerifyMismatch),
+            SubmitBehavior::LockHeld { holder } => SubmitOutcome::LockHeld {
+                holder: holder.clone(),
+            },
+            SubmitBehavior::VerifyMismatch => {
+                SubmitOutcome::WriteFailed(WriteFailure::VerifyMismatch)
+            }
             SubmitBehavior::Unreachable => SubmitOutcome::WriteFailed(WriteFailure::Unreachable),
             SubmitBehavior::SubmitRejectTax(e) => {
                 // A live tax-kernel rejection re-renders inline beside the field —
@@ -230,7 +245,10 @@ impl RuntimePort for FakeRuntime {
 pub fn flat_federal_ctx(tax_year: i32, top_ppm: i64) -> TaxContext {
     use config::{BracketRow, BracketSet, Jurisdiction, Niit, Ppm, TaxYear};
     let set = BracketSet {
-        rows: vec![BracketRow { lower_threshold_cents: Cents(0), rate_ppm: Ppm(top_ppm) }],
+        rows: vec![BracketRow {
+            lower_threshold_cents: Cents(0),
+            rate_ppm: Ppm(top_ppm),
+        }],
         last_verified: Date(19_000),
         source_note: "test".to_string(),
     };
@@ -309,12 +327,14 @@ impl ViewBuilder {
     pub fn mark(mut self, symbol: &str, price_cents: i64, quote_epoch: Date) -> Self {
         self.view.marks.insert(
             symbol.to_string(),
-            PricedMark { price_cents: Cents(price_cents), quote_epoch },
+            PricedMark {
+                price_cents: Cents(price_cents),
+                quote_epoch,
+            },
         );
-        self.view.freshness.insert(
-            symbol.to_string(),
-            SymbolFreshness::Priced { quote_epoch },
-        );
+        self.view
+            .freshness
+            .insert(symbol.to_string(), SymbolFreshness::Priced { quote_epoch });
         self
     }
 
@@ -467,7 +487,12 @@ pub fn series_point(
 /// contents (rows joined by `\n`), so a test asserts on rendered text. Uses
 /// ratatui's `TestBackend` semantics via the in-memory Buffer. (FAKE runtime
 /// rendering tests)
-pub fn render_string(model: &crate::Model, port: &impl RuntimePort, width: u16, height: u16) -> String {
+pub fn render_string(
+    model: &crate::Model,
+    port: &impl RuntimePort,
+    width: u16,
+    height: u16,
+) -> String {
     let buf = crate::render_to_buffer(model, port, width, height);
     buffer_to_string(&buf)
 }
@@ -504,7 +529,15 @@ pub fn replay(log: &[LedgerEvent], marks: &[(&str, i64)]) -> Snapshot {
 }
 
 /// A Buy `LedgerEvent` (terse builder).
-pub fn buy(seq: u64, date: i32, lot_id: &str, symbol: &str, qty_whole: i64, price_cents: i64, platform: &str) -> LedgerEvent {
+pub fn buy(
+    seq: u64,
+    date: i32,
+    lot_id: &str,
+    symbol: &str,
+    qty_whole: i64,
+    price_cents: i64,
+    platform: &str,
+) -> LedgerEvent {
     LedgerEvent {
         id: format!("e{seq}"),
         seq: pt_core::Seq(seq),

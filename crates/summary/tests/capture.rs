@@ -7,9 +7,7 @@ use common::*;
 use pt_core::Date;
 use reports::{read_history, TradingDayKey};
 use summary::testkit::{FakeLockProbe, InMemoryHistory, NoopLock};
-use summary::{
-    build_report, capture, compute_delta, CaptureOutcome, StaleReason,
-};
+use summary::{build_report, capture, compute_delta, CaptureOutcome, StaleReason};
 
 // @spec SUMMARY-CAP-001
 #[test]
@@ -28,7 +26,10 @@ fn capture_triggers_append_snapshot_for_the_current_trading_day() {
     assert_eq!(stored[0].key, TradingDayKey(Date(19_490)));
     // The lock was acquired INSIDE reports::append_snapshot (a TUI + a cron capture
     // cannot race). (SUMMARY-CAP-001)
-    assert!(lock.acquire_count() >= 1, "capture must go through the locked primitive");
+    assert!(
+        lock.acquire_count() >= 1,
+        "capture must go through the locked primitive"
+    );
 }
 
 // @spec SUMMARY-CAP-001
@@ -44,7 +45,11 @@ fn capture_is_last_wins_per_trading_day_no_duplicate_on_rerun() {
     capture(&mut client, &lock, &probe, &inputs_at(19_490, 210_00)).expect("point");
 
     let stored = read_history(&client).expect("integrity-clean read");
-    assert_eq!(stored.len(), 1, "re-run the same trading day must not duplicate");
+    assert_eq!(
+        stored.len(),
+        1,
+        "re-run the same trading day must not duplicate"
+    );
     assert_eq!(stored[0].total_market_value_cents.0, 210_00 * 3 + 120_00); // last value wins
 }
 
@@ -89,9 +94,15 @@ fn uncaptured_note_distinguishes_lock_held_from_offline_append_failed() {
     let failed_report = build_report(&inputs, &failed, failed_delta, stored.first());
 
     // Both are stale (uncaptured), but the model carries a DISTINCT reason. (SUMMARY-CAP-003)
-    assert!(held_report.stale && failed_report.stale, "both uncaptured runs are stale");
+    assert!(
+        held_report.stale && failed_report.stale,
+        "both uncaptured runs are stale"
+    );
     assert_eq!(held_report.stale_reason, Some(StaleReason::LockHeld));
-    assert_eq!(failed_report.stale_reason, Some(StaleReason::OfflineOrAppendFailed));
+    assert_eq!(
+        failed_report.stale_reason,
+        Some(StaleReason::OfflineOrAppendFailed)
+    );
     assert_ne!(
         held_report.stale_reason, failed_report.stale_reason,
         "the two reasons are not conflated"
@@ -117,7 +128,10 @@ fn uncaptured_note_distinguishes_lock_held_from_offline_append_failed() {
     let fresh_delta = compute_delta(&fresh, &stored, &[]);
     let fresh_report = build_report(&inputs, &fresh, fresh_delta, stored.first());
     assert!(!fresh_report.stale);
-    assert_eq!(fresh_report.stale_reason, None, "a fresh run carries no stale reason");
+    assert_eq!(
+        fresh_report.stale_reason, None,
+        "a fresh run carries no stale reason"
+    );
 }
 
 // @spec SUMMARY-CAP-001

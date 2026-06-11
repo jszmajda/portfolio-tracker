@@ -53,10 +53,27 @@ fn committable_workbook() -> LegacyWorkbook {
         ..LegacyWorkbook::default()
     };
     wb.actions.push(buy_row(
-        "Stock Actions", 3, "GOOG-B1", "GOOG", 100, "50.00", "0", date(2020, 1, 15), PLATFORM,
+        "Stock Actions",
+        3,
+        "GOOG-B1",
+        "GOOG",
+        100,
+        "50.00",
+        "0",
+        date(2020, 1, 15),
+        PLATFORM,
     ));
     wb.sales.push(sale_row(
-        "Stock Sales", 3, "GOOG-S1", "GOOG-B1", "GOOG", 20, "55.00", "0", date(2021, 6, 1), PLATFORM,
+        "Stock Sales",
+        3,
+        "GOOG-S1",
+        "GOOG-B1",
+        "GOOG",
+        20,
+        "55.00",
+        "0",
+        date(2021, 6, 1),
+        PLATFORM,
     ));
     wb.positions.push(position_row("GOOG", 80, 10_000, 80_000));
     wb
@@ -83,9 +100,13 @@ fn commit_with_a_real_reentrant_lock_succeeds_without_deadlock() {
     let report = dry_run(&committable_workbook(), &Marks::new()).expect("dry-run");
     assert!(report.commit_allowed);
 
-    let out =
-        commit(&mut store, &report.accept()).expect("a commit under a free reentrant lock succeeds");
-    assert_eq!(out.appended.len(), 2, "both reconstructed ledger events landed");
+    let out = commit(&mut store, &report.accept())
+        .expect("a commit under a free reentrant lock succeeds");
+    assert_eq!(
+        out.appended.len(),
+        2,
+        "both reconstructed ledger events landed"
+    );
     assert_eq!(
         store.sheets().read_rows(Tab::Ledger).unwrap().len(),
         2,
@@ -94,12 +115,8 @@ fn commit_with_a_real_reentrant_lock_succeeds_without_deadlock() {
 
     // After the commit returns, the whole-commit guard has dropped — the lock is
     // free again (no leaked hold).
-    let probe = AdvisoryLock::with_clock(
-        &path,
-        "probe",
-        DEFAULT_TTL_SECS,
-        ManualClock::new(10_000),
-    );
+    let probe =
+        AdvisoryLock::with_clock(&path, "probe", DEFAULT_TTL_SECS, ManualClock::new(10_000));
     assert!(
         probe.try_acquire().is_acquired(),
         "the whole-commit guard released when commit returned"

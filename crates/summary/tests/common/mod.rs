@@ -7,9 +7,7 @@
 
 use std::collections::BTreeMap;
 
-use config::{
-    BracketRow, BracketSet, BracketState, Jurisdiction, Niit, Ppm, StateCode, TaxYear,
-};
+use config::{BracketRow, BracketSet, BracketState, Jurisdiction, Niit, Ppm, StateCode, TaxYear};
 use ledger_core::{LedgerEvent, LedgerEventKind, Marks, Snapshot, Symbol};
 use pt_core::{Cents, Date, MicroShares, Seq};
 use reports::{
@@ -83,7 +81,10 @@ pub fn sell(
 
 /// A `Marks` map for replay (symbol → per-share Cents).
 pub fn ledger_marks(entries: &[(&str, i64)]) -> Marks {
-    entries.iter().map(|(s, c)| (Symbol::from(*s), Cents(*c))).collect()
+    entries
+        .iter()
+        .map(|(s, c)| (Symbol::from(*s), Cents(*c)))
+        .collect()
 }
 
 /// Priced marks (with quote-epoch) for composition/capture: `(symbol, cents,
@@ -94,7 +95,10 @@ pub fn priced_marks(entries: &[(&str, i64, i32)]) -> PricedMarks {
         .map(|(s, c, q)| {
             (
                 Symbol::from(*s),
-                PricedMark { price_cents: Cents(*c), quote_epoch: Date(*q) },
+                PricedMark {
+                    price_cents: Cents(*c),
+                    quote_epoch: Date(*q),
+                },
             )
         })
         .collect()
@@ -111,7 +115,16 @@ pub fn small_events() -> Vec<LedgerEvent> {
     vec![
         buy(1, 19_000, "lot-amzn", "AMZN", 3_000_000, 150_00, "schwab"),
         buy(2, 19_010, "lot-goog", "GOOG", 2_000_000, 100_00, "fidelity"),
-        sell(3, 19_100, "sale-1", "GOOG", 1_000_000, 130_00, "fidelity", Some("NJ")),
+        sell(
+            3,
+            19_100,
+            "sale-1",
+            "GOOG",
+            1_000_000,
+            130_00,
+            "fidelity",
+            Some("NJ"),
+        ),
     ]
 }
 
@@ -126,7 +139,10 @@ pub fn small_snapshot(marks: &Marks) -> Snapshot {
 
 fn flat_set(rate: i64) -> BracketSet {
     BracketSet {
-        rows: vec![BracketRow { lower_threshold_cents: Cents(0), rate_ppm: Ppm(rate) }],
+        rows: vec![BracketRow {
+            lower_threshold_cents: Cents(0),
+            rate_ppm: Ppm(rate),
+        }],
         last_verified: Date(19_000),
         source_note: "test".to_string(),
     }
@@ -136,15 +152,18 @@ fn flat_set(rate: i64) -> BracketSet {
 pub fn ctx(tax_year: i32) -> TaxContext {
     let federal = ResolvedJurisdiction {
         jurisdiction: Jurisdiction::Federal,
-        ordinary: Some(flat_set(370_000)),           // 37%
-        federal_long_term: Some(flat_set(200_000)),  // 20%
-        niit: Some(Niit { rate_ppm: Ppm(38_000), magi_threshold_cents: Cents(0) }),
+        ordinary: Some(flat_set(370_000)),          // 37%
+        federal_long_term: Some(flat_set(200_000)), // 20%
+        niit: Some(Niit {
+            rate_ppm: Ppm(38_000),
+            magi_threshold_cents: Cents(0),
+        }),
         ordinary_income_cents: Cents(0),
         state: BracketState::Verified,
     };
     let nj = ResolvedJurisdiction {
         jurisdiction: Jurisdiction::State("NJ".to_string()),
-        ordinary: Some(flat_set(55_250)),            // 5.525%
+        ordinary: Some(flat_set(55_250)), // 5.525%
         federal_long_term: None,
         niit: None,
         ordinary_income_cents: Cents(0),
@@ -247,8 +266,7 @@ pub fn inputs_with_reserve_events(
     let mut inputs = inputs_at(key_day, amzn_cents);
     let snap = small_snapshot(&ledger_marks(&[("AMZN", amzn_cents), ("GOOG", 120_00)]));
     let c = ctx(2022);
-    inputs.annual_rows =
-        annual_rows_with_reserve_events(&snap, &c, 2022, moved_cents, paid_cents);
+    inputs.annual_rows = annual_rows_with_reserve_events(&snap, &c, 2022, moved_cents, paid_cents);
     inputs
 }
 
@@ -264,12 +282,23 @@ pub fn point_at(key_day: i32, amzn_cents: i64) -> SeriesPoint {
     let as_of = Date(19_500);
     let c = ctx(2022);
     let est = estimates(&snap, as_of, &c);
-    build_series_point(&snap, &marks, &est, TradingDayKey(Date(key_day)), 1_700_000_000, Date(19_500))
+    build_series_point(
+        &snap,
+        &marks,
+        &est,
+        TradingDayKey(Date(key_day)),
+        1_700_000_000,
+        Date(19_500),
+    )
 }
 
 /// A well-formed History row for a point (checksum computed honestly).
 pub fn row(point: &SeriesPoint) -> HistoryRow {
-    HistoryRow { key: point.key, point: point.clone(), checksum: point_checksum(point) }
+    HistoryRow {
+        key: point.key,
+        point: point.clone(),
+        checksum: point_checksum(point),
+    }
 }
 
 /// Mark a series point INCOMPLETE (a degraded capture) without changing its key —
@@ -311,7 +340,9 @@ pub fn inputs_at(key_day: i32, amzn_cents: i64) -> SummaryInputs {
 /// `key_day-5 ..= key_day` (a contiguous run, no weekend modelling). Used so the
 /// gap computation has the calendar `runtime` supplies. (SUMMARY-DELTA-002)
 pub fn trading_calendar_around(key_day: i32) -> Vec<TradingDayKey> {
-    ((key_day - 5)..=key_day).map(|d| TradingDayKey(Date(d))).collect()
+    ((key_day - 5)..=key_day)
+        .map(|d| TradingDayKey(Date(d)))
+        .collect()
 }
 
 /// `SummaryInputs` for the small portfolio where **GOOG is unpriced** (degraded):

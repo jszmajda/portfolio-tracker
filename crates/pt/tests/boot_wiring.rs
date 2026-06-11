@@ -18,11 +18,9 @@ use std::path::PathBuf;
 use config::Settings;
 use pt::wiring::{context_for_year, run_live_cycle};
 use pt_core::Date;
-use runtime::{
-    AdvisoryLock, Boot, ManualClock, StoreLockAdapter, DEFAULT_TTL_SECS, LOCKFILE_NAME,
-};
-use store::{InMemoryCache, Store};
+use runtime::{AdvisoryLock, Boot, ManualClock, StoreLockAdapter, DEFAULT_TTL_SECS, LOCKFILE_NAME};
 use store::testkit::InMemorySheets;
+use store::{InMemoryCache, Store};
 
 /// A unique temp cache dir for one test (so tests don't share lockfiles).
 fn temp_cache_dir(tag: &str) -> PathBuf {

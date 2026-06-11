@@ -47,37 +47,71 @@ fn picker_shows_platform_lots_with_term_remaining_basis_and_accepts_per_lot_or_f
     // FIFO shortcut fills oldest-first.
     let mut p3 = picker.clone();
     p3.fill_fifo();
-    assert_eq!(p3.lots.iter().find(|l| l.lot_id == "old").unwrap().take, ms(100));
-    assert_eq!(p3.lots.iter().find(|l| l.lot_id == "new").unwrap().take, ms(50));
+    assert_eq!(
+        p3.lots.iter().find(|l| l.lot_id == "old").unwrap().take,
+        ms(100)
+    );
+    assert_eq!(
+        p3.lots.iter().find(|l| l.lot_id == "new").unwrap().take,
+        ms(50)
+    );
 }
 
 // @spec TUI-ENTRY-LOT-002
 #[test]
 fn allocations_must_sum_to_sale_qty_cap_at_remaining_and_refuse_bad_picks_inline() {
     let snap = multi_lot_snapshot();
-    let mut picker = LotPicker::build(&snap, &"AMZN".to_string(), "Robinhood", ms(150), Date(20_000));
+    let mut picker = LotPicker::build(
+        &snap,
+        &"AMZN".to_string(),
+        "Robinhood",
+        ms(150),
+        Date(20_000),
+    );
 
     // Under-allocation: ✓ only when equal. (TUI-ENTRY-LOT-002)
     picker.set_take("old", ms(100));
     assert!(!picker.is_complete(), "100 of 150 is not complete");
     picker.set_take("new", ms(50));
-    assert!(picker.is_complete(), "✓ when allocations sum to the sale qty");
+    assert!(
+        picker.is_complete(),
+        "✓ when allocations sum to the sale qty"
+    );
 
     // Cap each lot at its remaining: a take above remaining is clamped.
     let applied = picker.set_take("old", ms(999));
-    assert_eq!(applied, ms(100), "the take is capped at the lot's remaining");
+    assert_eq!(
+        applied,
+        ms(100),
+        "the take is capped at the lot's remaining"
+    );
 
     // The picker REFUSES bad picks structurally at the picker level (the inline
     // refusal mechanism): a cross-platform lot is not even a candidate, and a take
     // for an unknown/wrong-symbol lot id is a no-op (no duplicate, no phantom lot).
-    assert!(picker.lots.iter().all(|l| l.lot_id != "schwab"), "the cross-platform Schwab lot is not a candidate");
-    assert_eq!(picker.set_take("schwab", ms(50)), MicroShares(0), "a cross-platform pick cannot be expressed");
-    assert_eq!(picker.set_take("not-a-lot", ms(50)), MicroShares(0), "a wrong-symbol/unknown pick is a no-op");
+    assert!(
+        picker.lots.iter().all(|l| l.lot_id != "schwab"),
+        "the cross-platform Schwab lot is not a candidate"
+    );
+    assert_eq!(
+        picker.set_take("schwab", ms(50)),
+        MicroShares(0),
+        "a cross-platform pick cannot be expressed"
+    );
+    assert_eq!(
+        picker.set_take("not-a-lot", ms(50)),
+        MicroShares(0),
+        "a wrong-symbol/unknown pick is a no-op"
+    );
     // Each lot stores one take (last-write-wins), so a duplicate pick of one lot is
     // impossible — re-setting overwrites rather than accumulating.
     picker.set_take("new", ms(10));
     picker.set_take("new", ms(20));
-    assert_eq!(picker.lots.iter().find(|l| l.lot_id == "new").unwrap().take, ms(20), "one take per lot — no duplicate");
+    assert_eq!(
+        picker.lots.iter().find(|l| l.lot_id == "new").unwrap().take,
+        ms(20),
+        "one take per lot — no duplicate"
+    );
 
     // And the kernel is the authority at submit — a hand-built cross-platform Sell
     // (one the picker can never compose) is refused by the LedgerError set.
@@ -91,7 +125,10 @@ fn allocations_must_sum_to_sale_qty_cap_at_remaining_and_refuse_bad_picks_inline
             qty: ms(50),
             unit_price_cents: Cents(26_126),
             fees_cents: Cents(0),
-            lot_refs: vec![LotRef { lot_id: "schwab".to_string(), qty: ms(50) }],
+            lot_refs: vec![LotRef {
+                lot_id: "schwab".to_string(),
+                qty: ms(50),
+            }],
             accrues_to_state: None,
             platform: "Robinhood".to_string(),
             tracking_code: None,
@@ -113,14 +150,24 @@ fn allocations_must_sum_to_sale_qty_cap_at_remaining_and_refuse_bad_picks_inline
 #[test]
 fn editing_the_sale_qty_resets_the_allocation() {
     let snap = multi_lot_snapshot();
-    let mut picker = LotPicker::build(&snap, &"AMZN".to_string(), "Robinhood", ms(150), Date(20_000));
+    let mut picker = LotPicker::build(
+        &snap,
+        &"AMZN".to_string(),
+        "Robinhood",
+        ms(150),
+        Date(20_000),
+    );
     picker.set_take("old", ms(100));
     picker.set_take("new", ms(50));
     assert!(picker.is_complete());
 
     // Editing the sale qty resets the allocation (a stale ✓ must never reach submit).
     picker.set_sale_qty(ms(120));
-    assert_eq!(picker.allocated(), MicroShares(0), "the allocation resets on a qty change");
+    assert_eq!(
+        picker.allocated(),
+        MicroShares(0),
+        "the allocation resets on a qty change"
+    );
     assert!(!picker.is_complete());
 }
 
@@ -137,9 +184,18 @@ fn explicit_empty_and_insufficient_states_and_rem_zero_greyed() {
         .contains("no open lots for AMZN on Fidelity"));
 
     // Insufficient: the platform's remaining (200) is below the sale qty (250).
-    let picker = LotPicker::build(&snap, &"AMZN".to_string(), "Robinhood", ms(250), Date(20_000));
+    let picker = LotPicker::build(
+        &snap,
+        &"AMZN".to_string(),
+        "Robinhood",
+        ms(250),
+        Date(20_000),
+    );
     match picker.state() {
-        PickerState::Insufficient { remaining, shortfall } => {
+        PickerState::Insufficient {
+            remaining,
+            shortfall,
+        } => {
             assert_eq!(remaining, ms(200));
             assert_eq!(shortfall, ms(50), "the shortfall is named");
         }
@@ -160,7 +216,10 @@ fn explicit_empty_and_insufficient_states_and_rem_zero_greyed() {
                 qty: ms(100),
                 unit_price_cents: Cents(9_989),
                 fees_cents: Cents(0),
-                lot_refs: vec![LotRef { lot_id: "spent".to_string(), qty: ms(100) }],
+                lot_refs: vec![LotRef {
+                    lot_id: "spent".to_string(),
+                    qty: ms(100),
+                }],
                 accrues_to_state: None,
                 platform: "Robinhood".to_string(),
                 tracking_code: None,
@@ -173,7 +232,13 @@ fn explicit_empty_and_insufficient_states_and_rem_zero_greyed() {
     // candidate; the live lot remains. A rem-0 candidate (greyed) arises only when a
     // lot literally has remaining 0 yet still appears — which the open-lots filter
     // already excludes. Confirm the live picker has the one open lot.
-    let picker = LotPicker::build(&snap2, &"AMZN".to_string(), "Robinhood", ms(50), Date(20_000));
+    let picker = LotPicker::build(
+        &snap2,
+        &"AMZN".to_string(),
+        "Robinhood",
+        ms(50),
+        Date(20_000),
+    );
     assert_eq!(picker.lots.len(), 1);
     assert!(!picker.lots[0].greyed(), "the live lot is allocatable");
     // The greyed() predicate fires for a rem-0 lot.
@@ -187,7 +252,13 @@ fn explicit_empty_and_insufficient_states_and_rem_zero_greyed() {
 fn live_gain_tax_preview_is_est_flagged_and_degraded_on_a_missing_mark_and_never_blocks() {
     let snap = multi_lot_snapshot();
     let ctx = flat_federal_ctx(common::YEAR, 220_000);
-    let mut picker = LotPicker::build(&snap, &"AMZN".to_string(), "Robinhood", ms(100), Date(20_000));
+    let mut picker = LotPicker::build(
+        &snap,
+        &"AMZN".to_string(),
+        "Robinhood",
+        ms(100),
+        Date(20_000),
+    );
     picker.set_take("old", ms(100)); // basis $8/sh ($800 for 100 sh)
 
     // Priced: a positive gain estimate + a tax estimate, [est]-flagged.
@@ -203,10 +274,21 @@ fn live_gain_tax_preview_is_est_flagged_and_degraded_on_a_missing_mark_and_never
     assert!(!preview.degraded);
     let gain = preview.est_gain.expect("priced → a gain estimate");
     assert!(gain.0 > 0, "selling well above basis is a gain");
-    assert!(preview.est_tax.is_some(), "[est] tax present when brackets verified");
+    assert!(
+        preview.est_tax.is_some(),
+        "[est] tax present when brackets verified"
+    );
 
     // Degraded mark: the preview is degraded (‡, never a zero), never blocks.
-    let degraded = tui::gain_tax_preview(&picker, Cents(26_126), Cents(0), &snap, &ctx, Date(20_000), false);
+    let degraded = tui::gain_tax_preview(
+        &picker,
+        Cents(26_126),
+        Cents(0),
+        &snap,
+        &ctx,
+        Date(20_000),
+        false,
+    );
     assert!(degraded.degraded);
     assert_eq!(degraded.est_gain, None, "no fabricated gain when degraded");
     assert_eq!(degraded.est_tax, None);
@@ -228,9 +310,23 @@ fn preview_tax_is_the_verified_kernel_stacked_figure_not_a_flat_top_rate() {
 
     // A long-term lot (acquired day 15_000, sold day 20_000 — well over a year).
     let snap = multi_lot_snapshot();
-    let mut lt_picker = LotPicker::build(&snap, &"AMZN".to_string(), "Robinhood", ms(100), Date(20_000));
+    let mut lt_picker = LotPicker::build(
+        &snap,
+        &"AMZN".to_string(),
+        "Robinhood",
+        ms(100),
+        Date(20_000),
+    );
     lt_picker.set_take("old", ms(100));
-    assert_eq!(lt_picker.lots.iter().find(|l| l.lot_id == "old").unwrap().term, tax::Term::LongTerm);
+    assert_eq!(
+        lt_picker
+            .lots
+            .iter()
+            .find(|l| l.lot_id == "old")
+            .unwrap()
+            .term,
+        tax::Term::LongTerm
+    );
     let lt = tui::gain_tax_preview(&lt_picker, unit, Cents(0), &snap, &ctx, Date(20_000), true);
     let lt_tax = lt.est_tax.expect("priced LT preview has a kernel tax").0;
     let lt_gain = lt.est_gain.unwrap().0;
@@ -239,25 +335,52 @@ fn preview_tax_is_the_verified_kernel_stacked_figure_not_a_flat_top_rate() {
     // a fresh single-lot snapshot acquired just before the sale.
     let st_log = vec![buy(1, 19_900, "fresh", "AMZN", 100, 800, "Robinhood")];
     let st_snap = replay(&st_log, &[("AMZN", 26_126)]);
-    let mut st_picker = LotPicker::build(&st_snap, &"AMZN".to_string(), "Robinhood", ms(100), Date(20_000));
+    let mut st_picker = LotPicker::build(
+        &st_snap,
+        &"AMZN".to_string(),
+        "Robinhood",
+        ms(100),
+        Date(20_000),
+    );
     st_picker.set_take("fresh", ms(100));
     assert_eq!(st_picker.lots[0].term, tax::Term::ShortTerm);
-    let st = tui::gain_tax_preview(&st_picker, unit, Cents(0), &st_snap, &ctx, Date(20_000), true);
+    let st = tui::gain_tax_preview(
+        &st_picker,
+        unit,
+        Cents(0),
+        &st_snap,
+        &ctx,
+        Date(20_000),
+        true,
+    );
     let st_tax = st.est_tax.expect("priced ST preview has a kernel tax").0;
 
     // Same gain magnitude, but the LT lot is taxed at 15% and the ST at 37%: a flat
     // ordinary-top computation would have taxed BOTH at 37%. The kernel path makes
     // them differ — proving the preview routes LT through the preferential set.
-    assert_eq!(lt_gain, st.est_gain.unwrap().0, "same gain magnitude in both pickers");
-    assert!(lt_tax < st_tax, "LT preferential ({lt_tax}) < ST ordinary ({st_tax}) — kernel, not flat top-rate");
+    assert_eq!(
+        lt_gain,
+        st.est_gain.unwrap().0,
+        "same gain magnitude in both pickers"
+    );
+    assert!(
+        lt_tax < st_tax,
+        "LT preferential ({lt_tax}) < ST ordinary ({st_tax}) — kernel, not flat top-rate"
+    );
 
     // (1) The LT figure equals the verified kernel computed over the same proposal.
     let net_gain = lt_gain;
     // ordinary 37% top would have been net_gain * 0.37; the kernel LT is ~15%.
     let flat_top = pt_core::round_half_to_even((net_gain as i128) * 370_000, 1_000_000) as i64;
-    assert_ne!(lt_tax, flat_top, "the LT preview is NOT the flat ordinary top-rate figure");
+    assert_ne!(
+        lt_tax, flat_top,
+        "the LT preview is NOT the flat ordinary top-rate figure"
+    );
     let lt_rate = (lt_tax as i128 * 1_000_000) / (net_gain as i128);
-    assert!((lt_rate - 150_000).abs() < 2_000, "the LT preview ≈ the 15% preferential kernel rate, got {lt_rate} ppm");
+    assert!(
+        (lt_rate - 150_000).abs() < 2_000,
+        "the LT preview ≈ the 15% preferential kernel rate, got {lt_rate} ppm"
+    );
 }
 
 // @spec TUI-ENTRY-LOT-005
@@ -271,8 +394,14 @@ fn preview_tax_stacks_on_prior_realized_ytd() {
     use config::{BracketRow, BracketSet, Jurisdiction, Niit, Ppm, TaxYear};
     let two_band = BracketSet {
         rows: vec![
-            BracketRow { lower_threshold_cents: Cents(0), rate_ppm: Ppm(100_000) }, // 10%
-            BracketRow { lower_threshold_cents: Cents(50_000_00), rate_ppm: Ppm(300_000) }, // 30% above $50k
+            BracketRow {
+                lower_threshold_cents: Cents(0),
+                rate_ppm: Ppm(100_000),
+            }, // 10%
+            BracketRow {
+                lower_threshold_cents: Cents(50_000_00),
+                rate_ppm: Ppm(300_000),
+            }, // 30% above $50k
         ],
         last_verified: Date(19_000),
         source_note: "two-band".to_string(),
@@ -296,11 +425,25 @@ fn preview_tax_stacks_on_prior_realized_ytd() {
     // set; sells for a ~$25k gain ($26,126 − $800 over 100 sh ≈ $25,326).
     let st_log = vec![buy(1, 19_900, "fresh", "AMZN", 100, 800, "Robinhood")];
     let st_snap = replay(&st_log, &[("AMZN", 26_126)]);
-    let mut picker = LotPicker::build(&st_snap, &"AMZN".to_string(), "Robinhood", ms(100), Date(20_000));
+    let mut picker = LotPicker::build(
+        &st_snap,
+        &"AMZN".to_string(),
+        "Robinhood",
+        ms(100),
+        Date(20_000),
+    );
     picker.set_take("fresh", ms(100));
 
     // No prior YTD: the gain stacks from $0, mostly in the 10% band.
-    let cold = tui::gain_tax_preview(&picker, Cents(26_126), Cents(0), &st_snap, &ctx, Date(20_000), true);
+    let cold = tui::gain_tax_preview(
+        &picker,
+        Cents(26_126),
+        Cents(0),
+        &st_snap,
+        &ctx,
+        Date(20_000),
+        true,
+    );
     let cold_tax = cold.est_tax.unwrap().0;
 
     // Prior YTD of $60k ST already fills the 10% band; the SAME proposed gain now
@@ -320,11 +463,22 @@ fn preview_tax_stacks_on_prior_realized_ytd() {
         holding_days: 50,
         accrues_to_state: None,
     });
-    let warm = tui::gain_tax_preview(&picker, Cents(26_126), Cents(0), &warm_snap, &ctx, Date(20_000), true);
+    let warm = tui::gain_tax_preview(
+        &picker,
+        Cents(26_126),
+        Cents(0),
+        &warm_snap,
+        &ctx,
+        Date(20_000),
+        true,
+    );
     let warm_tax = warm.est_tax.unwrap().0;
 
     assert_eq!(cold.est_gain, warm.est_gain, "same proposed gain in both");
-    assert!(warm_tax > cold_tax, "prior YTD stacks the proposed gain into a higher band: {warm_tax} > {cold_tax}");
+    assert!(
+        warm_tax > cold_tax,
+        "prior YTD stacks the proposed gain into a higher band: {warm_tax} > {cold_tax}"
+    );
 }
 
 /// A federal context with distinct ordinary-top and long-term top rates so a flat
@@ -332,12 +486,18 @@ fn preview_tax_stacks_on_prior_realized_ytd() {
 fn ctx_ordinary_vs_lt(tax_year: i32, ordinary_top_ppm: i64, lt_top_ppm: i64) -> tax::TaxContext {
     use config::{BracketRow, BracketSet, Jurisdiction, Niit, Ppm, TaxYear};
     let ordinary = BracketSet {
-        rows: vec![BracketRow { lower_threshold_cents: Cents(0), rate_ppm: Ppm(ordinary_top_ppm) }],
+        rows: vec![BracketRow {
+            lower_threshold_cents: Cents(0),
+            rate_ppm: Ppm(ordinary_top_ppm),
+        }],
         last_verified: Date(19_000),
         source_note: "ord".to_string(),
     };
     let lt = BracketSet {
-        rows: vec![BracketRow { lower_threshold_cents: Cents(0), rate_ppm: Ppm(lt_top_ppm) }],
+        rows: vec![BracketRow {
+            lower_threshold_cents: Cents(0),
+            rate_ppm: Ppm(lt_top_ppm),
+        }],
         last_verified: Date(19_000),
         source_note: "lt".to_string(),
     };
@@ -362,9 +522,26 @@ fn ctx_ordinary_vs_lt(tax_year: i32, ordinary_top_ppm: i64, lt_top_ppm: i64) -> 
 fn preview_tax_is_na_under_cold_start_brackets() {
     let snap = multi_lot_snapshot();
     let ctx = tui::testkit::cold_start_ctx(common::YEAR);
-    let mut picker = LotPicker::build(&snap, &"AMZN".to_string(), "Robinhood", ms(100), Date(20_000));
+    let mut picker = LotPicker::build(
+        &snap,
+        &"AMZN".to_string(),
+        "Robinhood",
+        ms(100),
+        Date(20_000),
+    );
     picker.set_take("old", ms(100));
-    let preview = tui::gain_tax_preview(&picker, Cents(26_126), Cents(0), &snap, &ctx, Date(20_000), true);
+    let preview = tui::gain_tax_preview(
+        &picker,
+        Cents(26_126),
+        Cents(0),
+        &snap,
+        &ctx,
+        Date(20_000),
+        true,
+    );
     assert!(preview.est_gain.is_some(), "the gain is still computed");
-    assert_eq!(preview.est_tax, None, "no tax estimate under NoBracketsAvailable");
+    assert_eq!(
+        preview.est_tax, None,
+        "no tax estimate under NoBracketsAvailable"
+    );
 }

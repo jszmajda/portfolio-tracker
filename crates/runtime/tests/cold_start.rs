@@ -43,7 +43,11 @@ fn an_offline_workbook_still_classifies_as_unreachable() {
 // @spec STORE-LOAD-007
 #[test]
 fn a_store_over_the_real_adapter_loads_a_fresh_workbook_as_an_empty_book() {
-    let mut store = Store::new(fresh_workbook_adapter(), NoopLock::new(), InMemoryCache::new());
+    let mut store = Store::new(
+        fresh_workbook_adapter(),
+        NoopLock::new(),
+        InMemoryCache::new(),
+    );
     let logs = store.load().expect("cold start, not an error");
     assert!(logs.ledger.is_empty() && logs.tax.is_empty());
 }
@@ -60,9 +64,16 @@ fn ensure_tab_creates_the_sheet_with_the_frozen_header() {
     );
     let grid = adapter.api().rows_at(Tab::Ledger.name());
     let want: Vec<String> = Tab::Ledger.header().iter().map(|h| h.to_string()).collect();
-    assert_eq!(grid.first(), Some(&want), "row 1 is the frozen schema header");
     assert_eq!(
-        adapter.read_rows(Tab::Ledger).expect("readable after bootstrap").len(),
+        grid.first(),
+        Some(&want),
+        "row 1 is the frozen schema header"
+    );
+    assert_eq!(
+        adapter
+            .read_rows(Tab::Ledger)
+            .expect("readable after bootstrap")
+            .len(),
         0,
         "no data rows yet — the header is not data"
     );
@@ -86,10 +97,15 @@ fn republish_to_a_fresh_workbook_creates_the_view_tab_with_its_frozen_header() {
 
     let tab = ViewTab {
         name: sheets_view::POSITIONS_TAB.to_string(),
-        header: sheets_view::POSITIONS_HEADER.iter().map(|s| s.to_string()).collect(),
+        header: sheets_view::POSITIONS_HEADER
+            .iter()
+            .map(|s| s.to_string())
+            .collect(),
         rows: vec![vec![Cell::Value("AMZN".to_string())]],
     };
-    adapter.batch_update_view(&tab).expect("the first republish bootstraps the tab");
+    adapter
+        .batch_update_view(&tab)
+        .expect("the first republish bootstraps the tab");
 
     assert!(!adapter.api().sheet_missing(sheets_view::POSITIONS_TAB));
     let grid = adapter.api().rows_at(sheets_view::POSITIONS_TAB);
@@ -106,7 +122,9 @@ fn the_price_pass_on_a_fresh_workbook_is_empty_not_an_error() {
     let api = FakeSheetsApi::new();
     api.set_sheet_missing(sheets_view::POSITIONS_TAB);
     let adapter = ViewSheetsAdapter::new(api, sheets_view::POSITIONS_TAB);
-    let pass = adapter.read_price_pass().expect("no tab yet ⇒ no marks, not an outage");
+    let pass = adapter
+        .read_price_pass()
+        .expect("no tab yet ⇒ no marks, not an outage");
     assert!(pass.is_empty());
 }
 
@@ -122,7 +140,9 @@ fn the_first_history_capture_bootstraps_the_history_tab() {
     let mut adapter = HistorySheetsAdapter::new(api, sheets_view::HISTORY_TAB);
 
     assert_eq!(
-        adapter.read_history().expect("a missing History tab is an empty series"),
+        adapter
+            .read_history()
+            .expect("a missing History tab is an empty series"),
         vec![],
         "fresh workbook ⇒ no captured points yet"
     );
@@ -141,8 +161,14 @@ fn the_first_history_capture_bootstraps_the_history_tab() {
         reporting_tz_date: pt_core::Date(19_200),
         incomplete: false,
     };
-    let row = HistoryRow { key, checksum: point_checksum(&point), point };
-    adapter.upsert_point(&row).expect("the first capture bootstraps the tab");
+    let row = HistoryRow {
+        key,
+        checksum: point_checksum(&point),
+        point,
+    };
+    adapter
+        .upsert_point(&row)
+        .expect("the first capture bootstraps the tab");
 
     assert!(!adapter.api().sheet_missing(sheets_view::HISTORY_TAB));
     let back = adapter.read_history().expect("readable after bootstrap");
@@ -154,7 +180,11 @@ fn the_first_history_capture_bootstraps_the_history_tab() {
 #[test]
 fn a_store_over_the_real_adapter_bootstraps_on_first_append() {
     use pt_core::{Cents, Date, MicroShares, Seq};
-    let mut store = Store::new(fresh_workbook_adapter(), NoopLock::new(), InMemoryCache::new());
+    let mut store = Store::new(
+        fresh_workbook_adapter(),
+        NoopLock::new(),
+        InMemoryCache::new(),
+    );
 
     let ev = ledger_core::LedgerEvent {
         id: "evt-cold-1".to_string(),
@@ -170,7 +200,13 @@ fn a_store_over_the_real_adapter_bootstraps_on_first_append() {
             tracking_code: None,
         },
     };
-    let out = store.append_ledger(&ev).expect("the first-ever write bootstraps the tab");
+    let out = store
+        .append_ledger(&ev)
+        .expect("the first-ever write bootstraps the tab");
     assert_eq!(out.seq.0, 1, "Seq 1 on the freshly-created tab");
-    assert_eq!(store.load().expect("reload").ledger.len(), 1, "the event is durably read back");
+    assert_eq!(
+        store.load().expect("reload").ledger.len(),
+        1,
+        "the event is durably read back"
+    );
 }

@@ -23,7 +23,12 @@ fn date(y: i32, m: i32, d: i32) -> Date {
 }
 
 fn amzn_20_for_1(on: Date) -> KnownCorporateAction {
-    KnownCorporateAction { symbol: "AMZN".to_string(), date: on, ratio_num: 20, ratio_den: 1 }
+    KnownCorporateAction {
+        symbol: "AMZN".to_string(),
+        date: on,
+        ratio_num: 20,
+        ratio_den: 1,
+    }
 }
 
 // @spec IMPORT-CORP-007
@@ -38,10 +43,42 @@ fn a_post_split_framed_row_converts_back_to_its_pre_split_frame_exactly() {
     // row-date frame and is untouched.
     let buy_date = date(2021, 3, 1);
     let mut parsed = ParsedLegacy {
-        actions: vec![buy_row("Stock Actions", 2, "B1", "AMZN", 2000, "100.00", "0", buy_date, "schwab")],
+        actions: vec![buy_row(
+            "Stock Actions",
+            2,
+            "B1",
+            "AMZN",
+            2000,
+            "100.00",
+            "0",
+            buy_date,
+            "schwab",
+        )],
         sales: vec![
-            sale_row("Stock Sales", 2, "B1@r2", "B1", "AMZN", 400, "110.00", "0", date(2022, 1, 10), "schwab"),
-            sale_row("Stock Sales", 3, "B1@r3", "B1", "AMZN", 100, "120.00", "0", date(2023, 4, 1), "schwab"),
+            sale_row(
+                "Stock Sales",
+                2,
+                "B1@r2",
+                "B1",
+                "AMZN",
+                400,
+                "110.00",
+                "0",
+                date(2022, 1, 10),
+                "schwab",
+            ),
+            sale_row(
+                "Stock Sales",
+                3,
+                "B1@r3",
+                "B1",
+                "AMZN",
+                100,
+                "120.00",
+                "0",
+                date(2023, 4, 1),
+                "schwab",
+            ),
         ],
         ..ParsedLegacy::default()
     };
@@ -54,21 +91,42 @@ fn a_post_split_framed_row_converts_back_to_its_pre_split_frame_exactly() {
     let notes = apply_owner_mappings(&mut parsed, &inputs).expect("the rewrite is exact");
 
     let b1 = &parsed.actions[0];
-    assert_eq!(b1.qty, MicroShares(100_000_000), "qty ÷ 20: 2,000 → 100 shares");
-    assert_eq!(b1.dollars_per_share, "2000.00", "$/share × 20: $100 → $2,000");
+    assert_eq!(
+        b1.qty,
+        MicroShares(100_000_000),
+        "qty ÷ 20: 2,000 → 100 shares"
+    );
+    assert_eq!(
+        b1.dollars_per_share, "2000.00",
+        "$/share × 20: $100 → $2,000"
+    );
     assert_eq!(b1.date, buy_date, "the TRUE date is untouched");
 
     let pre_split_sale = &parsed.sales[0];
-    assert_eq!(pre_split_sale.qty, MicroShares(20_000_000), "a pre-split-dated sale shares the frame");
+    assert_eq!(
+        pre_split_sale.qty,
+        MicroShares(20_000_000),
+        "a pre-split-dated sale shares the frame"
+    );
     assert_eq!(pre_split_sale.dollars_per_share, "2200.00");
-    assert_eq!(pre_split_sale.date, date(2022, 1, 10), "its date too is untouched");
+    assert_eq!(
+        pre_split_sale.date,
+        date(2022, 1, 10),
+        "its date too is untouched"
+    );
 
     let post_split_sale = &parsed.sales[1];
-    assert_eq!(post_split_sale.qty, MicroShares(100_000_000), "a post-split sale is already in frame");
+    assert_eq!(
+        post_split_sale.qty,
+        MicroShares(100_000_000),
+        "a post-split sale is already in frame"
+    );
     assert_eq!(post_split_sale.dollars_per_share, "120.00");
 
     assert!(
-        notes.iter().any(|n| n.contains("post-split-framed row converted to pre-split frame")),
+        notes
+            .iter()
+            .any(|n| n.contains("post-split-framed row converted to pre-split frame")),
         "the conversion is reported, never silent: {notes:?}"
     );
 }
@@ -80,7 +138,17 @@ fn an_inexact_post_split_frame_division_is_a_loud_error() {
     // the frame assumption is wrong, and the rewrite must fail loudly rather than
     // round a share count.
     let mut parsed = ParsedLegacy {
-        actions: vec![buy_row("Stock Actions", 2, "B1", "AMZN", 100, "99.00", "0", date(2021, 3, 1), "schwab")],
+        actions: vec![buy_row(
+            "Stock Actions",
+            2,
+            "B1",
+            "AMZN",
+            100,
+            "99.00",
+            "0",
+            date(2021, 3, 1),
+            "schwab",
+        )],
         ..ParsedLegacy::default()
     };
     let inputs = OwnerInputs {
@@ -95,5 +163,8 @@ fn an_inexact_post_split_frame_division_is_a_loud_error() {
     };
 
     let err = apply_owner_mappings(&mut parsed, &inputs).expect_err("inexact division is an error");
-    assert!(err.contains("not divisible"), "the error names the failure: {err}");
+    assert!(
+        err.contains("not divisible"),
+        "the error names the failure: {err}"
+    );
 }

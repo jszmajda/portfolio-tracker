@@ -16,8 +16,8 @@ use ledger_core::{LedgerEvent, Symbol};
 use pt_core::Date;
 use runtime::lock::{AdvisoryLock, Clock, LockOutcome};
 use runtime::{
-    assign_ledger_event_id, assign_tax_event_id, revalidate_ledger,
-    revalidate_tax, Boot, CycleOutcome, MarksCache, RevalidateError, StoreLockAdapter,
+    assign_ledger_event_id, assign_tax_event_id, revalidate_ledger, revalidate_tax, Boot,
+    CycleOutcome, MarksCache, RevalidateError, StoreLockAdapter,
 };
 use sheets_view::SettleConfig;
 use store::{Cache, Lock, SheetsClient, Store, StoreError};
@@ -219,13 +219,21 @@ pub fn iso_date(d: Date) -> String {
 // @spec TUI-VIEW-NAV-013
 pub fn hhmm_in_reporting_tz(epoch_secs: i64, reporting_timezone: &str) -> String {
     let offset_secs: i64 = if reporting_timezone == "US/Eastern" {
-        if is_us_eastern_dst(epoch_secs) { -4 * 3600 } else { -5 * 3600 }
+        if is_us_eastern_dst(epoch_secs) {
+            -4 * 3600
+        } else {
+            -5 * 3600
+        }
     } else {
         0
     };
     let local = epoch_secs + offset_secs;
     let secs_of_day = local.rem_euclid(86_400);
-    format!("{:02}:{:02}", secs_of_day / 3_600, (secs_of_day % 3_600) / 60)
+    format!(
+        "{:02}:{:02}",
+        secs_of_day / 3_600,
+        (secs_of_day % 3_600) / 60
+    )
 }
 
 /// Whether `epoch_secs` falls in US-Eastern daylight time: from 02:00 EST on the
@@ -435,7 +443,10 @@ where
         Some(existing) => existing,
         None => assign_ledger_event_id(&logs, candidate),
     };
-    let stamped = LedgerEvent { id: event_id, ..candidate.clone() };
+    let stamped = LedgerEvent {
+        id: event_id,
+        ..candidate.clone()
+    };
 
     // 3. Content de-dup precedes re-validation (RUNTIME-EVENTID-001 "same content ⇒
     //    same event"): if the assigned id is ALREADY in the refreshed log, this is a
@@ -542,7 +553,11 @@ fn ledger_id_for_existing_content(
 /// The canonical content cells of a ledger event with the id + `Seq` normalised out —
 /// the same content `store`'s idempotency compares. (RUNTIME-EVENTID-001)
 fn ledger_content_cells(event: &LedgerEvent) -> store::Row {
-    let normalised = LedgerEvent { id: String::new(), seq: pt_core::Seq(0), ..event.clone() };
+    let normalised = LedgerEvent {
+        id: String::new(),
+        seq: pt_core::Seq(0),
+        ..event.clone()
+    };
     let mut row = store::serde_rows::ledger_to_row(&normalised);
     row.cells.remove("Seq");
     row.cells.remove("EventId");

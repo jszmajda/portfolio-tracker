@@ -14,9 +14,7 @@
 
 use std::collections::BTreeMap;
 
-use ledger_core::{
-    replay, LedgerEvent, LedgerEventKind, LotRef, Marks, Snapshot,
-};
+use ledger_core::{replay, LedgerEvent, LedgerEventKind, LotRef, Marks, Snapshot};
 use pt_core::{Cents, Date, MicroShares, Seq};
 
 // ---------------------------------------------------------------------------
@@ -199,7 +197,11 @@ fn multi_lot_sell_allocates_proceeds_by_largest_remainder_summing_exactly() {
 
     // Sum must be EXACTLY net proceeds (100c) — the headline largest-remainder
     // guarantee.
-    assert_eq!(p1 + p2 + p3, 100, "per-lot proceeds must sum to net proceeds");
+    assert_eq!(
+        p1 + p2 + p3,
+        100,
+        "per-lot proceeds must sum to net proceeds"
+    );
     // The +1 residual goes to the earliest lot (L1) in ascending FIFO order.
     assert_eq!(p1, 34, "earliest lot receives the residual unit");
     assert_eq!(p2, 33);
@@ -235,7 +237,11 @@ fn realized_gain_is_proceeds_minus_basis_and_may_be_negative() {
     let snap = replay(&events, &no_marks());
 
     let g = gain_for_lot(&snap, "L1");
-    assert_eq!(g.basis_cents, Cents(2000), "consumed basis is the full lot basis");
+    assert_eq!(
+        g.basis_cents,
+        Cents(2000),
+        "consumed basis is the full lot basis"
+    );
     assert_eq!(g.proceeds_cents, Cents(1000));
     assert_eq!(
         g.gain_cents,
@@ -368,10 +374,7 @@ fn unrealized_pnl_sums_per_lot_mark_value_minus_basis() {
     ];
     let snap = replay(&events, &marks(&[("AMZN", 200)]));
 
-    let pos = snap
-        .positions
-        .get("AMZN")
-        .expect("AMZN position present");
+    let pos = snap.positions.get("AMZN").expect("AMZN position present");
     assert_eq!(
         pos.unrealized_cents,
         Some(Cents(1250)),
@@ -388,7 +391,15 @@ fn unrealized_pnl_sums_per_lot_mark_value_minus_basis() {
 #[test]
 fn unmarked_symbol_with_open_lots_reports_absent_unrealized_not_zero() {
     let events = vec![buy(
-        "e1", 1, 100, "L1", "AMZN", shares(10), 100, 0, "fidelity",
+        "e1",
+        1,
+        100,
+        "L1",
+        "AMZN",
+        shares(10),
+        100,
+        0,
+        "fidelity",
     )];
     // No mark supplied for AMZN.
     let snap = replay(&events, &no_marks());

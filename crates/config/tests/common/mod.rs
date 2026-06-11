@@ -95,9 +95,15 @@ pub fn valid_rules(tax_year: i32, last_verified: i32) -> TaxRules {
         niit(38_000, 250_000_00),
         &[
             // DC top ~10.75%
-            ("DC", bracket_set(&[(0, 40_000), (10_000_000_00, 107_500)], last_verified)),
+            (
+                "DC",
+                bracket_set(&[(0, 40_000), (10_000_000_00, 107_500)], last_verified),
+            ),
             // NJ top 5.525% (the rate bps cannot represent)
-            ("NJ", bracket_set(&[(0, 14_000), (1_000_000_00, 55_250)], last_verified)),
+            (
+                "NJ",
+                bracket_set(&[(0, 14_000), (1_000_000_00, 55_250)], last_verified),
+            ),
         ],
         300_000_00,
     )

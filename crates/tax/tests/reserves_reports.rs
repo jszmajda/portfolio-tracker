@@ -8,14 +8,18 @@ mod common;
 use common::*;
 
 use config::{BracketState, Jurisdiction};
-use tax::{
-    annual_report, quarter_of, quarterly_report, reserves, safe_harbor_ppm, Quarter,
-};
+use tax::{annual_report, quarter_of, quarterly_report, reserves, safe_harbor_ppm, Quarter};
 
 fn ctx() -> tax::TaxContext {
     context(
         2025,
-        federal(flat(300_000), flat(0), niit(0, 0), 0, BracketState::Verified),
+        federal(
+            flat(300_000),
+            flat(0),
+            niit(0, 0),
+            0,
+            BracketState::Verified,
+        ),
         &[],
         0,
         None,
@@ -23,7 +27,16 @@ fn ctx() -> tax::TaxContext {
 }
 fn one_gain() -> ledger_core::RealizedGain {
     // Short-term → federal ordinary 30% → 30_000c accrual.
-    gain("s1", 1, "lotA", "AMZN", date(2025, 1, 2), date(2025, 6, 1), 100_000, None)
+    gain(
+        "s1",
+        1,
+        "lotA",
+        "AMZN",
+        date(2025, 1, 2),
+        date(2025, 6, 1),
+        100_000,
+        None,
+    )
 }
 
 fn fed_reserve(reserves: &[tax::Reserve], tax_year: i32) -> Option<&tax::Reserve> {
@@ -44,15 +57,41 @@ fn reserve_001_balance_is_sum_moves_minus_sum_pays() {
     let key2 = fed_key("s2", "lotB", 2025);
     // Both keys are backed by real gains, so the reserve is not flagged backless.
     let gains = vec![
-        gain("s1", 1, "lotA", "AMZN", date(2025, 1, 2), date(2025, 6, 1), 100_000, None),
-        gain("s2", 2, "lotB", "AMZN", date(2025, 1, 2), date(2025, 6, 1), 100_000, None),
+        gain(
+            "s1",
+            1,
+            "lotA",
+            "AMZN",
+            date(2025, 1, 2),
+            date(2025, 6, 1),
+            100_000,
+            None,
+        ),
+        gain(
+            "s2",
+            2,
+            "lotB",
+            "AMZN",
+            date(2025, 1, 2),
+            date(2025, 6, 1),
+            100_000,
+            None,
+        ),
     ];
     let events = vec![
         allocate(1, key.clone(), "acct"),
         move_(2, key.clone(), 30_000, date(2025, 6, 15)),
         allocate(3, key2.clone(), "acct"),
         move_(4, key2.clone(), 5_000, date(2025, 7, 1)),
-        pay(5, Jurisdiction::Federal, 2025, Quarter::Q2, 20_000, date(2025, 6, 16), vec![key]),
+        pay(
+            5,
+            Jurisdiction::Federal,
+            2025,
+            Quarter::Q2,
+            20_000,
+            date(2025, 6, 16),
+            vec![key],
+        ),
     ];
     let r = reserves(&gains, &events, &ctx());
     let fed = fed_reserve(&r, 2025).expect("a federal 2025 reserve must exist");
@@ -61,7 +100,10 @@ fn reserve_001_balance_is_sum_moves_minus_sum_pays() {
         pt_core::Cents(15_000),
         "reserve = Σ Move (35_000) − Σ Pay (20_000) = 15_000"
     );
-    assert!(!fed.has_backless_entry, "backed Move/Pay → not a backless reserve");
+    assert!(
+        !fed.has_backless_entry,
+        "backed Move/Pay → not a backless reserve"
+    );
 }
 
 // ===========================================================================
@@ -78,7 +120,15 @@ fn reserve_002_may_go_negative() {
     let events = vec![
         allocate(1, key.clone(), "acct"),
         move_(2, key.clone(), 10_000, date(2025, 6, 15)),
-        pay(3, Jurisdiction::Federal, 2025, Quarter::Q2, 25_000, date(2025, 6, 16), vec![key]),
+        pay(
+            3,
+            Jurisdiction::Federal,
+            2025,
+            Quarter::Q2,
+            25_000,
+            date(2025, 6, 16),
+            vec![key],
+        ),
     ];
     let r = reserves(&gains, &events, &ctx());
     let fed = fed_reserve(&r, 2025).expect("a federal 2025 reserve must exist");
@@ -114,8 +164,26 @@ fn report_001_quarterly_report_groups_gains_by_sale_date() {
     // Two gains, one in Q1 (Feb) one in Q3 (Jul). The report places each in its
     // period's federal cell.
     // Both short-term (acquired the prior month), so they land in short-term gain.
-    let g1 = gain("s1", 1, "lotA", "AMZN", date(2025, 1, 2), date(2025, 2, 1), 100_000, None);
-    let g2 = gain("s2", 2, "lotB", "AMZN", date(2025, 6, 1), date(2025, 7, 1), 100_000, None);
+    let g1 = gain(
+        "s1",
+        1,
+        "lotA",
+        "AMZN",
+        date(2025, 1, 2),
+        date(2025, 2, 1),
+        100_000,
+        None,
+    );
+    let g2 = gain(
+        "s2",
+        2,
+        "lotB",
+        "AMZN",
+        date(2025, 6, 1),
+        date(2025, 7, 1),
+        100_000,
+        None,
+    );
     let cells = quarterly_report(&[g1, g2], &[], &ctx());
 
     let q1 = cells
@@ -127,8 +195,16 @@ fn report_001_quarterly_report_groups_gains_by_sale_date() {
         .find(|c| c.period == Quarter::Q3 && c.jurisdiction == Jurisdiction::Federal)
         .expect("a Q3 federal cell must exist");
     // The Feb gain is short-term; both land in their period's short-term gain.
-    assert_eq!(q1.short_term_gain_cents, pt_core::Cents(100_000), "the Feb gain is in Q1");
-    assert_eq!(q3.short_term_gain_cents, pt_core::Cents(100_000), "the Jul gain is in Q3");
+    assert_eq!(
+        q1.short_term_gain_cents,
+        pt_core::Cents(100_000),
+        "the Feb gain is in Q1"
+    );
+    assert_eq!(
+        q3.short_term_gain_cents,
+        pt_core::Cents(100_000),
+        "the Jul gain is in Q3"
+    );
 }
 
 // ===========================================================================
@@ -150,10 +226,25 @@ fn report_002_safe_harbor_targets_are_cumulative() {
 fn report_002_cell_carries_lt_st_split_and_accrual_and_target() {
     // A long-term gain in Q3. The Q3 federal cell shows the LT split, the
     // computed accrual, and the Q3 safe-harbor target.
-    let g = gain("s1", 1, "lotA", "AMZN", date(2023, 1, 1), date(2025, 7, 1), 100_000, None);
+    let g = gain(
+        "s1",
+        1,
+        "lotA",
+        "AMZN",
+        date(2023, 1, 1),
+        date(2025, 7, 1),
+        100_000,
+        None,
+    );
     let ctx = context(
         2025,
-        federal(flat(0), flat(150_000), niit(0, 0), 0, BracketState::Verified),
+        federal(
+            flat(0),
+            flat(150_000),
+            niit(0, 0),
+            0,
+            BracketState::Verified,
+        ),
         &[],
         0,
         None,
@@ -163,10 +254,22 @@ fn report_002_cell_carries_lt_st_split_and_accrual_and_target() {
         .iter()
         .find(|c| c.period == Quarter::Q3 && c.jurisdiction == Jurisdiction::Federal)
         .expect("a Q3 federal cell must exist");
-    assert_eq!(q3.long_term_gain_cents, pt_core::Cents(100_000), "the gain is long-term");
+    assert_eq!(
+        q3.long_term_gain_cents,
+        pt_core::Cents(100_000),
+        "the gain is long-term"
+    );
     assert_eq!(q3.short_term_gain_cents, pt_core::Cents(0));
-    assert_eq!(q3.accrual_cents, pt_core::Cents(15_000), "LT 15% → 15_000c accrual");
-    assert_eq!(q3.safe_harbor_ppm, config::Ppm(675_000), "Q3 cumulative target 67.5%");
+    assert_eq!(
+        q3.accrual_cents,
+        pt_core::Cents(15_000),
+        "LT 15% → 15_000c accrual"
+    );
+    assert_eq!(
+        q3.safe_harbor_ppm,
+        config::Ppm(675_000),
+        "Q3 cumulative target 67.5%"
+    );
 }
 
 // ===========================================================================
@@ -183,7 +286,15 @@ fn report_003_annual_row_totals() {
     let events = vec![
         allocate(1, key.clone(), "acct"),
         move_(2, key.clone(), 25_000, date(2025, 6, 15)),
-        pay(3, Jurisdiction::Federal, 2025, Quarter::Q2, 20_000, date(2025, 6, 16), vec![key]),
+        pay(
+            3,
+            Jurisdiction::Federal,
+            2025,
+            Quarter::Q2,
+            20_000,
+            date(2025, 6, 16),
+            vec![key],
+        ),
     ];
     let rows = annual_report(&[one_gain()], &events, &ctx());
     let fed = rows
@@ -193,8 +304,16 @@ fn report_003_annual_row_totals() {
     assert_eq!(fed.accrued_cents, pt_core::Cents(30_000));
     assert_eq!(fed.moved_cents, pt_core::Cents(25_000));
     assert_eq!(fed.paid_cents, pt_core::Cents(20_000));
-    assert_eq!(fed.outstanding_cents, pt_core::Cents(10_000), "outstanding = accrued − paid");
-    assert_eq!(fed.shortfall_cents, pt_core::Cents(5_000), "shortfall = accrued − moved");
+    assert_eq!(
+        fed.outstanding_cents,
+        pt_core::Cents(10_000),
+        "outstanding = accrued − paid"
+    );
+    assert_eq!(
+        fed.shortfall_cents,
+        pt_core::Cents(5_000),
+        "shortfall = accrued − moved"
+    );
 }
 
 // ===========================================================================
@@ -209,7 +328,13 @@ fn report_004_effective_rate_only_above_de_minimis() {
     // 1e6 / 100_000) = 300_000 ppm.
     let ctx = context(
         2025,
-        federal(flat(300_000), flat(0), niit(0, 0), 0, BracketState::Verified),
+        federal(
+            flat(300_000),
+            flat(0),
+            niit(0, 0),
+            0,
+            BracketState::Verified,
+        ),
         &[],
         500,
         None,
@@ -233,12 +358,27 @@ fn report_004_effective_rate_na_below_de_minimis() {
     // n/a (None).
     let ctx = context(
         2025,
-        federal(flat(300_000), flat(0), niit(0, 0), 0, BracketState::Verified),
+        federal(
+            flat(300_000),
+            flat(0),
+            niit(0, 0),
+            0,
+            BracketState::Verified,
+        ),
         &[],
         500,
         None,
     );
-    let g = gain("s1", 1, "lotA", "AMZN", date(2025, 1, 2), date(2025, 6, 1), 100, None);
+    let g = gain(
+        "s1",
+        1,
+        "lotA",
+        "AMZN",
+        date(2025, 1, 2),
+        date(2025, 6, 1),
+        100,
+        None,
+    );
     let rows = annual_report(&[g], &[], &ctx);
     let fed = rows
         .iter()
@@ -264,12 +404,27 @@ fn accrual_005_de_minimis_excluded_from_outstanding() {
     // not 30c. With no Move/Pay, outstanding = accrued − paid.
     let ctx = context(
         2025,
-        federal(flat(300_000), flat(0), niit(0, 0), 0, BracketState::Verified),
+        federal(
+            flat(300_000),
+            flat(0),
+            niit(0, 0),
+            0,
+            BracketState::Verified,
+        ),
         &[],
         500,
         None,
     );
-    let tiny = gain("s1", 1, "lotA", "AMZN", date(2025, 1, 2), date(2025, 6, 1), 100, None);
+    let tiny = gain(
+        "s1",
+        1,
+        "lotA",
+        "AMZN",
+        date(2025, 1, 2),
+        date(2025, 6, 1),
+        100,
+        None,
+    );
     let rows = annual_report(&[tiny], &[], &ctx);
     let fed = rows
         .iter()
@@ -294,7 +449,13 @@ fn accrual_005_material_accrual_contributes_full_amount_to_outstanding() {
     // threshold) contributes its FULL applied amount to the outstanding balance.
     let ctx = context(
         2025,
-        federal(flat(300_000), flat(0), niit(0, 0), 0, BracketState::Verified),
+        federal(
+            flat(300_000),
+            flat(0),
+            niit(0, 0),
+            0,
+            BracketState::Verified,
+        ),
         &[],
         500,
         None,
@@ -304,7 +465,11 @@ fn accrual_005_material_accrual_contributes_full_amount_to_outstanding() {
         .iter()
         .find(|r| r.jurisdiction == Jurisdiction::Federal && r.tax_year.0 == 2025)
         .unwrap();
-    assert_eq!(fed.accrued_cents, pt_core::Cents(30_000), "a material accrual is included");
+    assert_eq!(
+        fed.accrued_cents,
+        pt_core::Cents(30_000),
+        "a material accrual is included"
+    );
     assert_eq!(
         fed.outstanding_cents,
         pt_core::Cents(30_000),

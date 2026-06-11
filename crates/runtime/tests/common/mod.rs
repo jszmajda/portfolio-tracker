@@ -13,7 +13,14 @@ use store::EventLogs;
 use tax::{ResolvedJurisdiction, TaxContext};
 
 /// A `Buy` event opening a lot.
-pub fn buy(seq: u64, date: i32, lot: &str, symbol: &str, qty_micro: i64, unit_cents: i64) -> LedgerEvent {
+pub fn buy(
+    seq: u64,
+    date: i32,
+    lot: &str,
+    symbol: &str,
+    qty_micro: i64,
+    unit_cents: i64,
+) -> LedgerEvent {
     LedgerEvent {
         id: format!("e{seq}"),
         seq: Seq(seq),
@@ -90,7 +97,10 @@ pub fn closed_symbol_logs() -> EventLogs {
 
 fn flat_set(rate: i64) -> BracketSet {
     BracketSet {
-        rows: vec![BracketRow { lower_threshold_cents: Cents(0), rate_ppm: Ppm(rate) }],
+        rows: vec![BracketRow {
+            lower_threshold_cents: Cents(0),
+            rate_ppm: Ppm(rate),
+        }],
         last_verified: Date(19_000),
         source_note: "test".to_string(),
     }
@@ -103,7 +113,10 @@ pub fn ctx(tax_year: i32) -> TaxContext {
         jurisdiction: Jurisdiction::Federal,
         ordinary: Some(flat_set(370_000)),
         federal_long_term: Some(flat_set(200_000)),
-        niit: Some(Niit { rate_ppm: Ppm(38_000), magi_threshold_cents: Cents(0) }),
+        niit: Some(Niit {
+            rate_ppm: Ppm(38_000),
+            magi_threshold_cents: Cents(0),
+        }),
         ordinary_income_cents: Cents(0),
         state: BracketState::Verified,
     };

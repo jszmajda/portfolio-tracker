@@ -3,7 +3,9 @@
 
 mod common;
 
-use sheets_view::{render_positions, render_tax, DATA_START_ROW, POSITIONS_HEADER, TAX_RESERVE_HEADER};
+use sheets_view::{
+    render_positions, render_tax, DATA_START_ROW, POSITIONS_HEADER, TAX_RESERVE_HEADER,
+};
 
 use config::AliasMap;
 use pt_core::Date;
@@ -84,14 +86,23 @@ fn per_row_formulas_reference_their_own_row_beneath_frozen_header() {
         assert!(mv.contains(&format!("B{r}")), "MV row {r}: {mv}");
         // Unrealized P&L = Market Value(F) − Total Basis(D) on THIS row.
         let un = row[col("Unrealized P&L")].text();
-        assert!(un.contains(&format!("F{r}")) && un.contains(&format!("D{r}")), "Unreal row {r}: {un}");
+        assert!(
+            un.contains(&format!("F{r}")) && un.contains(&format!("D{r}")),
+            "Unreal row {r}: {un}"
+        );
         // The formula must NOT reference any OTHER data row's number, so a row
         // shift cannot mis-pair the cells.
         for other in 0..positions.rows.len() {
             let ro = (other as u32) + DATA_START_ROW;
             if ro != r {
-                assert!(!mv.contains(&format!("E{ro}")), "MV row {r} leaked E{ro}: {mv}");
-                assert!(!mv.contains(&format!("B{ro}")), "MV row {r} leaked B{ro}: {mv}");
+                assert!(
+                    !mv.contains(&format!("E{ro}")),
+                    "MV row {r} leaked E{ro}: {mv}"
+                );
+                assert!(
+                    !mv.contains(&format!("B{ro}")),
+                    "MV row {r} leaked B{ro}: {mv}"
+                );
             }
         }
     }
@@ -108,8 +119,12 @@ fn positions_shows_pretax_and_live_posttax_estimate() {
     let positions = render_positions(&snap, &rates, &aliases).unwrap();
 
     // The post-tax columns are labelled estimates (header carries "(est)").
-    assert!(POSITIONS_HEADER.iter().any(|h| *h == "Net Unrealized (est)"));
-    assert!(POSITIONS_HEADER.iter().any(|h| *h == "Est. Unrealized Tax (est)"));
+    assert!(POSITIONS_HEADER
+        .iter()
+        .any(|h| *h == "Net Unrealized (est)"));
+    assert!(POSITIONS_HEADER
+        .iter()
+        .any(|h| *h == "Est. Unrealized Tax (est)"));
     // A pre-tax Unrealized P&L column exists alongside.
     assert!(POSITIONS_HEADER.iter().any(|h| *h == "Unrealized P&L"));
 
@@ -119,7 +134,10 @@ fn positions_shows_pretax_and_live_posttax_estimate() {
     let net = row[col("Net Unrealized (est)")].text();
     assert!(net.contains(&format!("G{r}")), "net: {net}");
     assert!(net.contains(&format!("H{r}")), "net: {net}");
-    assert!(net.contains("1-") || net.contains("1 -"), "net must use (1 - rate): {net}");
+    assert!(
+        net.contains("1-") || net.contains("1 -"),
+        "net must use (1 - rate): {net}"
+    );
 
     // The Est. Tax Rate column is a VALUE written by tax (a percentage string),
     // present for a symbol with a computed effective rate.
@@ -155,21 +173,36 @@ fn est_tax_rate_cell_is_numeric_percent_the_posttax_formulas_can_multiply() {
     let text = row[rate_idx].text();
 
     // The cell is a percent-suffixed value (the form Sheets parses to a fraction).
-    assert!(text.ends_with('%'), "Est. Tax Rate must be a percent literal: {text}");
-    let numeric: f64 = text.trim_end_matches('%').parse().expect("percent body is numeric");
+    assert!(
+        text.ends_with('%'),
+        "Est. Tax Rate must be a percent literal: {text}"
+    );
+    let numeric: f64 = text
+        .trim_end_matches('%')
+        .parse()
+        .expect("percent body is numeric");
     // Sheets coerces "X%" to the fraction X/100 — model that coercion and confirm
     // `=G*H` (pre-tax × rate) and `=G*(1-H)` (net) would evaluate sensibly: the
     // fraction is a real number in [0, 1] (a tax rate), never NaN/text.
     let fraction = numeric / 100.0;
-    assert!(fraction.is_finite() && (0.0..=1.0).contains(&fraction), "rate fraction: {fraction}");
+    assert!(
+        fraction.is_finite() && (0.0..=1.0).contains(&fraction),
+        "rate fraction: {fraction}"
+    );
 
     // Concretely evaluate the two post-tax formulas against a sample pre-tax G to
     // confirm the cell multiplies correctly (=G*H and =G*(1-H)).
     let pre_tax_g = 1_000.0_f64; // an example Unrealized P&L the live formula yields
     let est_unrealized_tax = pre_tax_g * fraction; // =G*H
     let net_unrealized = pre_tax_g * (1.0 - fraction); // =G*(1-H)
-    assert!((est_unrealized_tax + net_unrealized - pre_tax_g).abs() < 1e-9, "G*H + G*(1-H) == G");
-    assert!(est_unrealized_tax > 0.0, "a positive rate yields a positive estimated tax");
+    assert!(
+        (est_unrealized_tax + net_unrealized - pre_tax_g).abs() < 1e-9,
+        "G*H + G*(1-H) == G"
+    );
+    assert!(
+        est_unrealized_tax > 0.0,
+        "a positive rate yields a positive estimated tax"
+    );
 }
 
 // @spec SHEET-MARK-008
@@ -190,22 +223,43 @@ fn positions_carries_a_locale_proof_quote_date_companion_column() {
 
     // The companion column is a typed header column (no ragged rows).
     let qcol = col("Quote Date");
-    assert_eq!(qcol, 12, "Quote Date is the read-back's column-12 companion");
+    assert_eq!(
+        qcol, 12,
+        "Quote Date is the read-back's column-12 companion"
+    );
 
     for row in &positions.rows {
         let cell = &row[qcol];
-        assert!(cell.is_formula(), "Quote Date must be a live formula: {cell:?}");
+        assert!(
+            cell.is_formula(),
+            "Quote Date must be a live formula: {cell:?}"
+        );
         let text = cell.text();
         // The encoding contract: GOOGLEFINANCE's trade time, truncated to a date
         // serial, re-based to days since 1970-01-01, and rendered via TEXT(…,"0")
         // — a digits-only string every locale formats identically, parsed by the
         // settle pass as the kernel Date. Empty (never an error string) while
         // loading/errored.
-        assert!(text.contains("GOOGLEFINANCE"), "quote date reads GOOGLEFINANCE: {text}");
-        assert!(text.contains("tradetime"), "quote date uses the tradetime attribute: {text}");
-        assert!(text.contains("DATE(1970,1,1)"), "re-based to days since 1970-01-01: {text}");
-        assert!(text.contains("TEXT("), "rendered as locale-proof digits via TEXT: {text}");
-        assert!(text.contains("IFERROR"), "loading/errored renders empty, not an error: {text}");
+        assert!(
+            text.contains("GOOGLEFINANCE"),
+            "quote date reads GOOGLEFINANCE: {text}"
+        );
+        assert!(
+            text.contains("tradetime"),
+            "quote date uses the tradetime attribute: {text}"
+        );
+        assert!(
+            text.contains("DATE(1970,1,1)"),
+            "re-based to days since 1970-01-01: {text}"
+        );
+        assert!(
+            text.contains("TEXT("),
+            "rendered as locale-proof digits via TEXT: {text}"
+        );
+        assert!(
+            text.contains("IFERROR"),
+            "loading/errored renders empty, not an error: {text}"
+        );
     }
 
     // The aliased symbol's companion formula uses the RESOLVED ticker.
@@ -316,14 +370,29 @@ fn reserve_summary_carries_all_five_kernel_exact_columns() {
             let a = v.unsigned_abs();
             format!("{sign}{}.{:02}", a / 100, a % 100)
         };
-        assert_eq!(row[rcol("Accrued")].text(), fmt(ar.accrued_cents), "Accrued");
+        assert_eq!(
+            row[rcol("Accrued")].text(),
+            fmt(ar.accrued_cents),
+            "Accrued"
+        );
         assert_eq!(row[rcol("Moved")].text(), fmt(ar.moved_cents), "Moved");
         assert_eq!(row[rcol("Paid")].text(), fmt(ar.paid_cents), "Paid");
-        assert_eq!(row[rcol("Outstanding")].text(), fmt(ar.outstanding_cents), "Outstanding");
-        assert_eq!(row[rcol("Shortfall")].text(), fmt(ar.shortfall_cents), "Shortfall");
+        assert_eq!(
+            row[rcol("Outstanding")].text(),
+            fmt(ar.outstanding_cents),
+            "Outstanding"
+        );
+        assert_eq!(
+            row[rcol("Shortfall")].text(),
+            fmt(ar.shortfall_cents),
+            "Shortfall"
+        );
         // None of the five is an empty string (the gap the review flagged).
         for name in ["Accrued", "Moved", "Paid", "Outstanding", "Shortfall"] {
-            assert!(!row[rcol(name)].text().is_empty(), "{name} must not be blank");
+            assert!(
+                !row[rcol(name)].text().is_empty(),
+                "{name} must not be blank"
+            );
         }
     }
 
@@ -338,7 +407,9 @@ fn reserve_summary_carries_all_five_kernel_exact_columns() {
         .reserve_summary
         .rows
         .iter()
-        .find(|r| r[rcol("Jurisdiction")].text() == "Federal" && r[rcol("Tax Year")].text() == "2022")
+        .find(|r| {
+            r[rcol("Jurisdiction")].text() == "Federal" && r[rcol("Tax Year")].text() == "2022"
+        })
         .expect("federal 2022 reserve-summary row");
     assert_eq!(fed_row[rcol("Moved")].text(), "50.00");
     assert_eq!(fed_row[rcol("Paid")].text(), "20.00");

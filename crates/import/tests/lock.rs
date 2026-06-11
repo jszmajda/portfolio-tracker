@@ -13,7 +13,7 @@
 mod common;
 use common::*;
 
-use import::testkit::{fresh_store_with_lock, founding_residency};
+use import::testkit::{founding_residency, fresh_store_with_lock};
 use import::{commit, dry_run, LegacyWorkbook};
 use ledger_core::Marks;
 use store::{SheetsClient, Tab};
@@ -38,7 +38,11 @@ fn commit_holds_the_lock_across_the_whole_commit_and_inner_appends_reacquire() {
 
     let (mut store, lock) = fresh_store_with_lock();
     let commit_report = commit(&mut store, &report.accept()).expect("commit to a fresh store");
-    assert_eq!(commit_report.appended.len(), 2, "two ledger events appended");
+    assert_eq!(
+        commit_report.appended.len(),
+        2,
+        "two ledger events appended"
+    );
     assert_eq!(
         store.sheets().read_rows(Tab::Ledger).unwrap().len(),
         2,

@@ -85,7 +85,9 @@ pub struct Palette {
 impl Palette {
     /// The truecolor palette (the default shipped theme).
     pub fn ledger() -> Self {
-        Palette { depth: ColorDepth::TrueColor }
+        Palette {
+            depth: ColorDepth::TrueColor,
+        }
     }
 
     /// The palette at a given colour depth.
@@ -96,15 +98,15 @@ impl Palette {
     /// The truecolor RGB for a role (the canonical "Ledger" hex values).
     fn truecolor(role: Role) -> Color {
         match role {
-            Role::Gain => Color::Rgb(0x6F, 0xA8, 0x6B), // sage
-            Role::Loss => Color::Rgb(0xC5, 0x59, 0x4B), // terracotta
-            Role::Flat => Color::Rgb(0xE8, 0xE1, 0xD3), // fg
-            Role::Stale => Color::Rgb(0x9A, 0x8F, 0x7A), // warm dim
+            Role::Gain => Color::Rgb(0x6F, 0xA8, 0x6B),     // sage
+            Role::Loss => Color::Rgb(0xC5, 0x59, 0x4B),     // terracotta
+            Role::Flat => Color::Rgb(0xE8, 0xE1, 0xD3),     // fg
+            Role::Stale => Color::Rgb(0x9A, 0x8F, 0x7A),    // warm dim
             Role::Degraded => Color::Rgb(0x9A, 0x8F, 0x7A), // warm dim
             Role::Estimate => Color::Rgb(0x5F, 0xA8, 0x9E), // verdigris
-            Role::Warn => Color::Rgb(0xE0, 0x8A, 0x3C), // amber
-            Role::Error => Color::Rgb(0xE5, 0x54, 0x4A), // escalated red
-            Role::Accent => Color::Rgb(0xD4, 0xA8, 0x2C), // gilt
+            Role::Warn => Color::Rgb(0xE0, 0x8A, 0x3C),     // amber
+            Role::Error => Color::Rgb(0xE5, 0x54, 0x4A),    // escalated red
+            Role::Accent => Color::Rgb(0xD4, 0xA8, 0x2C),   // gilt
             Role::Fg => Color::Rgb(0xE8, 0xE1, 0xD3),
             Role::FgDim => Color::Rgb(0x9A, 0x8F, 0x7A),
             Role::FgFaint => Color::Rgb(0x5C, 0x54, 0x44),
@@ -217,8 +219,7 @@ fn rgb_to_xterm256(r: u8, g: u8, b: u8) -> u8 {
     let (ri, gi, bi) = (nearest_level(r), nearest_level(g), nearest_level(b));
     let cube_index = 16 + 36 * ri as u8 + 6 * gi as u8 + bi as u8;
     let (cr, cg, cb) = (LEVELS[ri] as i32, LEVELS[gi] as i32, LEVELS[bi] as i32);
-    let cube_dist =
-        (r as i32 - cr).pow(2) + (g as i32 - cg).pow(2) + (b as i32 - cb).pow(2);
+    let cube_dist = (r as i32 - cr).pow(2) + (g as i32 - cg).pow(2) + (b as i32 - cb).pow(2);
 
     // The grayscale ramp: 24 steps from 8 to 238 in increments of 10 (indices
     // 232–255).
@@ -227,9 +228,8 @@ fn rgb_to_xterm256(r: u8, g: u8, b: u8) -> u8 {
     let gray_step = gray_step.clamp(0, 23);
     let gray_val = 8 + gray_step * 10;
     let gray_index = 232 + gray_step as u8;
-    let gray_dist = (r as i32 - gray_val).pow(2)
-        + (g as i32 - gray_val).pow(2)
-        + (b as i32 - gray_val).pow(2);
+    let gray_dist =
+        (r as i32 - gray_val).pow(2) + (g as i32 - gray_val).pow(2) + (b as i32 - gray_val).pow(2);
 
     if gray_dist < cube_dist {
         gray_index
@@ -379,7 +379,11 @@ fn compact_abs_dollars(abs_cents: u64) -> String {
     }
     // Hundredths of a million: 0.01m = $10,000 = 1,000,000 cents.
     let hundredths_m = pt_core::round_half_to_even(abs_cents as i128, 1_000_000) as u64;
-    format!("${}.{:02}m", group_thousands(hundredths_m / 100), hundredths_m % 100)
+    format!(
+        "${}.{:02}m",
+        group_thousands(hundredths_m / 100),
+        hundredths_m % 100
+    )
 }
 
 /// Format `Cents` as a **signed** dollar string with the leading `+`/`−` the
@@ -417,7 +421,11 @@ pub fn shares_grouped(q: MicroShares) -> String {
         format!("{sign}{}", group_thousands(whole))
     } else {
         let frac_str = format!("{frac:06}");
-        format!("{sign}{}.{}", group_thousands(whole), frac_str.trim_end_matches('0'))
+        format!(
+            "{sign}{}.{}",
+            group_thousands(whole),
+            frac_str.trim_end_matches('0')
+        )
     }
 }
 
@@ -532,7 +540,10 @@ pub fn delta_text_whole(c: Cents) -> (String, Role) {
     use std::cmp::Ordering;
     match c.0.cmp(&0) {
         Ordering::Greater => (format!("{GLYPH_UP} {}", signed_money_whole(c)), Role::Gain),
-        Ordering::Less => (format!("{GLYPH_DOWN} {}", signed_money_whole(c)), Role::Loss),
+        Ordering::Less => (
+            format!("{GLYPH_DOWN} {}", signed_money_whole(c)),
+            Role::Loss,
+        ),
         Ordering::Equal => (format!("{GLYPH_FLAT} {}", money_whole(c)), Role::Flat),
     }
 }
@@ -542,8 +553,14 @@ pub fn delta_text_whole(c: Cents) -> (String, Role) {
 pub fn delta_text_compact(c: Cents) -> (String, Role) {
     use std::cmp::Ordering;
     match c.0.cmp(&0) {
-        Ordering::Greater => (format!("{GLYPH_UP} {}", signed_money_compact(c)), Role::Gain),
-        Ordering::Less => (format!("{GLYPH_DOWN} {}", signed_money_compact(c)), Role::Loss),
+        Ordering::Greater => (
+            format!("{GLYPH_UP} {}", signed_money_compact(c)),
+            Role::Gain,
+        ),
+        Ordering::Less => (
+            format!("{GLYPH_DOWN} {}", signed_money_compact(c)),
+            Role::Loss,
+        ),
         Ordering::Equal => (format!("{GLYPH_FLAT} {}", money_compact(c)), Role::Flat),
     }
 }
@@ -574,7 +591,11 @@ pub fn stepper_dots(stage: LifecycleStop) -> String {
     };
     let mut dots = String::new();
     for i in 0..4 {
-        dots.push(if i < filled { GLYPH_STEP_FILLED } else { GLYPH_STEP_EMPTY });
+        dots.push(if i < filled {
+            GLYPH_STEP_FILLED
+        } else {
+            GLYPH_STEP_EMPTY
+        });
     }
     dots
 }
@@ -615,7 +636,9 @@ pub fn sparkline(values: &[i64]) -> String {
     let min = *values.iter().min().unwrap();
     let max = *values.iter().max().unwrap();
     if max == min {
-        return std::iter::repeat(SPARK_RAMP[3]).take(values.len()).collect();
+        return std::iter::repeat(SPARK_RAMP[3])
+            .take(values.len())
+            .collect();
     }
     let span = max - min;
     values

@@ -206,7 +206,9 @@ pub struct ResidencyTimeline {
 impl ResidencyTimeline {
     /// An empty timeline (no founding entry yet → import is blocked).
     pub fn new() -> Self {
-        ResidencyTimeline { entries: Vec::new() }
+        ResidencyTimeline {
+            entries: Vec::new(),
+        }
     }
 
     /// Build a timeline from entries, validating the invariants (sorted, unique
@@ -653,10 +655,7 @@ pub fn resolve_brackets(
 /// The bracket set a `TaxRules` carries for `jurisdiction`, if any: the federal
 /// ordinary set for `Federal`, or the state's entry in `state_ordinary` for
 /// `State(s)`. A jurisdiction the table does not cover yields `None`.
-fn bracket_set_for<'a>(
-    rules: &'a TaxRules,
-    jurisdiction: &Jurisdiction,
-) -> Option<&'a BracketSet> {
+fn bracket_set_for<'a>(rules: &'a TaxRules, jurisdiction: &Jurisdiction) -> Option<&'a BracketSet> {
     match jurisdiction {
         Jurisdiction::Federal => Some(&rules.federal_ordinary),
         Jurisdiction::State(s) => rules.state_ordinary.get(s),
@@ -760,8 +759,7 @@ fn days_from_civil(y: i32, m: i32, d: i32) -> i32 {
     let y = if m <= 2 { y - 1 } else { y };
     let era = if y >= 0 { y } else { y - 399 } / 400;
     let yoe = (y - era * 400) as i64; // [0, 399]
-    let doy = (153 * (if m > 2 { m - 3 } else { m + 9 }) as i64 + 2) / 5
-        + (d - 1) as i64; // [0, 365]
+    let doy = (153 * (if m > 2 { m - 3 } else { m + 9 }) as i64 + 2) / 5 + (d - 1) as i64; // [0, 365]
     let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy; // [0, 146096]
     (era as i64 * 146097 + doe - 719468) as i32
 }
@@ -1031,8 +1029,8 @@ impl ConfigStore for InMemoryConfig {
         lock: &L,
     ) -> Result<(), ConfigError> {
         let _guard = lock.acquire()?; // (CONFIG-SETTINGS-006)
-        // The timeline is constructed through `from_entries` (which validates),
-        // so it is well-formed by the time it arrives; re-validate defensively.
+                                      // The timeline is constructed through `from_entries` (which validates),
+                                      // so it is well-formed by the time it arrives; re-validate defensively.
         validate_residency_timeline(timeline.entries())?;
         self.workbook.residency = timeline;
         self.sync_cache();
@@ -1045,7 +1043,7 @@ impl ConfigStore for InMemoryConfig {
         lock: &L,
     ) -> Result<(), ConfigError> {
         let _guard = lock.acquire()?; // (CONFIG-SETTINGS-006)
-        // De-minimis must be non-negative. (CONFIG-VALID-003)
+                                      // De-minimis must be non-negative. (CONFIG-VALID-003)
         if (de_minimis.0).0 < 0 {
             return Err(ConfigError::NegativeAmount);
         }
@@ -1109,13 +1107,25 @@ mod month_arithmetic {
     #[test]
     fn subtract_months_clamps_day_to_target_month_length() {
         // Mar 31 − 1 month → Feb 28 (non-leap year clamp), not "Feb 31".
-        assert_eq!(subtract_months(Date(day(2025, 3, 31)), 1), Date(day(2025, 2, 28)));
+        assert_eq!(
+            subtract_months(Date(day(2025, 3, 31)), 1),
+            Date(day(2025, 2, 28))
+        );
         // Mar 31 − 1 month → Feb 29 in a leap year (clamp to the leap-day length).
-        assert_eq!(subtract_months(Date(day(2024, 3, 31)), 1), Date(day(2024, 2, 29)));
+        assert_eq!(
+            subtract_months(Date(day(2024, 3, 31)), 1),
+            Date(day(2024, 2, 29))
+        );
         // Jan 31 − 1 month → Dec 31 of the prior year (cross-year, no clamp).
-        assert_eq!(subtract_months(Date(day(2024, 1, 31)), 1), Date(day(2023, 12, 31)));
+        assert_eq!(
+            subtract_months(Date(day(2024, 1, 31)), 1),
+            Date(day(2023, 12, 31))
+        );
         // A 12-month subtraction on a non-clamped day is the same day a year back.
-        assert_eq!(subtract_months(Date(day(2025, 7, 1)), 12), Date(day(2024, 7, 1)));
+        assert_eq!(
+            subtract_months(Date(day(2025, 7, 1)), 12),
+            Date(day(2024, 7, 1))
+        );
     }
 
     // @spec CONFIG-STALE-002
@@ -1126,10 +1136,7 @@ mod month_arithmetic {
         let as_of = Date(day(2025, 7, 1));
         let exactly_12mo_prior = day(2024, 7, 1); // == subtract_months(as_of, 12)
         let mut by_year: BTreeMap<TaxYear, TaxRules> = BTreeMap::new();
-        by_year.insert(
-            TaxYear(2025),
-            mk_rules(2025, exactly_12mo_prior),
-        );
+        by_year.insert(TaxYear(2025), mk_rules(2025, exactly_12mo_prior));
         assert!(!is_stale(
             &by_year,
             &Jurisdiction::Federal,

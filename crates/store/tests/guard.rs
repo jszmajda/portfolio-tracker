@@ -37,7 +37,10 @@ fn tax_event_round_trips_through_row_for_every_kind() {
         let row = tax_to_row(&ev, &id);
         let (back, back_id) = row_to_tax(&row).expect("a well-formed row deserializes");
         assert_eq!(back, ev, "event -> row -> event must be the identity");
-        assert_eq!(back_id, id, "the store-assigned EventId must round-trip too");
+        assert_eq!(
+            back_id, id,
+            "the store-assigned EventId must round-trip too"
+        );
     }
 }
 
@@ -75,8 +78,14 @@ fn list_encodings_round_trip_delimiter_bearing_field_values() {
             unit_price_cents: Cents(175_00),
             fees_cents: Cents(2_00),
             lot_refs: vec![
-                LotRef { lot_id: "lot:weird;1".to_string(), qty: MicroShares(1_000_000) },
-                LotRef { lot_id: "lot~b%2".to_string(), qty: MicroShares(1_000_000) },
+                LotRef {
+                    lot_id: "lot:weird;1".to_string(),
+                    qty: MicroShares(1_000_000),
+                },
+                LotRef {
+                    lot_id: "lot~b%2".to_string(),
+                    qty: MicroShares(1_000_000),
+                },
             ],
             accrues_to_state: Some("N;J:".to_string()),
             platform: "schwab".to_string(),
@@ -118,7 +127,10 @@ fn list_encodings_round_trip_delimiter_bearing_field_values() {
     };
     let row = tax_to_row(&pay_nasty, &"tx-nasty".to_string());
     let (back, back_id) = row_to_tax(&row).expect("delimiter-bearing Pay round-trips");
-    assert_eq!(back, pay_nasty, "covers with reserved delimiters round-trip");
+    assert_eq!(
+        back, pay_nasty,
+        "covers with reserved delimiters round-trip"
+    );
     assert_eq!(back_id, "tx-nasty");
 }
 

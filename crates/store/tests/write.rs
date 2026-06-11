@@ -252,15 +252,23 @@ fn block_partial_retry_keeps_seq_dense_and_loads() {
         .append_ledger_block(&[a, b])
         .expect("retry of a partially-landed block");
 
-    assert!(outs[0].idempotent_skip, "A was already landed → idempotent skip");
-    assert!(!outs[1].idempotent_skip, "B is the unlanded suffix → appended");
+    assert!(
+        outs[0].idempotent_skip,
+        "A was already landed → idempotent skip"
+    );
+    assert!(
+        !outs[1].idempotent_skip,
+        "B is the unlanded suffix → appended"
+    );
     assert_eq!(
         outs[1].seq.0, 3,
         "the skipped A did not consume a Seq; B is dense at 3, not 4"
     );
 
     // The Seq set is dense (1,2,3) and the workbook loads without a gap error.
-    let logs = store.load().expect("a dense log loads after the partial retry");
+    let logs = store
+        .load()
+        .expect("a dense log loads after the partial retry");
     let mut seqs: Vec<u64> = logs.ledger.iter().map(|e| e.seq.0).collect();
     seqs.sort_unstable();
     assert_eq!(seqs, vec![1, 2, 3], "no Seq gap from the skipped prefix");
@@ -327,7 +335,11 @@ fn landed_but_failed_verify_row_is_caught_by_idempotency_on_retry() {
         store.append_ledger(&ev).unwrap_err(),
         StoreError::WriteVerifyMismatch
     );
-    assert_eq!(store.sheets().rows(Tab::Ledger).len(), 1, "no double-append");
+    assert_eq!(
+        store.sheets().rows(Tab::Ledger).len(),
+        1,
+        "no double-append"
+    );
 }
 
 // @spec STORE-WRITE-002, STORE-WRITE-007

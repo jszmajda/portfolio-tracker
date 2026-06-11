@@ -181,9 +181,7 @@ fn parse_flat_toml(contents: &str) -> Vec<(String, String)> {
                 val = before.trim();
             }
         }
-        let val = val
-            .trim_matches(|c| c == '"' || c == '\'')
-            .to_string();
+        let val = val.trim_matches(|c| c == '"' || c == '\'').to_string();
         out.push((key, val));
     }
     out

@@ -13,7 +13,9 @@ use reports::{compose, Composition, DegradeCause, PricedTotalState};
 
 /// Find a composition row by its label.
 fn row<'a>(rows: &'a [reports::CompositionRow], label: &str) -> &'a reports::CompositionRow {
-    rows.iter().find(|r| r.label == label).unwrap_or_else(|| panic!("no row {label}"))
+    rows.iter()
+        .find(|r| r.label == label)
+        .unwrap_or_else(|| panic!("no row {label}"))
 }
 
 /// The sum of priced (non-degraded) per-symbol share_ppm.
@@ -45,8 +47,13 @@ fn composition_per_symbol_pre_and_post_tax() {
     assert_eq!(amzn.unrealized_pretax_cents, Some(Cents(150_00)));
     // Net-of-tax unrealized is present (a tax estimate exists) and is at most the
     // pre-tax figure for a gain (tax reduces the net).
-    let net = amzn.unrealized_net_of_tax_cents.expect("net-of-tax present");
-    assert!(net.0 <= 150_00 && net.0 >= 0, "net-of-tax in [0, pretax]: {net:?}");
+    let net = amzn
+        .unrealized_net_of_tax_cents
+        .expect("net-of-tax present");
+    assert!(
+        net.0 <= 150_00 && net.0 >= 0,
+        "net-of-tax in [0, pretax]: {net:?}"
+    );
 
     let goog = row(&comp.by_symbol, "GOOG");
     assert_eq!(goog.market_value_cents, Some(Cents(120_00)));
@@ -191,7 +198,10 @@ fn priced_total_nonpositive_distinguishes_positions_exist_but_unpriced() {
     let est = estimates(&snap, as_of, &ctx);
     let comp = compose(&snap, &BTreeMap::new(), &est);
 
-    assert_eq!(comp.priced_total_state, PricedTotalState::PositionsExistButUnpriced);
+    assert_eq!(
+        comp.priced_total_state,
+        PricedTotalState::PositionsExistButUnpriced
+    );
     // Every symbol is degraded; none carries a share.
     assert!(comp.by_symbol.iter().all(|r| r.share_ppm.is_none()));
     assert_eq!(priced_share_sum(&comp), 0);
@@ -207,10 +217,17 @@ fn negative_basis_position_is_flagged_not_a_nonsensical_share() {
     // basis we coerce negative via a crafted event sequence is not possible — use
     // a position-level synthetic snapshot.
     let snap = negative_basis_snapshot();
-    let comp = compose(&snap, &priced_marks(&[("ACME", 50_00, 19_490)]), &BTreeMap::new());
+    let comp = compose(
+        &snap,
+        &priced_marks(&[("ACME", 50_00, 19_490)]),
+        &BTreeMap::new(),
+    );
 
     let acme = row(&comp.by_symbol, "ACME");
-    assert!(acme.negative_basis, "negative-basis position must be flagged");
+    assert!(
+        acme.negative_basis,
+        "negative-basis position must be flagged"
+    );
 }
 
 // @spec REPORT-COMP-004
@@ -231,8 +248,14 @@ fn priced_negative_basis_position_emits_market_value_share_not_a_basis_share() {
     let comp = compose(&snap, &marks, &est);
 
     let acme = row(&comp.by_symbol, "ACME");
-    assert!(acme.negative_basis, "priced negative-basis position is still flagged");
-    assert_eq!(acme.degraded, None, "mark + tax estimate present → non-degraded");
+    assert!(
+        acme.negative_basis,
+        "priced negative-basis position is still flagged"
+    );
+    assert_eq!(
+        acme.degraded, None,
+        "mark + tax estimate present → non-degraded"
+    );
     // Share is the MARKET-VALUE share (well-defined), not a basis share: ACME is the
     // only priced symbol so its market-value share is exactly 100%.
     assert_eq!(acme.share_ppm, Some(Ppm(1_000_000)));
@@ -252,7 +275,11 @@ fn platform_negative_basis_is_from_final_aggregate_not_running_sum() {
     let comp = compose(&snap, &marks, &BTreeMap::new());
 
     let schwab = row(&comp.by_platform, "schwab");
-    assert_eq!(schwab.total_basis_cents, Cents(50_00), "final aggregate basis is +$50");
+    assert_eq!(
+        schwab.total_basis_cents,
+        Cents(50_00),
+        "final aggregate basis is +$50"
+    );
     assert!(
         !schwab.negative_basis,
         "a positive final aggregate must not be false-flagged negative by lot order"
@@ -307,7 +334,9 @@ fn net_of_tax_distributes_exact_tax_across_lots_and_platforms_no_penny_drift() {
 
     // The per-symbol net-of-tax is the authority: pretax $200 − tax $101.01.
     let zzz = row(&comp.by_symbol, "ZZZ");
-    let symbol_net = zzz.unrealized_net_of_tax_cents.expect("priced → net present");
+    let symbol_net = zzz
+        .unrealized_net_of_tax_cents
+        .expect("priced → net present");
     assert_eq!(symbol_net, Cents(200_00 - 101_01));
 
     // The per-platform net-of-tax sub-totals must sum EXACTLY to the per-symbol net
@@ -329,7 +358,11 @@ fn net_of_tax_distributes_exact_tax_across_lots_and_platforms_no_penny_drift() {
         .iter()
         .map(|r| r.unrealized_pretax_cents.expect("priced platform").0)
         .sum();
-    assert_eq!(plat_pretax_sum - plat_net_sum, 101_01, "distributed tax sums to the exact estimate");
+    assert_eq!(
+        plat_pretax_sum - plat_net_sum,
+        101_01,
+        "distributed tax sums to the exact estimate"
+    );
 }
 
 // @spec REPORT-COMP-004
@@ -342,12 +375,28 @@ fn fully_closed_out_book_reports_no_positions() {
     // GOOG: 2 bought @ $100, both sold @ $130 → fully closed.
     let events = vec![
         buy(1, 19_000, "lot-goog", "GOOG", 2_000_000, 100_00, "fidelity"),
-        sell(2, 19_100, "sale-1", "GOOG", 2_000_000, 130_00, "fidelity", Some("NJ")),
+        sell(
+            2,
+            19_100,
+            "sale-1",
+            "GOOG",
+            2_000_000,
+            130_00,
+            "fidelity",
+            Some("NJ"),
+        ),
     ];
     let snap = replay(&events, &ledger_marks(&[("GOOG", 130_00)]));
-    assert!(!snap.positions.is_empty(), "the position map is non-empty (closed lot present)");
+    assert!(
+        !snap.positions.is_empty(),
+        "the position map is non-empty (closed lot present)"
+    );
 
-    let comp = compose(&snap, &priced_marks(&[("GOOG", 130_00, 19_490)]), &BTreeMap::new());
+    let comp = compose(
+        &snap,
+        &priced_marks(&[("GOOG", 130_00, 19_490)]),
+        &BTreeMap::new(),
+    );
     assert_eq!(comp.priced_total_state, PricedTotalState::NoPositions);
     assert_eq!(priced_share_sum(&comp), 0);
 }
@@ -389,8 +438,15 @@ fn pct_of_basis_is_na_when_degraded_or_basis_nonpositive() {
     let comp = compose(&snap, &marks, &est);
     let goog = row(&comp.by_symbol, "GOOG");
     assert!(goog.degraded.is_some());
-    assert_eq!(goog.unrealized_pct_of_basis_ppm, None, "degraded → n/a, never fabricated");
-    assert_eq!(goog.total_basis_cents, Cents(100_00), "basis survives degradation");
+    assert_eq!(
+        goog.unrealized_pct_of_basis_ppm, None,
+        "degraded → n/a, never fabricated"
+    );
+    assert_eq!(
+        goog.total_basis_cents,
+        Cents(100_00),
+        "basis survives degradation"
+    );
 
     // A priced zero-basis position (e.g. a zero-cost acquisition) → n/a: a ≤ 0
     // basis has no meaningful %-of-basis (never a nonsensical percentage).
@@ -402,7 +458,10 @@ fn pct_of_basis_is_na_when_degraded_or_basis_nonpositive() {
     let marks_z = priced_marks(&[("ZERO", 100_00, 19_490)]);
     let comp_z = compose(&zero, &marks_z, &est_z);
     let z = row(&comp_z.by_symbol, "ZERO");
-    assert!(z.degraded.is_none(), "the zero-basis row is priced, not degraded");
+    assert!(
+        z.degraded.is_none(),
+        "the zero-basis row is priced, not degraded"
+    );
     assert_eq!(z.total_basis_cents, Cents(0));
     assert_eq!(z.unrealized_pct_of_basis_ppm, None, "basis ≤ 0 → n/a");
 }

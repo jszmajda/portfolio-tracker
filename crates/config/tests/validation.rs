@@ -28,7 +28,10 @@ use pt_core::{Cents, Date};
 fn valid_bracket_set_is_accepted_including_single_flat_rate() {
     // A multi-row ascending set is valid.
     assert_eq!(
-        validate_bracket_set(&bracket_set(&[(0, 100_000), (1_000_000_00, 370_000)], 19_700)),
+        validate_bracket_set(&bracket_set(
+            &[(0, 100_000), (1_000_000_00, 370_000)],
+            19_700
+        )),
         Ok(()),
     );
     // A single flat-rate [(0, r)] set is valid.
@@ -68,7 +71,10 @@ fn non_ascending_or_duplicate_thresholds_are_rejected() {
     );
     // Descending threshold.
     assert_eq!(
-        validate_bracket_set(&bracket_set(&[(0, 100_000), (5_000, 200_000), (1_000, 300_000)], 19_700)),
+        validate_bracket_set(&bracket_set(
+            &[(0, 100_000), (5_000, 200_000), (1_000, 300_000)],
+            19_700
+        )),
         Err(ConfigError::ThresholdsNotStrictlyAscending),
     );
 }
@@ -142,8 +148,7 @@ fn stateless_year_with_federal_plus_niit_reaching_100_percent_is_rejected() {
     r.state_ordinary.clear();
     assert!(r.state_ordinary.is_empty());
     // Raise fed-LT top so fed-max + NIIT reaches exactly the ceiling.
-    r.federal_long_term =
-        bracket_set(&[(0, 0), (5_000_000_00, 962_000)], 19_700);
+    r.federal_long_term = bracket_set(&[(0, 0), (5_000_000_00, 962_000)], 19_700);
     assert_eq!(federal_baseline_top_rate_ppm(&r), PPM_FULL);
     assert_eq!(
         validate_tax_rules(&r),
@@ -157,8 +162,7 @@ fn stateless_year_just_below_100_percent_is_accepted() {
     // One ppm below: fed-LT top 961_999 + NIIT 38_000 = 999_999 < 1_000_000.
     let mut r = valid_rules(2025, 19_700);
     r.state_ordinary.clear();
-    r.federal_long_term =
-        bracket_set(&[(0, 0), (5_000_000_00, 961_999)], 19_700);
+    r.federal_long_term = bracket_set(&[(0, 0), (5_000_000_00, 961_999)], 19_700);
     assert_eq!(federal_baseline_top_rate_ppm(&r), PPM_FULL - 1);
     assert_eq!(validate_tax_rules(&r), Ok(()));
 }
@@ -199,7 +203,9 @@ fn negative_niit_income_or_de_minimis_is_rejected() {
 #[test]
 fn invalid_write_leaves_stored_config_untouched() {
     let mut store = InMemoryConfig::cold_start();
-    store.put_tax_rules(valid_rules(2025, 19_700), &pt_core::NoopLock::new()).expect("seed");
+    store
+        .put_tax_rules(valid_rules(2025, 19_700), &pt_core::NoopLock::new())
+        .expect("seed");
 
     // An invalid write (empty federal-ordinary set) is refused...
     let mut bad = valid_rules(2025, 19_700);

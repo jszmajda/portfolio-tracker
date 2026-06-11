@@ -19,11 +19,17 @@ fn autorefresh_fires_once_an_hour_has_elapsed_with_no_entry_open() {
     // Under the threshold: not due — even one tick short.
     assert!(!should_autorefresh(Duration::ZERO, false));
     assert!(!should_autorefresh(Duration::from_secs(59 * 60), false));
-    assert!(!should_autorefresh(AUTOREFRESH_INTERVAL - Duration::from_secs(1), false));
+    assert!(!should_autorefresh(
+        AUTOREFRESH_INTERVAL - Duration::from_secs(1),
+        false
+    ));
 
     // At and past the threshold: due.
     assert!(should_autorefresh(AUTOREFRESH_INTERVAL, false));
-    assert!(should_autorefresh(AUTOREFRESH_INTERVAL + Duration::from_secs(1), false));
+    assert!(should_autorefresh(
+        AUTOREFRESH_INTERVAL + Duration::from_secs(1),
+        false
+    ));
     assert!(should_autorefresh(Duration::from_secs(9 * 60 * 60), false));
 }
 
@@ -53,7 +59,10 @@ fn a_failed_autorefresh_leaves_the_clock_unadvanced_so_the_next_tick_retries() {
     // time has only grown and the decision is still "due" — retry until one lands.
     let mut elapsed = AUTOREFRESH_INTERVAL; // the attempt that just failed
     for _ in 0..3 {
-        assert!(should_autorefresh(elapsed, false), "still due on the next tick");
+        assert!(
+            should_autorefresh(elapsed, false),
+            "still due on the next tick"
+        );
         elapsed += Duration::from_secs(1); // the clock was not advanced; time passes
     }
 

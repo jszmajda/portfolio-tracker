@@ -112,7 +112,14 @@ fn sell(
     }
 }
 
-fn split(id: &str, seq: u64, date: i32, symbol: &str, ratio_num: i64, ratio_den: i64) -> LedgerEvent {
+fn split(
+    id: &str,
+    seq: u64,
+    date: i32,
+    symbol: &str,
+    ratio_num: i64,
+    ratio_den: i64,
+) -> LedgerEvent {
     LedgerEvent {
         id: id.to_string(),
         seq: Seq(seq),
@@ -181,9 +188,30 @@ fn verif_001_basis_conservation_across_buy_sell_split() {
     let acquired_basis = scale_i128(10 * SHARE as i128 * 100) as i64 + 500; // 1500
 
     let log = vec![
-        buy("e1", 1, 100, "lotA", "AMZN", 10 * SHARE, 100, 500, "fidelity"),
+        buy(
+            "e1",
+            1,
+            100,
+            "lotA",
+            "AMZN",
+            10 * SHARE,
+            100,
+            500,
+            "fidelity",
+        ),
         split("e2", 2, 110, "AMZN", 2, 1),
-        sell("e3", 3, 120, "s1", "AMZN", 4 * SHARE, 110, 0, vec![], "fidelity"),
+        sell(
+            "e3",
+            3,
+            120,
+            "s1",
+            "AMZN",
+            4 * SHARE,
+            110,
+            0,
+            vec![],
+            "fidelity",
+        ),
     ];
 
     let snap = replay(&log, &no_marks());
@@ -204,7 +232,18 @@ fn verif_001_basis_conservation_full_consumption_zero_residual() {
 
     let log = vec![
         vest("e1", 1, 100, "lotV", "GOOG", 3 * SHARE, 333, "schwab"),
-        sell("e2", 2, 130, "s1", "GOOG", 3 * SHARE, 333, 0, vec![], "schwab"),
+        sell(
+            "e2",
+            2,
+            130,
+            "s1",
+            "GOOG",
+            3 * SHARE,
+            333,
+            0,
+            vec![],
+            "schwab",
+        ),
     ];
 
     let snap = replay(&log, &no_marks());
@@ -216,7 +255,10 @@ fn verif_001_basis_conservation_full_consumption_zero_residual() {
         .filter(|ol| ol.lot.symbol == "GOOG")
         .map(|ol| ol.lot.remaining_qty.0)
         .sum();
-    assert_eq!(open_qty, 0, "fully-consumed lot must leave zero open quantity");
+    assert_eq!(
+        open_qty, 0,
+        "fully-consumed lot must leave zero open quantity"
+    );
 
     let observed = observed_basis_for(&snap, "GOOG");
     assert_eq!(
@@ -237,7 +279,18 @@ fn verif_002_share_accounting_within_epoch_no_split() {
     // Before any split: acquired 10 shares, sell 4 → 6 open + 4 disposed = 10.
     let log = vec![
         buy("e1", 1, 100, "lotA", "MSFT", 10 * SHARE, 200, 0, "fidelity"),
-        sell("e2", 2, 110, "s1", "MSFT", 4 * SHARE, 210, 0, vec![], "fidelity"),
+        sell(
+            "e2",
+            2,
+            110,
+            "s1",
+            "MSFT",
+            4 * SHARE,
+            210,
+            0,
+            vec![],
+            "fidelity",
+        ),
     ];
 
     let snap = replay(&log, &no_marks());
@@ -292,7 +345,18 @@ fn verif_002_split_rescales_aggregate_quantity() {
 fn verif_003_non_negative_qty_and_basis() {
     let log = vec![
         buy("e1", 1, 100, "lotA", "NFLX", 5 * SHARE, 150, 25, "fidelity"),
-        sell("e2", 2, 120, "s1", "NFLX", 5 * SHARE, 160, 10, vec![], "fidelity"),
+        sell(
+            "e2",
+            2,
+            120,
+            "s1",
+            "NFLX",
+            5 * SHARE,
+            160,
+            10,
+            vec![],
+            "fidelity",
+        ),
         buy("e3", 3, 130, "lotB", "NFLX", 2 * SHARE, 170, 0, "fidelity"),
     ];
 
@@ -321,14 +385,35 @@ fn verif_003_non_negative_qty_and_basis() {
 #[test]
 fn verif_004_reject_leaves_state_byte_identical() {
     // A valid accepted prefix.
-    let accepted = vec![buy("e1", 1, 100, "lotA", "AMZN", 5 * SHARE, 100, 0, "fidelity")];
+    let accepted = vec![buy(
+        "e1",
+        1,
+        100,
+        "lotA",
+        "AMZN",
+        5 * SHARE,
+        100,
+        0,
+        "fidelity",
+    )];
 
     // Snapshot of the accepted prefix before attempting the bad candidate.
     let before = replay(&accepted, &no_marks());
 
     // A candidate that must be rejected: a Sell of 100 shares against a lot that
     // only has 5 (InsufficientShares).
-    let bad = sell("e2", 2, 110, "s1", "AMZN", 100 * SHARE, 100, 0, vec![], "fidelity");
+    let bad = sell(
+        "e2",
+        2,
+        110,
+        "s1",
+        "AMZN",
+        100 * SHARE,
+        100,
+        0,
+        vec![],
+        "fidelity",
+    );
 
     let result = validate(&accepted, &bad);
     assert!(result.is_err(), "over-large Sell must be rejected");
@@ -354,7 +439,18 @@ fn verif_005_replay_is_deterministic() {
     let log = vec![
         buy("e1", 1, 100, "lotA", "AMZN", 10 * SHARE, 100, 0, "fidelity"),
         buy("e2", 2, 100, "lotB", "AMZN", 10 * SHARE, 110, 0, "fidelity"),
-        sell("e3", 3, 120, "s1", "AMZN", 15 * SHARE, 130, 0, vec![], "fidelity"),
+        sell(
+            "e3",
+            3,
+            120,
+            "s1",
+            "AMZN",
+            15 * SHARE,
+            130,
+            0,
+            vec![],
+            "fidelity",
+        ),
     ];
     let mut marks: Marks = BTreeMap::new();
     marks.insert("AMZN".to_string(), Cents(140));
@@ -376,7 +472,18 @@ fn verif_005_fifo_order_is_by_acquire_date_then_open_seq() {
     let log = vec![
         buy("e1", 1, 100, "lotA", "AMZN", 5 * SHARE, 100, 0, "fidelity"),
         buy("e2", 2, 100, "lotB", "AMZN", 5 * SHARE, 200, 0, "fidelity"),
-        sell("e3", 3, 120, "s1", "AMZN", 5 * SHARE, 150, 0, vec![], "fidelity"),
+        sell(
+            "e3",
+            3,
+            120,
+            "s1",
+            "AMZN",
+            5 * SHARE,
+            150,
+            0,
+            vec![],
+            "fidelity",
+        ),
     ];
 
     let snap = replay(&log, &no_marks());
@@ -415,7 +522,18 @@ fn verif_006_realized_gain_sum_equals_net_minus_basis() {
     let log = vec![
         buy("e1", 1, 100, "lotA", "AMZN", 10 * SHARE, 100, 0, "fidelity"),
         buy("e2", 2, 105, "lotB", "AMZN", 10 * SHARE, 120, 0, "fidelity"),
-        sell("e3", 3, 120, "s1", "AMZN", 15 * SHARE, 130, fees, vec![], "fidelity"),
+        sell(
+            "e3",
+            3,
+            120,
+            "s1",
+            "AMZN",
+            15 * SHARE,
+            130,
+            fees,
+            vec![],
+            "fidelity",
+        ),
     ];
 
     let snap = replay(&log, &no_marks());
@@ -459,7 +577,18 @@ fn verif_006_consumed_quantities_sum_to_sale_quantity() {
     let log = vec![
         buy("e1", 1, 100, "lotA", "AMZN", 10 * SHARE, 100, 0, "fidelity"),
         buy("e2", 2, 105, "lotB", "AMZN", 10 * SHARE, 120, 0, "fidelity"),
-        sell("e3", 3, 120, "s1", "AMZN", 15 * SHARE, 130, 0, vec![], "fidelity"),
+        sell(
+            "e3",
+            3,
+            120,
+            "s1",
+            "AMZN",
+            15 * SHARE,
+            130,
+            0,
+            vec![],
+            "fidelity",
+        ),
     ];
 
     let snap = replay(&log, &no_marks());
@@ -485,7 +614,17 @@ fn verif_006_consumed_quantities_sum_to_sale_quantity() {
 // @spec LEDGER-VERIF-007
 #[test]
 fn verif_007_split_is_basis_neutral() {
-    let pre_log = vec![buy("e1", 1, 100, "lotA", "AAPL", 10 * SHARE, 100, 0, "fidelity")];
+    let pre_log = vec![buy(
+        "e1",
+        1,
+        100,
+        "lotA",
+        "AAPL",
+        10 * SHARE,
+        100,
+        0,
+        "fidelity",
+    )];
     let pre = replay(&pre_log, &no_marks());
     let pre_basis = observed_basis_for(&pre, "AAPL");
 
@@ -590,7 +729,18 @@ fn verif_008_reversal_rejected_when_surviving_event_depends() {
     // first. validate() against the accepted prefix must reject the Reversal.
     let accepted = vec![
         buy("e1", 1, 100, "lotA", "AMZN", 10 * SHARE, 100, 0, "fidelity"),
-        sell("e2", 2, 110, "s1", "AMZN", 4 * SHARE, 120, 0, vec![lot_ref("lotA", 4 * SHARE)], "fidelity"),
+        sell(
+            "e2",
+            2,
+            110,
+            "s1",
+            "AMZN",
+            4 * SHARE,
+            120,
+            0,
+            vec![lot_ref("lotA", 4 * SHARE)],
+            "fidelity",
+        ),
     ];
     let candidate = reversal("e3", 3, 120, "e1");
 

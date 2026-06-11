@@ -105,7 +105,10 @@ impl MarksCache {
             .map(|(s, m)| {
                 (
                     s.clone(),
-                    PricedMark { price_cents: m.price_cents, quote_epoch: m.quote_date },
+                    PricedMark {
+                        price_cents: m.price_cents,
+                        quote_epoch: m.quote_date,
+                    },
                 )
             })
             .collect()
@@ -152,7 +155,12 @@ pub enum SymbolFreshness {
 pub fn per_symbol_freshness(cache: &MarksCache) -> BTreeMap<Symbol, SymbolFreshness> {
     let mut out: BTreeMap<Symbol, SymbolFreshness> = BTreeMap::new();
     for (s, m) in &cache.marks {
-        out.insert(s.clone(), SymbolFreshness::Priced { quote_epoch: m.quote_date });
+        out.insert(
+            s.clone(),
+            SymbolFreshness::Priced {
+                quote_epoch: m.quote_date,
+            },
+        );
     }
     for (s, r) in &cache.degraded {
         out.insert(s.clone(), SymbolFreshness::Degraded { reason: *r });
@@ -230,7 +238,12 @@ pub fn replay_with_cached_marks(
     let annual_rows = tax::annual_report(&snapshot.realized_gains, &logs.tax, ctx);
     let estimates = unrealized_estimates(&snapshot, ctx, as_of);
 
-    Replayed { snapshot, accruals, annual_rows, estimates }
+    Replayed {
+        snapshot,
+        accruals,
+        annual_rows,
+        estimates,
+    }
 }
 
 /// Per-symbol unrealized tax estimates over the snapshot's open lots, the input
@@ -532,8 +545,18 @@ where
     Pl: pt_core::Lock,
 {
     let logs = store.load().map_err(CycleError::Load)?;
-    run_cycle_publishing(&logs, prior, ctx, as_of, publisher, lock, aliases, settle, stale_banner_quote_ts)
-        .map_err(CycleError::View)
+    run_cycle_publishing(
+        &logs,
+        prior,
+        ctx,
+        as_of,
+        publisher,
+        lock,
+        aliases,
+        settle,
+        stale_banner_quote_ts,
+    )
+    .map_err(CycleError::View)
 }
 
 // ===========================================================================

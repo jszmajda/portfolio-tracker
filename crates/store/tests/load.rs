@@ -109,7 +109,10 @@ fn an_unknown_kind_row_fails_the_load() {
     sheets.push_raw(Tab::Ledger, bad);
     let mut store = Store::new(sheets, NoopLock::new(), InMemoryCache::new());
     let err = store.load().unwrap_err();
-    assert!(matches!(err, StoreError::UnknownKind | StoreError::MissingField));
+    assert!(matches!(
+        err,
+        StoreError::UnknownKind | StoreError::MissingField
+    ));
 }
 
 // @spec STORE-LOAD-003
@@ -159,7 +162,11 @@ fn a_reversal_targeting_a_higher_seq_is_an_integrity_error() {
 // @spec STORE-LOAD-004
 #[test]
 fn a_reversal_targeting_another_reversal_is_an_integrity_error() {
-    let events = vec![buy(1, "b1"), reversal(2, "r2", "b1"), reversal(3, "r3", "r2")];
+    let events = vec![
+        buy(1, "b1"),
+        reversal(2, "r2", "b1"),
+        reversal(3, "r3", "r2"),
+    ];
     assert_eq!(
         check_ledger_integrity(&events).unwrap_err(),
         StoreError::BadReversal

@@ -15,7 +15,9 @@ use common::{ctx, small_logs};
 
 use config::Settings;
 use runtime::boot::{load_and_run_cycle, Boot};
-use runtime::{AdvisoryLock, ManualClock, MarksCache, StoreLockAdapter, DEFAULT_TTL_SECS, LOCKFILE_NAME};
+use runtime::{
+    AdvisoryLock, ManualClock, MarksCache, StoreLockAdapter, DEFAULT_TTL_SECS, LOCKFILE_NAME,
+};
 
 /// A unique temp cache dir for one test (so tests don't share lockfiles).
 fn temp_cache_dir(tag: &str) -> PathBuf {
@@ -24,7 +26,10 @@ fn temp_cache_dir(tag: &str) -> PathBuf {
         "pt-boot-test-{}-{}-{}",
         tag,
         std::process::id(),
-        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
     ));
     std::fs::create_dir_all(&p).expect("create the cache dir");
     p
@@ -55,10 +60,16 @@ fn the_composition_root_constructs_the_runtime_owned_lock_under_the_cache_dir() 
         "the advisory lockfile sits under the settings' cache dir"
     );
     // The holder identity names the role (so a Held outcome can name who holds it).
-    assert!(boot.lock().holder().starts_with("tui-"), "the holder names the role + pid");
+    assert!(
+        boot.lock().holder().starts_with("tui-"),
+        "the holder names the role + pid"
+    );
 
     // The constructed lock is a working advisory lock: it acquires when free.
-    assert!(boot.lock().try_acquire().is_acquired(), "the root's lock acquires when free");
+    assert!(
+        boot.lock().try_acquire().is_acquired(),
+        "the root's lock acquires when free"
+    );
 }
 
 // @spec RUNTIME-BOOT-001, RUNTIME-LOCK-002
@@ -82,9 +93,15 @@ fn the_root_lock_adapts_into_a_store_lock_acquired_inside_write_primitives() {
     let concurrent = AdvisoryLock::with_clock(&path, "cron-summary", DEFAULT_TTL_SECS, clock);
     {
         let _guard = store::Lock::acquire(&adapter).expect("in-primitive acquire when free");
-        assert!(concurrent.try_acquire().is_held(), "a concurrent process is locked out");
+        assert!(
+            concurrent.try_acquire().is_held(),
+            "a concurrent process is locked out"
+        );
     }
-    assert!(concurrent.try_acquire().is_acquired(), "the guard's Drop released the lock");
+    assert!(
+        concurrent.try_acquire().is_acquired(),
+        "the guard's Drop released the lock"
+    );
     let _ = std::fs::remove_file(&path);
 }
 
@@ -136,11 +153,11 @@ fn load_and_run_cycle_is_reachable_through_the_boot_module_entry() {
     // module re-exports (RUNTIME-BOOT-002) — not by re-wiring their own. We drive it
     // through a FAKE store + view client (the live GoogleSheetsApi is the e2e),
     // proving the boot entry IS the load_and_run_cycle the binary calls.
+    use pt_core::{Cents, Date};
     use sheets_view::testkit::{pass, InMemorySheetsView};
     use sheets_view::{PriceReading, SettleConfig};
     use store::testkit::InMemorySheets;
     use store::{serde_rows, InMemoryCache, NoopLock, Store};
-    use pt_core::{Cents, Date};
 
     let logs = small_logs();
     let ledger_rows: Vec<_> = logs.ledger.iter().map(serde_rows::ledger_to_row).collect();
@@ -153,8 +170,20 @@ fn load_and_run_cycle_is_reachable_through_the_boot_module_entry() {
     let ctx = ctx(2022);
     let view = InMemorySheetsView::new();
     view.set_prices(pass(&[
-        ("AMZN", PriceReading::Numeric { price_usd: 170.0, quote_date: Date(19_180) }),
-        ("GOOG", PriceReading::Numeric { price_usd: 125.0, quote_date: Date(19_181) }),
+        (
+            "AMZN",
+            PriceReading::Numeric {
+                price_usd: 170.0,
+                quote_date: Date(19_180),
+            },
+        ),
+        (
+            "GOOG",
+            PriceReading::Numeric {
+                price_usd: 125.0,
+                quote_date: Date(19_181),
+            },
+        ),
     ]));
 
     // The boot-module re-export IS runtime::cycle::load_and_run_cycle (the single
@@ -168,6 +197,12 @@ fn load_and_run_cycle_is_reachable_through_the_boot_module_entry() {
         SettleConfig { max_polls: 4 },
     )
     .expect("the boot entry loads + runs the cycle");
-    assert!(out.snapshot.positions.contains_key("AMZN"), "the cycle ran through the boot entry");
-    assert_eq!(out.marks.marks.get("AMZN").unwrap().price_cents, Cents(170_00));
+    assert!(
+        out.snapshot.positions.contains_key("AMZN"),
+        "the cycle ran through the boot entry"
+    );
+    assert_eq!(
+        out.marks.marks.get("AMZN").unwrap().price_cents,
+        Cents(170_00)
+    );
 }

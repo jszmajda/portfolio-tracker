@@ -17,9 +17,27 @@ fn two_year_snapshot() -> ledger_core::Snapshot {
         // 6 shares @ $100 basis.
         buy(1, 19_000, "lot-amzn", "AMZN", 6_000_000, 100_00, "schwab"),
         // Sell 2 sh @ $150 in 2022 (day 19_100) → proceeds $300, basis $200, gain $100.
-        sell(2, 19_100, "sale-2022", "AMZN", 2_000_000, 150_00, "schwab", Some("NJ")),
+        sell(
+            2,
+            19_100,
+            "sale-2022",
+            "AMZN",
+            2_000_000,
+            150_00,
+            "schwab",
+            Some("NJ"),
+        ),
         // Sell 2 sh @ $200 in 2023 (day 19_500) → proceeds $400, basis $200, gain $200.
-        sell(3, 19_500, "sale-2023", "AMZN", 2_000_000, 200_00, "schwab", Some("NJ")),
+        sell(
+            3,
+            19_500,
+            "sale-2023",
+            "AMZN",
+            2_000_000,
+            200_00,
+            "schwab",
+            Some("NJ"),
+        ),
     ];
     replay(&events, &ledger_marks(&[("AMZN", 200_00)]))
 }
@@ -71,7 +89,13 @@ fn realized_history_for_arbitrary_range_sums_only_in_range_sales() {
     let only_2022 = realized_history_for_range(&snap, Date(19_050), Date(19_200));
     assert_eq!(only_2022.gain_cents, pt_core::Cents(100_00));
     assert_eq!(only_2022.proceeds_cents, pt_core::Cents(300_00));
-    assert_eq!(only_2022.period, CalendarPeriod::Range { start: Date(19_050), end: Date(19_200) });
+    assert_eq!(
+        only_2022.period,
+        CalendarPeriod::Range {
+            start: Date(19_050),
+            end: Date(19_200)
+        }
+    );
     assert!(only_2022.label.to_lowercase().contains("calendar"));
 
     // A range covering BOTH sales sums them: gain $100 + $200 = $300.
@@ -87,7 +111,9 @@ fn realized_history_empty_when_no_sales() {
     let snap = small_snapshot(&ledger_marks(&[("AMZN", 200_00)]));
     // small_snapshot has one GOOG sale, so use a buy-only snapshot instead.
     let buy_only = replay(
-        &[buy(1, 19_000, "lot-amzn", "AMZN", 3_000_000, 150_00, "schwab")],
+        &[buy(
+            1, 19_000, "lot-amzn", "AMZN", 3_000_000, 150_00, "schwab",
+        )],
         &ledger_marks(&[("AMZN", 200_00)]),
     );
     let _ = snap;
@@ -106,7 +132,11 @@ fn realized_ytd_sums_only_the_given_years_sales() {
     assert_eq!(row.basis_cents, pt_core::Cents(200_00));
     assert_eq!(row.gain_cents, pt_core::Cents(200_00));
     assert_eq!(row.period, CalendarPeriod::Year(y2023));
-    assert!(row.label.to_lowercase().contains("calendar"), "labelled calendar: {}", row.label);
+    assert!(
+        row.label.to_lowercase().contains("calendar"),
+        "labelled calendar: {}",
+        row.label
+    );
 }
 
 // @spec REPORT-REAL-002

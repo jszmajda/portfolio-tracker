@@ -96,8 +96,7 @@ fn a_fresh_run_is_not_marked_stale() {
 #[test]
 fn json_reflects_the_bracket_state_on_cold_start() {
     // The versioned JSON carries the bracket state (so a consumer sees cold-start).
-    let inputs =
-        with_bracket_state(inputs_at(19_490, 200_00), BracketState::NoBracketsAvailable);
+    let inputs = with_bracket_state(inputs_at(19_490, 200_00), BracketState::NoBracketsAvailable);
     let current = summary::build_current_point(&inputs).unwrap();
     let capture = CaptureOutcome::Appended(current);
     let delta = compute_delta(&capture, &[], &[]);
@@ -105,7 +104,10 @@ fn json_reflects_the_bracket_state_on_cold_start() {
     let json = render_json(&report);
     assert!(json.contains("brackets_state"));
     // net_post_tax_cents is null on cold-start (never fabricated).
-    assert!(json.contains("\"net_post_tax_cents\":null") || json.contains("\"net_post_tax_cents\": null"));
+    assert!(
+        json.contains("\"net_post_tax_cents\":null")
+            || json.contains("\"net_post_tax_cents\": null")
+    );
 }
 
 // ===========================================================================
@@ -215,10 +217,20 @@ fn json_schema_v1_pins_the_exact_key_sets() {
     let pos_keys = key_set(&json, first_elem);
     assert_eq!(
         pos_keys,
-        expected(&["symbol", "shares", "price_cents", "value_cents", "delta_cents", "degraded"]),
+        expected(&[
+            "symbol",
+            "shares",
+            "price_cents",
+            "value_cents",
+            "delta_cents",
+            "degraded"
+        ]),
         "positions-element key set is pinned exactly"
     );
-    assert!(!report.positions.is_empty(), "the report actually has positions to pin");
+    assert!(
+        !report.positions.is_empty(),
+        "the report actually has positions to pin"
+    );
 
     // The TAX object carries EXACTLY these keys — including next_period (EMIT-006).
     // (SUMMARY-OUT-003)
@@ -226,7 +238,14 @@ fn json_schema_v1_pins_the_exact_key_sets() {
     let tax_keys = key_set(&json, tax_at);
     assert_eq!(
         tax_keys,
-        expected(&["year", "accrued", "moved", "outstanding", "next_period", "brackets_state"]),
+        expected(&[
+            "year",
+            "accrued",
+            "moved",
+            "outstanding",
+            "next_period",
+            "brackets_state"
+        ]),
         "tax key set is pinned exactly (carries next_period per EMIT-006)"
     );
 }
@@ -236,8 +255,7 @@ fn json_schema_v1_pins_the_exact_key_sets() {
 fn json_schema_v1_uses_integer_cents_and_null_never_a_fabricated_zero() {
     // Cold-start: bracket-dependent figures are null (never a fabricated 0), integer
     // cents elsewhere. (SUMMARY-OUT-003)
-    let inputs =
-        with_bracket_state(inputs_at(19_490, 200_00), BracketState::NoBracketsAvailable);
+    let inputs = with_bracket_state(inputs_at(19_490, 200_00), BracketState::NoBracketsAvailable);
     let current = summary::build_current_point(&inputs).unwrap();
     let capture = CaptureOutcome::Appended(current);
     let delta = compute_delta(&capture, &[], &[]);
@@ -245,12 +263,24 @@ fn json_schema_v1_uses_integer_cents_and_null_never_a_fabricated_zero() {
     let json = render_json(&report);
 
     // The cold-start / first-ever figures are JSON null, never a fabricated zero.
-    assert!(json.contains("\"net_post_tax_cents\":null"), "net is null on cold-start");
-    assert!(json.contains("\"total_delta_cents\":null"), "first-ever delta is null");
-    assert!(json.contains("\"accrued\":null"), "accrued is null on cold-start");
+    assert!(
+        json.contains("\"net_post_tax_cents\":null"),
+        "net is null on cold-start"
+    );
+    assert!(
+        json.contains("\"total_delta_cents\":null"),
+        "first-ever delta is null"
+    );
+    assert!(
+        json.contains("\"accrued\":null"),
+        "accrued is null on cold-start"
+    );
     assert!(json.contains("\"moved\":null"));
     assert!(json.contains("\"outstanding\":null"));
-    assert!(json.contains("\"next_period\":null"), "no fabricated period on cold-start");
+    assert!(
+        json.contains("\"next_period\":null"),
+        "no fabricated period on cold-start"
+    );
     // Never a fabricated zero for any of those degraded/cold-start figures.
     assert!(!json.contains("\"net_post_tax_cents\":0"));
     assert!(!json.contains("\"accrued\":0"));
@@ -258,7 +288,10 @@ fn json_schema_v1_uses_integer_cents_and_null_never_a_fabricated_zero() {
     // total_value_cents is the integer-cents market value (bracket-independent) — a
     // plain integer, not a string, not a float.
     assert!(
-        json.contains(&format!("\"total_value_cents\":{}", report.header.total_value_cents.0)),
+        json.contains(&format!(
+            "\"total_value_cents\":{}",
+            report.header.total_value_cents.0
+        )),
         "integer cents only"
     );
     assert!(!json.contains('.'), "no float anywhere in the cents JSON");
@@ -279,9 +312,21 @@ fn produced_run() -> SummaryRun {
 fn the_default_mode_is_text_and_json_is_selected_by_the_flag() {
     // No flag → text is the default; --json selects the JSON object. Unknown flags
     // leave the default unchanged (forward-compatible). (SUMMARY-OUT-001)
-    assert_eq!(select_mode(std::iter::empty::<&str>()), OutputMode::Text, "default is text");
-    assert_eq!(select_mode(["--json"]), OutputMode::Json, "--json selects json");
-    assert_eq!(select_mode(["--quiet"]), OutputMode::Text, "unknown flag → default text");
+    assert_eq!(
+        select_mode(std::iter::empty::<&str>()),
+        OutputMode::Text,
+        "default is text"
+    );
+    assert_eq!(
+        select_mode(["--json"]),
+        OutputMode::Json,
+        "--json selects json"
+    );
+    assert_eq!(
+        select_mode(["--quiet"]),
+        OutputMode::Text,
+        "unknown flag → default text"
+    );
     assert_eq!(select_mode(["--verbose", "--json"]), OutputMode::Json);
 }
 
@@ -292,15 +337,25 @@ fn dispatch_selects_the_renderer_and_pairs_the_exit_code() {
 
     // No flag → the text report (matches render_text), exit 0. (SUMMARY-OUT-001)
     let (text_out, text_exit) = dispatch(&run, select_mode(std::iter::empty::<&str>()));
-    let SummaryRun::Produced(ref report) = run else { panic!("expected produced") };
-    assert_eq!(text_out, render_text(report), "default dispatch == render_text");
+    let SummaryRun::Produced(ref report) = run else {
+        panic!("expected produced")
+    };
+    assert_eq!(
+        text_out,
+        render_text(report),
+        "default dispatch == render_text"
+    );
     assert!(text_out.contains("AMZN"));
     assert_eq!(text_exit, ExitCode::Produced);
     assert_eq!(text_exit.code(), 0, "exit equals exit_code().code()");
 
     // --json → the versioned JSON object (matches render_json), exit 0.
     let (json_out, json_exit) = dispatch(&run, select_mode(["--json"]));
-    assert_eq!(json_out, render_json(report), "--json dispatch == render_json");
+    assert_eq!(
+        json_out,
+        render_json(report),
+        "--json dispatch == render_json"
+    );
     assert!(json_out.contains("schema_version"));
     assert_eq!(json_exit.code(), run.exit_code().code());
 }
@@ -314,12 +369,21 @@ fn dispatch_of_a_fatal_run_carries_exit_2_and_never_a_confident_report() {
     let lock = NoopLock::new();
     let probe = FakeLockProbe::free();
     let inputs = inputs_at(19_490, 200_00);
-    let run = run_summary(&mut client, &lock, &probe, TrustState::BadCredentials, &inputs);
+    let run = run_summary(
+        &mut client,
+        &lock,
+        &probe,
+        TrustState::BadCredentials,
+        &inputs,
+    );
 
     let (text_out, exit) = dispatch(&run, OutputMode::Text);
     assert_eq!(exit, ExitCode::NoTrustworthySummary);
     assert_eq!(exit.code(), 2);
-    assert!(!text_out.contains("Total value"), "no confident report on a fatal run");
+    assert!(
+        !text_out.contains("Total value"),
+        "no confident report on a fatal run"
+    );
 
     let (json_out, json_exit) = dispatch(&run, OutputMode::Json);
     assert_eq!(json_exit.code(), 2);

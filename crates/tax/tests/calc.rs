@@ -108,12 +108,27 @@ fn calc_003_short_term_taxed_at_federal_ordinary_rate() {
     // so it stacks at the ORDINARY 30% → accrual = 30_000 cents.
     let ctx = context(
         2025,
-        federal(flat(300_000), flat(150_000), niit(0, 0), 0, BracketState::Verified),
+        federal(
+            flat(300_000),
+            flat(150_000),
+            niit(0, 0),
+            0,
+            BracketState::Verified,
+        ),
         &[],
         0,
         None,
     );
-    let g = gain("s1", 1, "lotA", "AMZN", date(2025, 1, 10), date(2025, 6, 1), 100_000, None);
+    let g = gain(
+        "s1",
+        1,
+        "lotA",
+        "AMZN",
+        date(2025, 1, 10),
+        date(2025, 6, 1),
+        100_000,
+        None,
+    );
     let accruals = compute_accruals(&[g], &[], &ctx);
 
     let fed = find_accrual(&accruals, "s1", "lotA", &Jurisdiction::Federal)
@@ -133,12 +148,27 @@ fn calc_003_long_term_taxed_at_preferential_rate() {
     // LT 15%. Held > 1yr → long-term → preferential 15% → accrual = 15_000 cents.
     let ctx = context(
         2025,
-        federal(flat(300_000), flat(150_000), niit(0, 0), 0, BracketState::Verified),
+        federal(
+            flat(300_000),
+            flat(150_000),
+            niit(0, 0),
+            0,
+            BracketState::Verified,
+        ),
         &[],
         0,
         None,
     );
-    let g = gain("s1", 1, "lotA", "AMZN", date(2023, 1, 10), date(2025, 6, 1), 100_000, None);
+    let g = gain(
+        "s1",
+        1,
+        "lotA",
+        "AMZN",
+        date(2023, 1, 10),
+        date(2025, 6, 1),
+        100_000,
+        None,
+    );
     let accruals = compute_accruals(&[g], &[], &ctx);
 
     let fed = find_accrual(&accruals, "s1", "lotA", &Jurisdiction::Federal)
@@ -161,12 +191,27 @@ fn calc_003_niit_adds_on_gains_above_magi_threshold() {
     // $1,000 = 15_000c. Federal accrual = 15_000 + 1_900 = 16_900c.
     let ctx = context(
         2025,
-        federal(flat(0), flat(150_000), niit(38_000, 50_000), 0, BracketState::Verified),
+        federal(
+            flat(0),
+            flat(150_000),
+            niit(38_000, 50_000),
+            0,
+            BracketState::Verified,
+        ),
         &[],
         0,
         None,
     );
-    let g = gain("s1", 1, "lotA", "AMZN", date(2023, 1, 10), date(2025, 6, 1), 100_000, None);
+    let g = gain(
+        "s1",
+        1,
+        "lotA",
+        "AMZN",
+        date(2023, 1, 10),
+        date(2025, 6, 1),
+        100_000,
+        None,
+    );
     let accruals = compute_accruals(&[g], &[], &ctx);
 
     let fed = find_accrual(&accruals, "s1", "lotA", &Jurisdiction::Federal)
@@ -191,7 +236,7 @@ fn calc_003_long_term_stacks_above_income_plus_short_term() {
     let ctx = context(
         2025,
         federal(
-            flat(100_000), // ordinary flat 10% (ST taxed here)
+            flat(100_000),                              // ordinary flat 10% (ST taxed here)
             bracket_set(&[(0, 0), (100_000, 200_000)]), // LT: 0% to $1k, 20% above
             niit(0, 0),
             0,
@@ -201,8 +246,26 @@ fn calc_003_long_term_stacks_above_income_plus_short_term() {
         0,
         None,
     );
-    let st = gain("sST", 1, "lotST", "AMZN", date(2025, 1, 2), date(2025, 3, 1), 100_000, None);
-    let lt = gain("sLT", 2, "lotLT", "AMZN", date(2023, 1, 1), date(2025, 6, 1), 100_000, None);
+    let st = gain(
+        "sST",
+        1,
+        "lotST",
+        "AMZN",
+        date(2025, 1, 2),
+        date(2025, 3, 1),
+        100_000,
+        None,
+    );
+    let lt = gain(
+        "sLT",
+        2,
+        "lotLT",
+        "AMZN",
+        date(2023, 1, 1),
+        date(2025, 6, 1),
+        100_000,
+        None,
+    );
     let accruals = compute_accruals(&[st, lt], &[], &ctx);
 
     let lt_acc = find_accrual(&accruals, "sLT", "lotLT", &Jurisdiction::Federal).unwrap();
@@ -225,13 +288,37 @@ fn calc_003_niit_attributed_marginally_across_two_gains() {
     // chronologically crosses the threshold.
     let ctx = context(
         2025,
-        federal(flat(0), flat(0), niit(38_000, 100_000), 0, BracketState::Verified),
+        federal(
+            flat(0),
+            flat(0),
+            niit(38_000, 100_000),
+            0,
+            BracketState::Verified,
+        ),
         &[],
         0,
         None,
     );
-    let first = gain("sA", 1, "lotA", "AMZN", date(2023, 1, 1), date(2025, 3, 1), 100_000, None);
-    let second = gain("sB", 2, "lotB", "AMZN", date(2023, 1, 1), date(2025, 6, 1), 100_000, None);
+    let first = gain(
+        "sA",
+        1,
+        "lotA",
+        "AMZN",
+        date(2023, 1, 1),
+        date(2025, 3, 1),
+        100_000,
+        None,
+    );
+    let second = gain(
+        "sB",
+        2,
+        "lotB",
+        "AMZN",
+        date(2023, 1, 1),
+        date(2025, 6, 1),
+        100_000,
+        None,
+    );
     let accruals = compute_accruals(&[first, second], &[], &ctx);
 
     let a = find_accrual(&accruals, "sA", "lotA", &Jurisdiction::Federal).unwrap();
@@ -260,12 +347,27 @@ fn calc_003_niit_lesser_of_mechanic_with_ordinary_income_in_magi() {
     // cap (the over-threshold excess, not the full gain).
     let ctx = context(
         2025,
-        federal(flat(0), flat(0), niit(38_000, 150_000), 100_000, BracketState::Verified),
+        federal(
+            flat(0),
+            flat(0),
+            niit(38_000, 150_000),
+            100_000,
+            BracketState::Verified,
+        ),
         &[],
         0,
         None,
     );
-    let g = gain("s1", 1, "lotA", "AMZN", date(2023, 1, 1), date(2025, 6, 1), 100_000, None);
+    let g = gain(
+        "s1",
+        1,
+        "lotA",
+        "AMZN",
+        date(2023, 1, 1),
+        date(2025, 6, 1),
+        100_000,
+        None,
+    );
     let accruals = compute_accruals(&[g], &[], &ctx);
     let fed = find_accrual(&accruals, "s1", "lotA", &Jurisdiction::Federal).unwrap();
     assert_eq!(
@@ -294,13 +396,24 @@ fn calc_004_state_taxes_long_term_gain_as_ordinary() {
         None,
     );
     let g = gain(
-        "s1", 1, "lotA", "AMZN",
-        date(2023, 1, 10), date(2025, 6, 1), 100_000, Some("DC"),
+        "s1",
+        1,
+        "lotA",
+        "AMZN",
+        date(2023, 1, 10),
+        date(2025, 6, 1),
+        100_000,
+        Some("DC"),
     );
     let accruals = compute_accruals(&[g], &[], &ctx);
 
-    let st = find_accrual(&accruals, "s1", "lotA", &Jurisdiction::State("DC".to_string()))
-        .expect("DC state accrual must exist");
+    let st = find_accrual(
+        &accruals,
+        "s1",
+        "lotA",
+        &Jurisdiction::State("DC".to_string()),
+    )
+    .expect("DC state accrual must exist");
     assert_eq!(st.term, Term::LongTerm, "the gain is long-term federally");
     assert_eq!(
         st.applied_cents,
@@ -336,8 +449,26 @@ fn calc_005_accrual_is_marginal_increment_in_chronological_order() {
     );
     // Acquire dates within the same year keep both gains short-term (taxed at the
     // ordinary progressive brackets).
-    let a = gain("sA", 1, "lotA", "AMZN", date(2025, 1, 2), date(2025, 3, 1), 100_000, None);
-    let b = gain("sB", 2, "lotB", "AMZN", date(2025, 1, 2), date(2025, 6, 1), 100_000, None);
+    let a = gain(
+        "sA",
+        1,
+        "lotA",
+        "AMZN",
+        date(2025, 1, 2),
+        date(2025, 3, 1),
+        100_000,
+        None,
+    );
+    let b = gain(
+        "sB",
+        2,
+        "lotB",
+        "AMZN",
+        date(2025, 1, 2),
+        date(2025, 6, 1),
+        100_000,
+        None,
+    );
     let accruals = compute_accruals(&[a, b], &[], &ctx);
 
     let fa = find_accrual(&accruals, "sA", "lotA", &Jurisdiction::Federal).unwrap();
@@ -376,8 +507,26 @@ fn calc_005_increment_order_follows_sale_date_not_seq() {
         None,
     );
     // seq 1 is dated LATER (June); seq 2 is dated EARLIER (March). Both short-term.
-    let late = gain("sLate", 1, "lotL", "AMZN", date(2025, 1, 2), date(2025, 6, 1), 100_000, None);
-    let early = gain("sEarly", 2, "lotE", "AMZN", date(2025, 1, 2), date(2025, 3, 1), 100_000, None);
+    let late = gain(
+        "sLate",
+        1,
+        "lotL",
+        "AMZN",
+        date(2025, 1, 2),
+        date(2025, 6, 1),
+        100_000,
+        None,
+    );
+    let early = gain(
+        "sEarly",
+        2,
+        "lotE",
+        "AMZN",
+        date(2025, 1, 2),
+        date(2025, 3, 1),
+        100_000,
+        None,
+    );
     let accruals = compute_accruals(&[late, early], &[], &ctx);
 
     let early_acc = find_accrual(&accruals, "sEarly", "lotE", &Jurisdiction::Federal).unwrap();
@@ -408,13 +557,37 @@ fn calc_006_within_year_loss_then_gain_nets_to_zero_clamp() {
     // so far). Flat ordinary 30%.
     let ctx = context(
         2025,
-        federal(flat(300_000), flat(0), niit(0, 0), 0, BracketState::Verified),
+        federal(
+            flat(300_000),
+            flat(0),
+            niit(0, 0),
+            0,
+            BracketState::Verified,
+        ),
         &[],
         0,
         None,
     );
-    let loss = gain("sL", 1, "lotL", "AMZN", date(2025, 1, 2), date(2025, 3, 1), -100_000, None);
-    let g = gain("sG", 2, "lotG", "AMZN", date(2025, 1, 2), date(2025, 6, 1), 40_000, None);
+    let loss = gain(
+        "sL",
+        1,
+        "lotL",
+        "AMZN",
+        date(2025, 1, 2),
+        date(2025, 3, 1),
+        -100_000,
+        None,
+    );
+    let g = gain(
+        "sG",
+        2,
+        "lotG",
+        "AMZN",
+        date(2025, 1, 2),
+        date(2025, 6, 1),
+        40_000,
+        None,
+    );
     let accruals = compute_accruals(&[loss, g], &[], &ctx);
 
     let loss_acc = find_accrual(&accruals, "sL", "lotL", &Jurisdiction::Federal).unwrap();
@@ -439,13 +612,37 @@ fn calc_006_loss_recovery_above_zero_is_taxed() {
     // that lifts the year above zero is taxed.
     let ctx = context(
         2025,
-        federal(flat(300_000), flat(0), niit(0, 0), 0, BracketState::Verified),
+        federal(
+            flat(300_000),
+            flat(0),
+            niit(0, 0),
+            0,
+            BracketState::Verified,
+        ),
         &[],
         0,
         None,
     );
-    let loss = gain("sL", 1, "lotL", "AMZN", date(2025, 1, 2), date(2025, 3, 1), -100_000, None);
-    let g = gain("sG", 2, "lotG", "AMZN", date(2025, 1, 2), date(2025, 6, 1), 150_000, None);
+    let loss = gain(
+        "sL",
+        1,
+        "lotL",
+        "AMZN",
+        date(2025, 1, 2),
+        date(2025, 3, 1),
+        -100_000,
+        None,
+    );
+    let g = gain(
+        "sG",
+        2,
+        "lotG",
+        "AMZN",
+        date(2025, 1, 2),
+        date(2025, 6, 1),
+        150_000,
+        None,
+    );
     let accruals = compute_accruals(&[loss, g], &[], &ctx);
 
     let gain_acc = find_accrual(&accruals, "sG", "lotG", &Jurisdiction::Federal).unwrap();
@@ -479,7 +676,16 @@ fn calc_007_inserting_earlier_gain_reprices_later_gain() {
         0,
         None,
     );
-    let b = gain("sB", 1, "lotB", "AMZN", date(2025, 1, 2), date(2025, 6, 1), 100_000, None);
+    let b = gain(
+        "sB",
+        1,
+        "lotB",
+        "AMZN",
+        date(2025, 1, 2),
+        date(2025, 6, 1),
+        100_000,
+        None,
+    );
 
     // B alone: 10% band.
     let only_b = compute_accruals(&[b.clone()], &[], &ctx);
@@ -487,7 +693,16 @@ fn calc_007_inserting_earlier_gain_reprices_later_gain() {
     assert_eq!(b_alone.applied_cents, Some(pt_core::Cents(10_000)));
 
     // Insert earlier-dated A (March, before B's June). Both short-term.
-    let a = gain("sA", 2, "lotA", "AMZN", date(2025, 1, 2), date(2025, 3, 1), 100_000, None);
+    let a = gain(
+        "sA",
+        2,
+        "lotA",
+        "AMZN",
+        date(2025, 1, 2),
+        date(2025, 3, 1),
+        100_000,
+        None,
+    );
     let both = compute_accruals(&[b, a], &[], &ctx);
     let b_after = find_accrual(&both, "sB", "lotB", &Jurisdiction::Federal).unwrap();
     assert_eq!(
@@ -509,12 +724,27 @@ fn calc_008_override_substitutes_applied_amount_retaining_derived() {
     // to 12_345c substitutes the applied amount; the derived value is retained.
     let ctx = context(
         2025,
-        federal(flat(300_000), flat(0), niit(0, 0), 0, BracketState::Verified),
+        federal(
+            flat(300_000),
+            flat(0),
+            niit(0, 0),
+            0,
+            BracketState::Verified,
+        ),
         &[],
         0,
         None,
     );
-    let g = gain("s1", 1, "lotA", "AMZN", date(2025, 1, 2), date(2025, 6, 1), 100_000, None);
+    let g = gain(
+        "s1",
+        1,
+        "lotA",
+        "AMZN",
+        date(2025, 1, 2),
+        date(2025, 6, 1),
+        100_000,
+        None,
+    );
     let ev = override_(1, fed_key("s1", "lotA", 2025), 12_345, "manual");
     let accruals = compute_accruals(&[g], &[ev], &ctx);
 
@@ -549,12 +779,25 @@ fn calc_009_unrealized_estimate_and_effective_rate_in_ppm() {
     // rate = round(15_000 × 1e6 / 100_000) = 150_000 ppm (15%).
     let ctx = context(
         2026,
-        federal(flat(0), flat(150_000), niit(0, 0), 0, BracketState::Verified),
+        federal(
+            flat(0),
+            flat(150_000),
+            niit(0, 0),
+            0,
+            BracketState::Verified,
+        ),
         &[],
         0,
         None,
     );
-    let lot = open_lot("lotA", "AMZN", date(2023, 1, 1), 10 * SHARE, 50_000, Some(100_000));
+    let lot = open_lot(
+        "lotA",
+        "AMZN",
+        date(2023, 1, 1),
+        10 * SHARE,
+        50_000,
+        Some(100_000),
+    );
     let est = tax::unrealized_estimate(
         &symbol_str("AMZN"),
         &[lot],
@@ -584,12 +827,25 @@ fn calc_009_effective_rate_is_zero_when_unrealized_not_positive() {
     // rate is 0 when unrealized ≤ 0 (and the estimated tax is 0, no gain to tax).
     let ctx = context(
         2026,
-        federal(flat(0), flat(150_000), niit(0, 0), 0, BracketState::Verified),
+        federal(
+            flat(0),
+            flat(150_000),
+            niit(0, 0),
+            0,
+            BracketState::Verified,
+        ),
         &[],
         0,
         None,
     );
-    let lot = open_lot("lotA", "AMZN", date(2023, 1, 1), 10 * SHARE, 110_000, Some(-10_000));
+    let lot = open_lot(
+        "lotA",
+        "AMZN",
+        date(2023, 1, 1),
+        10 * SHARE,
+        110_000,
+        Some(-10_000),
+    );
     let est = tax::unrealized_estimate(
         &symbol_str("AMZN"),
         &[lot],
@@ -617,15 +873,35 @@ fn calc_009_mixed_sign_lots_keep_effective_rate_at_most_100_percent() {
     // pretax and effective_rate_ppm ≤ 1_000_000 (100%).
     let ctx = context(
         2026,
-        federal(flat(0), flat(500_000), niit(0, 0), 0, BracketState::Verified),
+        federal(
+            flat(0),
+            flat(500_000),
+            niit(0, 0),
+            0,
+            BracketState::Verified,
+        ),
         &[],
         0,
         None,
     );
     // ST lot: acquired recently (short-term as of today), unrealized −90_000c.
-    let st_loss = open_lot("lotST", "AMZN", date(2026, 1, 2), 10 * SHARE, 200_000, Some(-90_000));
+    let st_loss = open_lot(
+        "lotST",
+        "AMZN",
+        date(2026, 1, 2),
+        10 * SHARE,
+        200_000,
+        Some(-90_000),
+    );
     // LT lot: acquired > 1yr ago (long-term as of today), unrealized +100_000c.
-    let lt_gain = open_lot("lotLT", "AMZN", date(2023, 1, 1), 10 * SHARE, 50_000, Some(100_000));
+    let lt_gain = open_lot(
+        "lotLT",
+        "AMZN",
+        date(2023, 1, 1),
+        10 * SHARE,
+        50_000,
+        Some(100_000),
+    );
     let est = tax::unrealized_estimate(
         &symbol_str("AMZN"),
         &[st_loss, lt_gain],
@@ -664,14 +940,34 @@ fn calc_009_underwater_fmv_basis_rsu_position_owes_zero_estimated_tax() {
     // never the legacy $0-basis model's ~30% of the FULL market value.
     let ctx = context(
         2026,
-        federal(flat(220_000), flat(150_000), niit(38_000, 20_000_000), 0, BracketState::Verified),
+        federal(
+            flat(220_000),
+            flat(150_000),
+            niit(38_000, 20_000_000),
+            0,
+            BracketState::Verified,
+        ),
         &[],
         0,
         None,
     );
     let lots = [
-        open_lot("RSU-GRNT1-f", "AMZN", date(2024, 11, 15), 500 * SHARE, 10_000_000, Some(-486_500)),
-        open_lot("RSU-GRNT2-b", "AMZN", date(2024, 11, 15), 250 * SHARE, 5_000_000, Some(-243_250)),
+        open_lot(
+            "RSU-GRNT1-f",
+            "AMZN",
+            date(2024, 11, 15),
+            500 * SHARE,
+            10_000_000,
+            Some(-486_500),
+        ),
+        open_lot(
+            "RSU-GRNT2-b",
+            "AMZN",
+            date(2024, 11, 15),
+            250 * SHARE,
+            5_000_000,
+            Some(-243_250),
+        ),
     ];
     let est = tax::unrealized_estimate(
         &symbol_str("AMZN"),
@@ -707,7 +1003,13 @@ fn calc_010_estimate_degraded_when_mark_unavailable() {
     // tax and rate are None (unavailable), never zero.
     let ctx = context(
         2026,
-        federal(flat(0), flat(150_000), niit(0, 0), 0, BracketState::Verified),
+        federal(
+            flat(0),
+            flat(150_000),
+            niit(0, 0),
+            0,
+            BracketState::Verified,
+        ),
         &[],
         0,
         None,
@@ -736,12 +1038,25 @@ fn calc_010_estimate_degraded_when_state_no_brackets() {
     // degraded (None), never a confident zero.
     let ctx = context(
         2026,
-        federal(flat(0), flat(150_000), niit(0, 0), 0, BracketState::Verified),
+        federal(
+            flat(0),
+            flat(150_000),
+            niit(0, 0),
+            0,
+            BracketState::Verified,
+        ),
         &[state_no_brackets("ZZ")],
         0,
         None,
     );
-    let lot = open_lot("lotA", "AMZN", date(2023, 1, 1), 10 * SHARE, 50_000, Some(100_000));
+    let lot = open_lot(
+        "lotA",
+        "AMZN",
+        date(2023, 1, 1),
+        10 * SHARE,
+        50_000,
+        Some(100_000),
+    );
     let est = tax::unrealized_estimate(
         &symbol_str("AMZN"),
         &[lot],
@@ -774,7 +1089,10 @@ fn calc_011_resolves_configured_state() {
     );
     let res = resolve_state(&ctx, &Some("DC".to_string()));
     assert_eq!(res.jurisdiction, Jurisdiction::State("DC".to_string()));
-    assert!(!res.fell_back_to_residency, "an explicit configured stamp does not fall back");
+    assert!(
+        !res.fell_back_to_residency,
+        "an explicit configured stamp does not fall back"
+    );
 }
 
 // @spec TAX-CALC-011
@@ -803,21 +1121,45 @@ fn calc_011_unconfigured_state_resolves_no_brackets_for_state_portion() {
     // to NoBracketsAvailable (unavailable, not zero), while Federal still computes.
     let ctx = context(
         2025,
-        federal(flat(300_000), flat(0), niit(0, 0), 0, BracketState::Verified),
+        federal(
+            flat(300_000),
+            flat(0),
+            niit(0, 0),
+            0,
+            BracketState::Verified,
+        ),
         &[], // no states configured
         0,
         None,
     );
-    let g = gain("s1", 1, "lotA", "AMZN", date(2025, 1, 2), date(2025, 6, 1), 100_000, Some("ZZ"));
+    let g = gain(
+        "s1",
+        1,
+        "lotA",
+        "AMZN",
+        date(2025, 1, 2),
+        date(2025, 6, 1),
+        100_000,
+        Some("ZZ"),
+    );
     let accruals = compute_accruals(&[g], &[], &ctx);
 
     // Federal computes a real number.
     let fed = find_accrual(&accruals, "s1", "lotA", &Jurisdiction::Federal).unwrap();
-    assert_eq!(fed.applied_cents, Some(pt_core::Cents(30_000)), "federal still computes");
+    assert_eq!(
+        fed.applied_cents,
+        Some(pt_core::Cents(30_000)),
+        "federal still computes"
+    );
 
     // The state portion exists but is NoBracketsAvailable with no number.
-    let st = find_accrual(&accruals, "s1", "lotA", &Jurisdiction::State("ZZ".to_string()))
-        .expect("an unconfigured-state accrual is still emitted, degraded");
+    let st = find_accrual(
+        &accruals,
+        "s1",
+        "lotA",
+        &Jurisdiction::State("ZZ".to_string()),
+    )
+    .expect("an unconfigured-state accrual is still emitted, degraded");
     assert_eq!(st.bracket_state, BracketState::NoBracketsAvailable);
     assert_eq!(
         st.applied_cents, None,
@@ -842,7 +1184,16 @@ fn calc_012_bracket_state_carried_on_accrual() {
         0,
         None,
     );
-    let g = gain("s1", 1, "lotA", "AMZN", date(2025, 1, 2), date(2025, 6, 1), 100_000, None);
+    let g = gain(
+        "s1",
+        1,
+        "lotA",
+        "AMZN",
+        date(2025, 1, 2),
+        date(2025, 6, 1),
+        100_000,
+        None,
+    );
     let accruals = compute_accruals(&[g], &[], &ctx);
 
     let fed = find_accrual(&accruals, "s1", "lotA", &Jurisdiction::Federal).unwrap();

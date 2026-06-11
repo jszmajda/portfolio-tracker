@@ -221,9 +221,8 @@ pub fn compose(
             },
             Some(mark) => {
                 // Market value = scale(mark × total_qty) (the single rounding site).
-                let mv = pt_core::scale(
-                    (mark.price_cents.0 as i128) * (total_qty.0 as i128),
-                ) as i64;
+                let mv =
+                    pt_core::scale((mark.price_cents.0 as i128) * (total_qty.0 as i128)) as i64;
                 let pretax = mv - basis;
                 // The tax estimate is degraded when absent or its estimated tax is
                 // None — degraded in BOTH views (the consistent degraded set).
@@ -319,15 +318,18 @@ pub fn compose(
         match marks.get(symbol) {
             None => entry.degraded = true,
             Some(mark) => {
-                let mv = pt_core::scale(
-                    (mark.price_cents.0 as i128) * (ol.lot.remaining_qty.0 as i128),
-                ) as i64;
+                let mv =
+                    pt_core::scale((mark.price_cents.0 as i128) * (ol.lot.remaining_qty.0 as i128))
+                        as i64;
                 entry.market_value += mv;
                 let lot_pretax = mv - ol.lot.remaining_basis_cents.0;
                 lots_by_symbol
                     .entry(symbol.as_str())
                     .or_default()
-                    .push(LotShare { platform: ol.lot.platform.as_str(), pretax: lot_pretax });
+                    .push(LotShare {
+                        platform: ol.lot.platform.as_str(),
+                        pretax: lot_pretax,
+                    });
             }
         }
     }
@@ -376,7 +378,13 @@ pub fn compose(
     let sym_shares: Vec<Option<config::Ppm>> = shares_ppm(
         &sym_facts
             .iter()
-            .map(|f| if f.degraded.is_none() { f.market_value } else { None })
+            .map(|f| {
+                if f.degraded.is_none() {
+                    f.market_value
+                } else {
+                    None
+                }
+            })
             .collect::<Vec<_>>(),
         priced_mv_total,
     );
@@ -407,7 +415,13 @@ pub fn compose(
     let plat_shares = shares_ppm(
         &plat_vec
             .iter()
-            .map(|(_, a)| if !a.degraded { Some(a.market_value) } else { None })
+            .map(|(_, a)| {
+                if !a.degraded {
+                    Some(a.market_value)
+                } else {
+                    None
+                }
+            })
             .collect::<Vec<_>>(),
         priced_plat_total,
     );
@@ -416,7 +430,11 @@ pub fn compose(
         .zip(plat_shares)
         .map(|((name, a), share)| CompositionRow {
             label: name.clone(),
-            market_value_cents: if a.degraded { None } else { Some(Cents(a.market_value)) },
+            market_value_cents: if a.degraded {
+                None
+            } else {
+                Some(Cents(a.market_value))
+            },
             share_ppm: share,
             total_basis_cents: Cents(a.basis),
             unrealized_pretax_cents: if a.degraded {
@@ -425,11 +443,23 @@ pub fn compose(
                 Some(Cents(a.market_value - a.basis))
             },
             unrealized_pct_of_basis_ppm: pct_of_basis_ppm(
-                if a.degraded { None } else { Some(a.market_value - a.basis) },
+                if a.degraded {
+                    None
+                } else {
+                    Some(a.market_value - a.basis)
+                },
                 a.basis,
             ),
-            unrealized_net_of_tax_cents: if a.degraded { None } else { Some(Cents(a.net_of_tax)) },
-            degraded: if a.degraded { Some(DegradeCause::NoMark) } else { None },
+            unrealized_net_of_tax_cents: if a.degraded {
+                None
+            } else {
+                Some(Cents(a.net_of_tax))
+            },
+            degraded: if a.degraded {
+                Some(DegradeCause::NoMark)
+            } else {
+                None
+            },
             // Negative-basis is decided from the FINAL aggregated platform basis,
             // mirroring the per-symbol total test — never latched from an
             // order-dependent running sum (which would false-positive when an
@@ -479,10 +509,9 @@ fn pct_of_basis_ppm(unrealized_pretax: Option<i64>, basis: i64) -> Option<config
     if basis <= 0 {
         return None;
     }
-    Some(config::Ppm(pt_core::round_half_to_even(
-        (u as i128) * 1_000_000,
-        basis as i128,
-    ) as i64))
+    Some(config::Ppm(
+        pt_core::round_half_to_even((u as i128) * 1_000_000, basis as i128) as i64,
+    ))
 }
 
 /// Largest-remainder allocation of `1_000_000` ppm across the priced rows so the
@@ -655,9 +684,8 @@ pub fn build_series_point(
             Some(mark) => {
                 // Per-symbol VALUE = scale(mark × total_qty) (the cross-time axis,
                 // split-neutral). (REPORT-VOT-002)
-                let mv = pt_core::scale(
-                    (mark.price_cents.0 as i128) * (pos.total_qty.0 as i128),
-                ) as i64;
+                let mv =
+                    pt_core::scale((mark.price_cents.0 as i128) * (pos.total_qty.0 as i128)) as i64;
                 per_symbol_value.insert(symbol.clone(), Cents(mv));
                 total_mv += mv;
                 let pretax = mv - pos.total_basis_cents.0;
@@ -844,9 +872,10 @@ pub fn per_symbol_value_delta(
             // value of ≤ 0 (or a degraded endpoint) yields None, never a
             // fabricated percentage. (REPORT-VOT-006)
             let delta_pct = match (from, delta) {
-                (Some(f), Some(d)) if f.0 > 0 => Some(config::Ppm(
-                    pt_core::round_half_to_even((d.0 as i128) * 1_000_000, f.0 as i128) as i64,
-                )),
+                (Some(f), Some(d)) if f.0 > 0 => Some(config::Ppm(pt_core::round_half_to_even(
+                    (d.0 as i128) * 1_000_000,
+                    f.0 as i128,
+                ) as i64)),
                 _ => None,
             };
             PerSymbolValueDelta {
@@ -1195,7 +1224,11 @@ pub fn realized_ytd(snapshot: &Snapshot, year: i32) -> RealizedHistoryRow {
 /// realized gain whose `sale_date` falls in the range, labelled "calendar
 /// &lt;start&gt;..&lt;end&gt;". Calendar-based; distinct from `tax`'s quarterly
 /// report. (REPORT-REAL-001)
-pub fn realized_history_for_range(snapshot: &Snapshot, start: Date, end: Date) -> RealizedHistoryRow {
+pub fn realized_history_for_range(
+    snapshot: &Snapshot,
+    start: Date,
+    end: Date,
+) -> RealizedHistoryRow {
     // Sum every realized gain whose sale_date falls in the inclusive calendar range
     // [start, end]. Calendar-based; distinct from tax's quarterly report.
     // (REPORT-REAL-001)

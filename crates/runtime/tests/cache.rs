@@ -10,7 +10,7 @@ mod common;
 
 use common::small_logs;
 
-use runtime::cache::{detect_tab_divergence};
+use runtime::cache::detect_tab_divergence;
 use runtime::{
     classify_divergence, detect_and_rebuild, detect_divergence, Divergence, RebuildStrategy,
 };
@@ -20,11 +20,20 @@ use store::testkit::InMemorySheets;
 use store::{Cache, Fingerprint, InMemoryCache, NoopLock, Store, Tab};
 
 fn fp(count: i64, max_seq: i64, checksum: i64) -> Fingerprint {
-    Fingerprint { count, max_seq, checksum, content_hash: 0 }
+    Fingerprint {
+        count,
+        max_seq,
+        checksum,
+        content_hash: 0,
+    }
 }
 
 fn probe(count: i64, max_seq: i64, checksum: i64) -> ProbeCells {
-    ProbeCells { count: Some(count), max_seq: Some(max_seq), checksum: Some(checksum) }
+    ProbeCells {
+        count: Some(count),
+        max_seq: Some(max_seq),
+        checksum: Some(checksum),
+    }
 }
 
 // @spec RUNTIME-CACHE-001
@@ -83,8 +92,15 @@ fn a_missing_or_errored_fingerprint_is_untrustworthy() {
     // authoritative and the cache cannot be trusted incrementally ⇒ full-replace.
     // (RUNTIME-CACHE-001/002)
     let stored = fp(3, 3, 100);
-    let errored = ProbeCells { count: None, max_seq: Some(3), checksum: Some(100) };
-    assert_eq!(classify_divergence(Some(&stored), &errored), Divergence::Untrustworthy);
+    let errored = ProbeCells {
+        count: None,
+        max_seq: Some(3),
+        checksum: Some(100),
+    };
+    assert_eq!(
+        classify_divergence(Some(&stored), &errored),
+        Divergence::Untrustworthy
+    );
 }
 
 // @spec RUNTIME-CACHE-002
@@ -115,7 +131,10 @@ fn detection_runs_the_store_probe_against_the_cache_fingerprint() {
         Divergence::Untrustworthy,
         "a cold cache forces a full read"
     );
-    assert_eq!(detect_divergence(&store).expect("detect both"), Divergence::Untrustworthy);
+    assert_eq!(
+        detect_divergence(&store).expect("detect both"),
+        Divergence::Untrustworthy
+    );
 }
 
 // @spec RUNTIME-CACHE-001, RUNTIME-CACHE-002
@@ -132,15 +151,33 @@ fn detect_and_rebuild_full_replaces_a_cold_cache_then_reads_in_sync() {
 
     // First detect_and_rebuild: cold cache ⇒ FullReplace from the workbook.
     let strategy = detect_and_rebuild(&mut store).expect("detect + rebuild");
-    assert_eq!(strategy, RebuildStrategy::FullReplace, "a cold cache is rebuilt full-replace");
-    assert!(store.cache().is_populated(), "the cache was materialized from the workbook");
+    assert_eq!(
+        strategy,
+        RebuildStrategy::FullReplace,
+        "a cold cache is rebuilt full-replace"
+    );
+    assert!(
+        store.cache().is_populated(),
+        "the cache was materialized from the workbook"
+    );
 
     // The rebuilt cache mirrors the authoritative log.
     let cached = store.cache().read().expect("read the rebuilt cache");
-    assert_eq!(cached.ledger.len(), logs.ledger.len(), "the workbook log was materialized");
+    assert_eq!(
+        cached.ledger.len(),
+        logs.ledger.len(),
+        "the workbook log was materialized"
+    );
 
     // A second detection now reads in-sync — nothing diverged after the rebuild.
-    assert_eq!(detect_divergence(&store).expect("re-detect"), Divergence::InSync);
+    assert_eq!(
+        detect_divergence(&store).expect("re-detect"),
+        Divergence::InSync
+    );
     let strategy2 = detect_and_rebuild(&mut store).expect("re-detect + rebuild");
-    assert_eq!(strategy2, RebuildStrategy::None, "an in-sync cache is not rebuilt again");
+    assert_eq!(
+        strategy2,
+        RebuildStrategy::None,
+        "an in-sync cache is not rebuilt again"
+    );
 }

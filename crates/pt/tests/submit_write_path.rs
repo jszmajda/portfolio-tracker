@@ -96,8 +96,14 @@ fn confirmed_durable_lands_the_event_with_an_assigned_event_id() {
     let outcome = submit_ledger_through_store(&mut store, &lock, &a_buy());
     match outcome {
         SubmitOutcome::Confirmed(o) => {
-            assert!(!o.event_id.is_empty(), "an EventId was assigned (RUNTIME-EVENTID-001)");
-            assert!(!o.idempotent_skip, "the first submit is a real append, not a skip");
+            assert!(
+                !o.event_id.is_empty(),
+                "an EventId was assigned (RUNTIME-EVENTID-001)"
+            );
+            assert!(
+                !o.idempotent_skip,
+                "the first submit is a real append, not a skip"
+            );
         }
         other => panic!("expected Confirmed, got {other:?}"),
     }
@@ -107,8 +113,12 @@ fn confirmed_durable_lands_the_event_with_an_assigned_event_id() {
         "the event landed durably (read-back-verified)"
     );
     // The lock released when the submit returned (no leaked hold).
-    let probe = AdvisoryLock::with_clock(&path, "probe", DEFAULT_TTL_SECS, ManualClock::new(10_000));
-    assert!(probe.try_acquire().is_acquired(), "the advisory lock released after the submit");
+    let probe =
+        AdvisoryLock::with_clock(&path, "probe", DEFAULT_TTL_SECS, ManualClock::new(10_000));
+    assert!(
+        probe.try_acquire().is_acquired(),
+        "the advisory lock released after the submit"
+    );
     let _ = std::fs::remove_file(&path);
 }
 
@@ -124,7 +134,10 @@ fn submit_revalidates_live_and_rejects_a_kernel_disagreement_inline() {
     // Seed a workbook with a Buy of 10 AMZN (so the live log holds 10 shares).
     let mut store = store_over(InMemorySheets::new(), &lock);
     let confirmed = submit_ledger_through_store(&mut store, &lock, &a_buy());
-    assert!(matches!(confirmed, SubmitOutcome::Confirmed(_)), "seed Buy lands");
+    assert!(
+        matches!(confirmed, SubmitOutcome::Confirmed(_)),
+        "seed Buy lands"
+    );
 
     // A Sell of 100 (more than the 10 held) against the live log — over-allocated, so
     // the kernel rejects at submit-time re-validation. (TUI-ENTRY-FLOW-002)
@@ -138,7 +151,10 @@ fn submit_revalidates_live_and_rejects_a_kernel_disagreement_inline() {
             qty: ms(100),
             unit_price_cents: Cents(11_000),
             fees_cents: Cents(0),
-            lot_refs: vec![LotRef { lot_id: "L1".to_string(), qty: ms(100) }],
+            lot_refs: vec![LotRef {
+                lot_id: "L1".to_string(),
+                qty: ms(100),
+            }],
             accrues_to_state: Some("DC".to_string()),
             platform: "Robinhood".to_string(),
             tracking_code: None,
@@ -147,7 +163,11 @@ fn submit_revalidates_live_and_rejects_a_kernel_disagreement_inline() {
     let outcome = submit_ledger_through_store(&mut store, &lock, &oversell);
     match outcome {
         SubmitOutcome::Rejected(SubmitRejection::Ledger(e)) => {
-            assert_eq!(e, LedgerError::InsufficientShares, "the specific kernel error rides back inline");
+            assert_eq!(
+                e,
+                LedgerError::InsufficientShares,
+                "the specific kernel error rides back inline"
+            );
         }
         other => panic!("expected a live-revalidation Rejected, got {other:?}"),
     }
@@ -179,7 +199,10 @@ fn lock_held_by_a_foreign_writer_fails_non_destructively_naming_the_holder() {
     let outcome = submit_ledger_through_store(&mut store, &tui_lock, &a_buy());
     match outcome {
         SubmitOutcome::LockHeld { holder } => {
-            assert_eq!(holder, "cron-summary", "the held outcome names the foreign holder");
+            assert_eq!(
+                holder, "cron-summary",
+                "the held outcome names the foreign holder"
+            );
         }
         other => panic!("expected LockHeld, got {other:?}"),
     }
@@ -240,8 +263,14 @@ fn a_byte_identical_retry_is_idempotent_landing_exactly_once() {
     let retry = submit_ledger_through_store(&mut store, &lock, &frozen);
     match retry {
         SubmitOutcome::Confirmed(o) => {
-            assert_eq!(o.event_id, first_id, "the retry assigns the SAME content-hash EventId");
-            assert!(o.idempotent_skip, "the byte-identical retry is an idempotent skip");
+            assert_eq!(
+                o.event_id, first_id,
+                "the retry assigns the SAME content-hash EventId"
+            );
+            assert!(
+                o.idempotent_skip,
+                "the byte-identical retry is an idempotent skip"
+            );
         }
         other => panic!("expected an idempotent Confirmed on retry, got {other:?}"),
     }
@@ -282,7 +311,10 @@ fn a_tax_event_submits_confirmed_through_the_same_path() {
             qty: ms(10),
             unit_price_cents: Cents(15_000),
             fees_cents: Cents(0),
-            lot_refs: vec![LotRef { lot_id: "L1".to_string(), qty: ms(10) }],
+            lot_refs: vec![LotRef {
+                lot_id: "L1".to_string(),
+                qty: ms(10),
+            }],
             accrues_to_state: Some("DC".to_string()),
             platform: "Robinhood".to_string(),
             tracking_code: None,
@@ -298,16 +330,26 @@ fn a_tax_event_submits_confirmed_through_the_same_path() {
     let logs = store.load().unwrap();
     let snapshot = ledger_core::replay(&logs.ledger, &ledger_core::Marks::new());
     let accruals = tax::compute_accruals(&snapshot.realized_gains, &logs.tax, &ctx);
-    let key = accruals.first().expect("the Sell realized an accrual").key.clone();
+    let key = accruals
+        .first()
+        .expect("the Sell realized an accrual")
+        .key
+        .clone();
 
     let allocate = TaxEvent {
         seq: Seq(0),
-        kind: tax::TaxEventKind::Allocate { accrual_key: key, account_label: "Reserve-Fed".to_string() },
+        kind: tax::TaxEventKind::Allocate {
+            accrual_key: key,
+            account_label: "Reserve-Fed".to_string(),
+        },
     };
     let outcome = submit_tax_through_store(&mut store, &lock, &ctx, &allocate);
     match outcome {
         SubmitOutcome::Confirmed(o) => {
-            assert!(o.event_id.starts_with("tax-"), "a tax id is prefix-disjoint from ledger ids");
+            assert!(
+                o.event_id.starts_with("tax-"),
+                "a tax id is prefix-disjoint from ledger ids"
+            );
             assert!(!o.idempotent_skip);
         }
         other => panic!("expected a Confirmed tax submit, got {other:?}"),

@@ -3,13 +3,13 @@
 
 mod common;
 
+use sheets_view::testkit::InMemorySheetsView;
 use sheets_view::{
     render_open_lots, render_positions, render_realized, render_tax, workbook_tab_order, Cell,
     Publisher, SheetsViewClient, ViewTab, HISTORY_TAB, LEDGER_EVENTS_TAB, OPEN_LOTS_TAB,
-    PLATFORMS_ALIASES_TAB, POSITIONS_TAB, REALIZED_TAB, RESIDENCY_TAB, TAX_EVENTS_TAB, TAX_RESERVE_HEADER,
-    TAX_RULES_TAB, TAX_TAB, VIEW_TABS,
+    PLATFORMS_ALIASES_TAB, POSITIONS_TAB, REALIZED_TAB, RESIDENCY_TAB, TAX_EVENTS_TAB,
+    TAX_RESERVE_HEADER, TAX_RULES_TAB, TAX_TAB, VIEW_TABS,
 };
-use sheets_view::testkit::InMemorySheetsView;
 
 use config::AliasMap;
 use pt_core::{Date, NoopLock};
@@ -63,14 +63,24 @@ fn publishes_four_view_tabs_one_row_per_entity() {
     // The reserve summary lives in its OWN typed band. (SHEET-TAB-001)
     assert_eq!(tax.accruals.rows.len(), accruals.len());
     for row in &tax.accruals.rows {
-        assert_eq!(row.len(), tax.accruals.header.len(), "no ragged/embedded rows");
+        assert_eq!(
+            row.len(),
+            tax.accruals.header.len(),
+            "no ragged/embedded rows"
+        );
         let first = row[0].text();
-        assert!(!first.is_empty(), "no blank/label/separator row in the accrual band: {row:?}");
+        assert!(
+            !first.is_empty(),
+            "no blank/label/separator row in the accrual band: {row:?}"
+        );
         assert_ne!(first, "RESERVE SUMMARY", "no among-data label row");
         // No embedded second header masquerading as data.
         assert_ne!(
             row.iter().map(|c| c.text().to_string()).collect::<Vec<_>>(),
-            TAX_RESERVE_HEADER.iter().map(|s| s.to_string()).collect::<Vec<_>>(),
+            TAX_RESERVE_HEADER
+                .iter()
+                .map(|s| s.to_string())
+                .collect::<Vec<_>>(),
             "no embedded reserve header inside the accrual band"
         );
     }
@@ -94,7 +104,10 @@ fn tax_accrual_band_has_no_among_data_summary_rows() {
     assert_ne!(tax.reserve_summary.name, tax.accruals.name);
     assert_eq!(
         tax.reserve_summary.header,
-        TAX_RESERVE_HEADER.iter().map(|s| s.to_string()).collect::<Vec<_>>()
+        TAX_RESERVE_HEADER
+            .iter()
+            .map(|s| s.to_string())
+            .collect::<Vec<_>>()
     );
 
     // Every accrual-band row is a genuine accrual (no blank/label/embedded-header
@@ -119,13 +132,19 @@ fn workbook_order_views_then_config_then_logs_positions_landing() {
     // Positions is the leftmost (landing) tab.
     assert_eq!(order.first().copied(), Some(POSITIONS_TAB));
     // Views first, in their order.
-    assert_eq!(&order[0..4], &[POSITIONS_TAB, OPEN_LOTS_TAB, REALIZED_TAB, TAX_TAB]);
+    assert_eq!(
+        &order[0..4],
+        &[POSITIONS_TAB, OPEN_LOTS_TAB, REALIZED_TAB, TAX_TAB]
+    );
     // History (reports) sits among the views in the ordering.
     let pos_history = order.iter().position(|t| *t == HISTORY_TAB).unwrap();
     // Config tabs after views/History.
     let pos_tax_rules = order.iter().position(|t| *t == TAX_RULES_TAB).unwrap();
     let pos_residency = order.iter().position(|t| *t == RESIDENCY_TAB).unwrap();
-    let pos_platforms = order.iter().position(|t| *t == PLATFORMS_ALIASES_TAB).unwrap();
+    let pos_platforms = order
+        .iter()
+        .position(|t| *t == PLATFORMS_ALIASES_TAB)
+        .unwrap();
     // Event logs are last (far right).
     let pos_ledger = order.iter().position(|t| *t == LEDGER_EVENTS_TAB).unwrap();
     let pos_tax_events = order.iter().position(|t| *t == TAX_EVENTS_TAB).unwrap();
@@ -171,8 +190,14 @@ fn republish_regenerates_data_and_never_rewrites_frozen_header() {
         name: POSITIONS_TAB.to_string(),
         header: vec!["Symbol".to_string(), "Shares".to_string()],
         rows: vec![
-            vec![Cell::Value("AMZN".to_string()), Cell::Value("3".to_string())],
-            vec![Cell::Value("GOOG".to_string()), Cell::Value("1".to_string())],
+            vec![
+                Cell::Value("AMZN".to_string()),
+                Cell::Value("3".to_string()),
+            ],
+            vec![
+                Cell::Value("GOOG".to_string()),
+                Cell::Value("1".to_string()),
+            ],
         ],
     };
     client.batch_update_view(&v1).unwrap();
@@ -186,7 +211,10 @@ fn republish_regenerates_data_and_never_rewrites_frozen_header() {
     let v2 = ViewTab {
         name: POSITIONS_TAB.to_string(),
         header: vec!["Symbol".to_string(), "Shares".to_string()],
-        rows: vec![vec![Cell::Value("AMZN".to_string()), Cell::Value("3".to_string())]],
+        rows: vec![vec![
+            Cell::Value("AMZN".to_string()),
+            Cell::Value("3".to_string()),
+        ]],
     };
     client.batch_update_view(&v2).unwrap();
     let p2 = client.published(POSITIONS_TAB).unwrap();

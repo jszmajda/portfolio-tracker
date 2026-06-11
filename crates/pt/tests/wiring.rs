@@ -12,7 +12,7 @@ use reports::{PricedMark, TradingDayKey};
 use runtime::{CycleOutcome, MarksCache, SymbolFreshness};
 use sheets_view::Mark;
 
-use pt::wiring::{summary_inputs_from_cycle, view_state_from_cycle, context_for_year};
+use pt::wiring::{context_for_year, summary_inputs_from_cycle, view_state_from_cycle};
 
 /// A minimal held cycle outcome: one priced symbol (AMZN @ $170), no realized
 /// gains, keyed to a trading day. Enough to prove the projection threads every
@@ -21,7 +21,10 @@ fn outcome() -> CycleOutcome {
     let mut marks = MarksCache::new();
     marks.marks.insert(
         "AMZN".to_string(),
-        Mark { price_cents: Cents(170_00), quote_date: Date(19_180) },
+        Mark {
+            price_cents: Cents(170_00),
+            quote_date: Date(19_180),
+        },
     );
     CycleOutcome {
         snapshot: Snapshot::default(),
@@ -48,11 +51,17 @@ fn summary_inputs_thread_the_cycle_through_unchanged() {
     // The priced marks projected from the cache (AMZN @ $170, stamped).
     assert_eq!(
         inputs.marks.get("AMZN"),
-        Some(&PricedMark { price_cents: Cents(170_00), quote_epoch: Date(19_180) })
+        Some(&PricedMark {
+            price_cents: Cents(170_00),
+            quote_epoch: Date(19_180)
+        })
     );
     assert_eq!(inputs.trading_day_key, Some(TradingDayKey(Date(19_180))));
     assert_eq!(inputs.tax_year, 2026);
-    assert_eq!(inputs.bracket_state, config::BracketState::NoBracketsAvailable);
+    assert_eq!(
+        inputs.bracket_state,
+        config::BracketState::NoBracketsAvailable
+    );
     assert_eq!(inputs.run_at_epoch_secs, 1_700_000_000);
     // summary computes nothing of its own — the snapshot is the cycle's verbatim.
     assert_eq!(inputs.snapshot, out.snapshot);
@@ -64,7 +73,9 @@ fn view_state_threads_freshness_and_marks_through_unchanged() {
     let mut freshness: BTreeMap<String, SymbolFreshness> = BTreeMap::new();
     freshness.insert(
         "AMZN".to_string(),
-        SymbolFreshness::Priced { quote_epoch: Date(19_180) },
+        SymbolFreshness::Priced {
+            quote_epoch: Date(19_180),
+        },
     );
     let mut names = BTreeMap::new();
     names.insert("AMZN".to_string(), "Amazon.com".to_string());
@@ -87,16 +98,26 @@ fn view_state_threads_freshness_and_marks_through_unchanged() {
     assert_eq!(view.freshness, freshness);
     assert_eq!(
         view.marks.get("AMZN"),
-        Some(&PricedMark { price_cents: Cents(170_00), quote_epoch: Date(19_180) })
+        Some(&PricedMark {
+            price_cents: Cents(170_00),
+            quote_epoch: Date(19_180)
+        })
     );
     // The binary owns the key→calendar conversion: the formatted as-of threads
     // through, never a raw key int. (TUI-VIEW-NAV-012)
-    assert_eq!(view.as_of_calendar, Some(pt::wiring::iso_date(Date(19_180))));
+    assert_eq!(
+        view.as_of_calendar,
+        Some(pt::wiring::iso_date(Date(19_180)))
+    );
     // The run wall-clock + display names thread through. (TUI-VIEW-NAV-013,
     // TUI-VIEW-POS-009)
     assert_eq!(view.updated_hhmm, Some("16:05".to_string()));
     assert_eq!(view.display_names.resolve("AMZN"), "Amazon.com");
-    assert_eq!(view.display_names.resolve("PLTR"), "PLTR", "ticker fallback");
+    assert_eq!(
+        view.display_names.resolve("PLTR"),
+        "PLTR",
+        "ticker fallback"
+    );
     // No integrity failure on a clean projection (derived numbers render).
     assert!(view.integrity.is_none());
     assert!(!view.blocked());
@@ -143,7 +164,10 @@ fn view_state_threads_no_calendar_for_a_keyless_or_zero_key_cycle() {
         None,
         config::DisplayNameMap::default(),
     );
-    assert_eq!(view.as_of_calendar, None, "a zero key never formats as 1970-01-01");
+    assert_eq!(
+        view.as_of_calendar, None,
+        "a zero key never formats as 1970-01-01"
+    );
 }
 
 // @spec TUI-VIEW-NAV-013
@@ -197,7 +221,11 @@ fn history_bundle_drops_zero_key_garbage_points() {
     // priced day") never enters the bundled series: not a chart column, not a
     // day-change prior.
     let (map, calendar) = history_bundle(vec![point(0, 9_999_00), point(20_614, 338_508_46)]);
-    assert_eq!(calendar, vec![TradingDayKey(Date(20_614))], "the zero key never enters the calendar");
+    assert_eq!(
+        calendar,
+        vec![TradingDayKey(Date(20_614))],
+        "the zero key never enters the calendar"
+    );
     assert!(!map.contains_key(&TradingDayKey(Date(0))));
     assert!(map.contains_key(&TradingDayKey(Date(20_614))));
 
@@ -207,7 +235,10 @@ fn history_bundle_drops_zero_key_garbage_points() {
 
     // Last-wins by key survives the filter.
     let (map, _) = history_bundle(vec![point(20_614, 1_00), point(20_614, 2_00)]);
-    assert_eq!(map[&TradingDayKey(Date(20_614))].total_market_value_cents, Cents(2_00));
+    assert_eq!(
+        map[&TradingDayKey(Date(20_614))].total_market_value_cents,
+        Cents(2_00)
+    );
 }
 
 // @spec TUI-VIEW-POS-011
@@ -230,7 +261,10 @@ fn view_bracket_state_is_configs_resolved_state_for_the_current_year() {
         filing_status: config::FilingStatus::default(),
         federal_ordinary: set.clone(),
         federal_long_term: set.clone(),
-        niit: config::Niit { rate_ppm: config::Ppm(38_000), magi_threshold_cents: Cents(250_000_00) },
+        niit: config::Niit {
+            rate_ppm: config::Ppm(38_000),
+            magi_threshold_cents: Cents(250_000_00),
+        },
         state_ordinary: BTreeMap::new(),
         ordinary_income_cents: Cents(300_000_00),
     };
@@ -243,7 +277,13 @@ fn view_bracket_state_is_configs_resolved_state_for_the_current_year() {
         "current-year rules → Verified, never n/a (no brackets)"
     );
     // A later year falls back to the most recent prior set, flagged Stale.
-    assert_eq!(view_bracket_state(Some(&data), 2027), config::BracketState::Stale);
+    assert_eq!(
+        view_bracket_state(Some(&data), 2027),
+        config::BracketState::Stale
+    );
     // An unreadable workbook config degrades to the honest cold-start.
-    assert_eq!(view_bracket_state(None, 2026), config::BracketState::NoBracketsAvailable);
+    assert_eq!(
+        view_bracket_state(None, 2026),
+        config::BracketState::NoBracketsAvailable
+    );
 }

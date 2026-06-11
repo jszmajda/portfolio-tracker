@@ -272,10 +272,7 @@ pub fn replay(events: &[LedgerEvent], marks: &Marks) -> Snapshot {
 /// state (with reversed targets filtered out) before it is appended.
 /// `Ok(())` ⇒ accept (append); `Err` ⇒ reject, leaving log/state untouched.
 /// (LEDGER-ERR-001)
-pub fn validate(
-    accepted: &[LedgerEvent],
-    candidate: &LedgerEvent,
-) -> Result<(), LedgerError> {
+pub fn validate(accepted: &[LedgerEvent], candidate: &LedgerEvent) -> Result<(), LedgerError> {
     core::validate_impl(accepted, candidate)
 }
 
@@ -300,8 +297,8 @@ mod core {
     use pt_core::{Cents, Date, MicroShares, Seq};
 
     use crate::{
-        LedgerError, LedgerEvent, LedgerEventKind, Lot, LotSource, Marks, OpenLot,
-        Position, RealizedGain, Snapshot,
+        LedgerError, LedgerEvent, LedgerEventKind, Lot, LotSource, Marks, OpenLot, Position,
+        RealizedGain, Snapshot,
     };
 
     verus! {
@@ -763,8 +760,7 @@ mod core {
             .iter()
             .filter(|e| {
                 // Drop the Reversals themselves and any reversed target.
-                !matches!(e.kind, LedgerEventKind::Reversal { .. })
-                    && !reversed.contains(&e.id)
+                !matches!(e.kind, LedgerEventKind::Reversal { .. }) && !reversed.contains(&e.id)
             })
             .cloned()
             .collect();
@@ -893,30 +889,38 @@ mod core {
     /// job; here we re-derive selection deterministically and, for safety on an
     /// unexpectedly-invalid log, return the matching `LedgerError`.
     fn apply_sell(st: &mut FoldState, e: &LedgerEvent) -> Result<(), LedgerError> {
-        let (sale_id, symbol, qty, unit_price_cents, fees_cents, lot_refs, accrues_to_state, platform) =
-            match &e.kind {
-                LedgerEventKind::Sell {
-                    sale_id,
-                    symbol,
-                    qty,
-                    unit_price_cents,
-                    fees_cents,
-                    lot_refs,
-                    accrues_to_state,
-                    platform,
-                    ..
-                } => (
-                    sale_id,
-                    symbol,
-                    *qty,
-                    *unit_price_cents,
-                    *fees_cents,
-                    lot_refs,
-                    accrues_to_state,
-                    platform,
-                ),
-                _ => unreachable!("apply_sell on a non-Sell event"),
-            };
+        let (
+            sale_id,
+            symbol,
+            qty,
+            unit_price_cents,
+            fees_cents,
+            lot_refs,
+            accrues_to_state,
+            platform,
+        ) = match &e.kind {
+            LedgerEventKind::Sell {
+                sale_id,
+                symbol,
+                qty,
+                unit_price_cents,
+                fees_cents,
+                lot_refs,
+                accrues_to_state,
+                platform,
+                ..
+            } => (
+                sale_id,
+                symbol,
+                *qty,
+                *unit_price_cents,
+                *fees_cents,
+                lot_refs,
+                accrues_to_state,
+                platform,
+            ),
+            _ => unreachable!("apply_sell on a non-Sell event"),
+        };
 
         if qty.0 <= 0 {
             return Err(LedgerError::NonPositiveQty);
@@ -1033,10 +1037,7 @@ mod core {
                 .iter()
                 .enumerate()
                 .filter(|(_, l)| {
-                    !l.closed
-                        && l.symbol == symbol
-                        && l.platform == platform
-                        && l.remaining_qty > 0
+                    !l.closed && l.symbol == symbol && l.platform == platform && l.remaining_qty > 0
                 })
                 .map(|(i, _)| i)
                 .collect();
@@ -1095,14 +1096,11 @@ mod core {
         let mut order: Vec<usize> = (0..n).collect();
         order.sort_by(|&i, &j| {
             // Descending remainder.
-            rems[j]
-                .cmp(&rems[i])
-                .then_with(|| {
-                    let li = &st.lots[plan[i].0];
-                    let lj = &st.lots[plan[j].0];
-                    (li.acquire_date.0, li.open_seq.0)
-                        .cmp(&(lj.acquire_date.0, lj.open_seq.0))
-                })
+            rems[j].cmp(&rems[i]).then_with(|| {
+                let li = &st.lots[plan[i].0];
+                let lj = &st.lots[plan[j].0];
+                (li.acquire_date.0, li.open_seq.0).cmp(&(lj.acquire_date.0, lj.open_seq.0))
+            })
         });
         let mut proceeds = floors;
         // Award one extra unit to the top `residual` positions (descending
@@ -1259,7 +1257,13 @@ mod core {
         }
 
         match &candidate.kind {
-            LedgerEventKind::Buy { lot_id, qty, unit_price_cents, fees_cents, .. } => {
+            LedgerEventKind::Buy {
+                lot_id,
+                qty,
+                unit_price_cents,
+                fees_cents,
+                ..
+            } => {
                 if qty.0 <= 0 {
                     return Err(LedgerError::NonPositiveQty);
                 }
@@ -1275,7 +1279,12 @@ mod core {
                 }
                 Ok(())
             }
-            LedgerEventKind::Vest { lot_id, qty, fmv_per_share_cents, .. } => {
+            LedgerEventKind::Vest {
+                lot_id,
+                qty,
+                fmv_per_share_cents,
+                ..
+            } => {
                 if qty.0 <= 0 {
                     return Err(LedgerError::NonPositiveQty);
                 }
@@ -1313,7 +1322,11 @@ mod core {
                 }
                 Ok(())
             }
-            LedgerEventKind::Split { symbol, ratio_num, ratio_den } => {
+            LedgerEventKind::Split {
+                symbol,
+                ratio_num,
+                ratio_den,
+            } => {
                 if *ratio_num < 1 || *ratio_den < 1 {
                     return Err(LedgerError::BadSplitRatio);
                 }

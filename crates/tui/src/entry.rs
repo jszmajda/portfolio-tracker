@@ -12,9 +12,7 @@
 //!    └─ edit ◀───┘ nothing written                                                     keep entry, [r]etry
 //! ```
 
-use ledger_core::{
-    LedgerError, LedgerEvent, LedgerEventKind, LotRef, LotSource, Snapshot, Symbol,
-};
+use ledger_core::{LedgerError, LedgerEvent, LedgerEventKind, LotRef, LotSource, Snapshot, Symbol};
 use pt_core::{Cents, Date, MicroShares};
 use tax::{AccrualKey, TaxError, TaxEvent, TaxEventKind};
 
@@ -105,7 +103,10 @@ impl RetryReason {
     pub fn notice(&self) -> String {
         match self {
             RetryReason::LockHeld { holder } => {
-                format!("{} lock held by {holder} — entry preserved · [r]etry", crate::theme::GLYPH_WARN)
+                format!(
+                    "{} lock held by {holder} — entry preserved · [r]etry",
+                    crate::theme::GLYPH_WARN
+                )
             }
             RetryReason::VerifyMismatch => {
                 "write could not be verified — entry preserved · [r]etry".to_string()
@@ -322,7 +323,13 @@ impl SellForm {
         let date = port.today();
         let symbol = aliases.resolve(typed_symbol);
         let platform = default_platform(platforms);
-        let picker = LotPicker::build(&port.view().snapshot, &symbol, &platform, MicroShares(0), date);
+        let picker = LotPicker::build(
+            &port.view().snapshot,
+            &symbol,
+            &platform,
+            MicroShares(0),
+            date,
+        );
         SellForm {
             sale_id,
             symbol,
@@ -438,7 +445,13 @@ impl LotPicker {
     /// Build a picker for a Sell from the snapshot's open lots, keeping only the
     /// symbol's lots **on the sale's platform**, term-classified as of the sale
     /// date. (TUI-ENTRY-LOT-001)
-    pub fn build(snapshot: &Snapshot, symbol: &Symbol, platform: &str, sale_qty: MicroShares, sale_date: Date) -> Self {
+    pub fn build(
+        snapshot: &Snapshot,
+        symbol: &Symbol,
+        platform: &str,
+        sale_qty: MicroShares,
+        sale_date: Date,
+    ) -> Self {
         let lots = snapshot
             .open_lots
             .iter()
@@ -495,7 +508,10 @@ impl LotPicker {
         self.lots
             .iter()
             .filter(|l| l.take.0 > 0)
-            .map(|l| LotRef { lot_id: l.lot_id.clone(), qty: l.take })
+            .map(|l| LotRef {
+                lot_id: l.lot_id.clone(),
+                qty: l.take,
+            })
             .collect()
     }
 
@@ -574,9 +590,15 @@ pub enum PickerState {
     NoOpenLots,
     /// The platform's total remaining is below the sale qty — ✓ unreachable, the
     /// shortfall named. (TUI-ENTRY-LOT-004)
-    Insufficient { remaining: MicroShares, shortfall: MicroShares },
+    Insufficient {
+        remaining: MicroShares,
+        shortfall: MicroShares,
+    },
     /// Allocated, but not yet equal to the sale qty (the running `N / M`).
-    UnderAllocated { allocated: MicroShares, needed: MicroShares },
+    UnderAllocated {
+        allocated: MicroShares,
+        needed: MicroShares,
+    },
     /// Allocated exactly to the sale qty — ✓. (TUI-ENTRY-LOT-002)
     Complete,
 }
@@ -588,7 +610,10 @@ impl PickerState {
             PickerState::NoOpenLots => {
                 format!("no open lots for {symbol} on {platform} — check platform")
             }
-            PickerState::Insufficient { remaining, shortfall } => format!(
+            PickerState::Insufficient {
+                remaining,
+                shortfall,
+            } => format!(
                 "insufficient — {} remaining, short {} on {platform}",
                 crate::theme::shares(*remaining),
                 crate::theme::shares(*shortfall),
@@ -678,7 +703,9 @@ pub fn reversible_targets(log: &[LedgerEvent]) -> Vec<ReversalCandidate> {
                     id: format!("__rev_probe__{}", e.id),
                     seq: pt_core::Seq(0),
                     date: e.date,
-                    kind: LedgerEventKind::Reversal { target_event_id: e.id.clone() },
+                    kind: LedgerEventKind::Reversal {
+                        target_event_id: e.id.clone(),
+                    },
                 };
                 match ledger_core::validate(log, &candidate) {
                     Ok(()) => None,
@@ -702,22 +729,44 @@ pub fn reversible_targets(log: &[LedgerEvent]) -> Vec<ReversalCandidate> {
 /// A one-line ledger-event summary for the Reversal list.
 fn summarize_event(e: &LedgerEvent) -> String {
     let kind = match &e.kind {
-        LedgerEventKind::Buy { symbol, qty, unit_price_cents, platform, .. } => format!(
+        LedgerEventKind::Buy {
+            symbol,
+            qty,
+            unit_price_cents,
+            platform,
+            ..
+        } => format!(
             "Buy {symbol} {} @ {} {platform}",
             crate::theme::shares(*qty),
             crate::theme::money(*unit_price_cents)
         ),
-        LedgerEventKind::Vest { symbol, qty, fmv_per_share_cents, platform, .. } => format!(
+        LedgerEventKind::Vest {
+            symbol,
+            qty,
+            fmv_per_share_cents,
+            platform,
+            ..
+        } => format!(
             "Vest {symbol} {} @ {} {platform}",
             crate::theme::shares(*qty),
             crate::theme::money(*fmv_per_share_cents)
         ),
-        LedgerEventKind::Sell { symbol, qty, unit_price_cents, platform, .. } => format!(
+        LedgerEventKind::Sell {
+            symbol,
+            qty,
+            unit_price_cents,
+            platform,
+            ..
+        } => format!(
             "Sell {symbol} {} @ {} {platform}",
             crate::theme::shares(*qty),
             crate::theme::money(*unit_price_cents)
         ),
-        LedgerEventKind::Split { symbol, ratio_num, ratio_den } => {
+        LedgerEventKind::Split {
+            symbol,
+            ratio_num,
+            ratio_den,
+        } => {
             format!("Split {symbol} {ratio_num}:{ratio_den}")
         }
         LedgerEventKind::Reversal { target_event_id } => format!("Reversal of {target_event_id}"),
@@ -731,7 +780,9 @@ pub fn compose_reversal(target_event_id: &str, date: Date) -> LedgerEvent {
         id: String::new(),
         seq: pt_core::Seq(0),
         date,
-        kind: LedgerEventKind::Reversal { target_event_id: target_event_id.to_string() },
+        kind: LedgerEventKind::Reversal {
+            target_event_id: target_event_id.to_string(),
+        },
     }
 }
 
@@ -746,7 +797,10 @@ pub fn compose_reversal(target_event_id: &str, date: Date) -> LedgerEvent {
 pub fn compose_allocate(key: AccrualKey, account_label: String) -> TaxEvent {
     TaxEvent {
         seq: pt_core::Seq(0),
-        kind: TaxEventKind::Allocate { accrual_key: key, account_label },
+        kind: TaxEventKind::Allocate {
+            accrual_key: key,
+            account_label,
+        },
     }
 }
 
@@ -755,7 +809,11 @@ pub fn compose_allocate(key: AccrualKey, account_label: String) -> TaxEvent {
 pub fn compose_move(key: AccrualKey, amount_cents: Cents, date: Date) -> TaxEvent {
     TaxEvent {
         seq: pt_core::Seq(0),
-        kind: TaxEventKind::Move { accrual_key: key, amount_cents, date },
+        kind: TaxEventKind::Move {
+            accrual_key: key,
+            amount_cents,
+            date,
+        },
     }
 }
 
@@ -771,7 +829,14 @@ pub fn compose_pay(
 ) -> TaxEvent {
     TaxEvent {
         seq: pt_core::Seq(0),
-        kind: TaxEventKind::Pay { jurisdiction, tax_year, period, amount_cents, date, covers },
+        kind: TaxEventKind::Pay {
+            jurisdiction,
+            tax_year,
+            period,
+            amount_cents,
+            date,
+            covers,
+        },
     }
 }
 
@@ -780,7 +845,11 @@ pub fn compose_pay(
 pub fn compose_override(key: AccrualKey, applied_amount_cents: Cents, reason: String) -> TaxEvent {
     TaxEvent {
         seq: pt_core::Seq(0),
-        kind: TaxEventKind::AmountOverride { accrual_key: key, applied_amount_cents, reason },
+        kind: TaxEventKind::AmountOverride {
+            accrual_key: key,
+            applied_amount_cents,
+            reason,
+        },
     }
 }
 
@@ -836,10 +905,7 @@ pub struct BatchSnapshot {
 /// Re-validate a batch snapshot against the *current* accruals: any selected key
 /// that vanished (no longer an accrual) or repriced (its applied amount changed)
 /// is flagged. An empty flag list means the batch is safe to submit. (TUI-ENTRY-TAX-005)
-pub fn revalidate_batch(
-    snapshot: &BatchSnapshot,
-    current: &[tax::Accrual],
-) -> Vec<BatchDelta> {
+pub fn revalidate_batch(snapshot: &BatchSnapshot, current: &[tax::Accrual]) -> Vec<BatchDelta> {
     let mut out = Vec::new();
     for (key, at_confirm) in &snapshot.selected {
         match current.iter().find(|a| &a.key == key) {
@@ -864,7 +930,11 @@ pub enum BatchDelta {
     /// The selected accrual vanished (its sale was reversed). (TUI-ENTRY-TAX-005)
     Vanished(AccrualKey),
     /// The selected accrual repriced (a config edit). (TUI-ENTRY-TAX-005)
-    Repriced { key: AccrualKey, at_confirm: Option<Cents>, now: Option<Cents> },
+    Repriced {
+        key: AccrualKey,
+        at_confirm: Option<Cents>,
+        now: Option<Cents>,
+    },
 }
 
 // ===========================================================================
@@ -932,8 +1002,17 @@ pub fn submit_ledger<P: RuntimePort>(port: &mut P, candidate: &LedgerEvent) -> P
 /// new-symbol `warn` shown until `[c]onfirm` — a confirmed (or already-known) symbol
 /// submits normally. The warning does not block; it makes opening a new position a
 /// deliberate, visible act. (TUI-ENTRY-ACT-006)
-pub fn submit_buy<P: RuntimePort>(port: &mut P, form: &BuyForm, aliases: &config::AliasMap) -> Phase {
-    if let Some(warn) = new_symbol_guard(&form.symbol, form.confirmed_new_symbol, port.view(), aliases) {
+pub fn submit_buy<P: RuntimePort>(
+    port: &mut P,
+    form: &BuyForm,
+    aliases: &config::AliasMap,
+) -> Phase {
+    if let Some(warn) = new_symbol_guard(
+        &form.symbol,
+        form.confirmed_new_symbol,
+        port.view(),
+        aliases,
+    ) {
         return warn;
     }
     submit_ledger(port, &form.compose())
@@ -941,8 +1020,17 @@ pub fn submit_buy<P: RuntimePort>(port: &mut P, form: &BuyForm, aliases: &config
 
 /// Submit a Vest through the write loop, gated by the same new-symbol guard as Buy.
 /// (TUI-ENTRY-ACT-006)
-pub fn submit_vest<P: RuntimePort>(port: &mut P, form: &VestForm, aliases: &config::AliasMap) -> Phase {
-    if let Some(warn) = new_symbol_guard(&form.symbol, form.confirmed_new_symbol, port.view(), aliases) {
+pub fn submit_vest<P: RuntimePort>(
+    port: &mut P,
+    form: &VestForm,
+    aliases: &config::AliasMap,
+) -> Phase {
+    if let Some(warn) = new_symbol_guard(
+        &form.symbol,
+        form.confirmed_new_symbol,
+        port.view(),
+        aliases,
+    ) {
         return warn;
     }
     submit_ledger(port, &form.compose())
@@ -973,7 +1061,9 @@ pub fn submit_sell<P: RuntimePort>(port: &mut P, form: &SellForm) -> Phase {
 pub fn sell_residency_guard(form: &SellForm) -> Option<Phase> {
     match &form.accrues_to_state {
         Some(s) if !s.trim().is_empty() => None,
-        _ => Some(Phase::Rejected(InlineError::Field(missing_accrues_to_state()))),
+        _ => Some(Phase::Rejected(InlineError::Field(
+            missing_accrues_to_state(),
+        ))),
     }
 }
 
@@ -1041,7 +1131,9 @@ fn map_outcome(outcome: SubmitOutcome) -> Phase {
         SubmitOutcome::Confirmed(_) => Phase::Confirmed,
         // A live kernel disagreement re-renders inline beside the field — NOT a
         // write-verify retry. (TUI-ENTRY-FLOW-002)
-        SubmitOutcome::Rejected(SubmitRejection::Ledger(e)) => Phase::Rejected(InlineError::Ledger(e)),
+        SubmitOutcome::Rejected(SubmitRejection::Ledger(e)) => {
+            Phase::Rejected(InlineError::Ledger(e))
+        }
         SubmitOutcome::Rejected(SubmitRejection::Tax(e)) => Phase::Rejected(InlineError::Tax(e)),
         SubmitOutcome::LockHeld { holder } => Phase::Retry(RetryReason::LockHeld { holder }),
         SubmitOutcome::WriteFailed(WriteFailure::VerifyMismatch) => {
@@ -1057,8 +1149,13 @@ fn map_outcome(outcome: SubmitOutcome) -> Phase {
 /// cached snapshot. Renders nothing on `Ok`; on `Err` the verified `LedgerError`
 /// is returned for inline rendering beside the field — nothing is written.
 /// (TUI-ENTRY-FLOW-001)
-pub fn inline_validate_ledger<P: RuntimePort>(port: &P, candidate: &LedgerEvent) -> Option<InlineError> {
-    port.validate_ledger(candidate).err().map(InlineError::Ledger)
+pub fn inline_validate_ledger<P: RuntimePort>(
+    port: &P,
+    candidate: &LedgerEvent,
+) -> Option<InlineError> {
+    port.validate_ledger(candidate)
+        .err()
+        .map(InlineError::Ledger)
 }
 
 /// Inline advisory validation of a candidate tax event. (TUI-ENTRY-FLOW-001)
@@ -1098,7 +1195,9 @@ pub fn parse_money(s: &str) -> Result<Cents, InlineError> {
         None => (cleaned.as_str(), ""),
     };
     if frac_str.len() > 2 {
-        return Err(InlineError::Field(format!("at most two decimal places: '{s}'")));
+        return Err(InlineError::Field(format!(
+            "at most two decimal places: '{s}'"
+        )));
     }
     let whole_part = if whole_str.is_empty() { "0" } else { whole_str };
     let whole: i64 = whole_part
@@ -1141,7 +1240,9 @@ pub fn parse_shares(s: &str) -> Result<MicroShares, InlineError> {
         None => (cleaned.as_str(), ""),
     };
     if frac_str.len() > 6 {
-        return Err(InlineError::Field(format!("at most six decimal places: '{s}'")));
+        return Err(InlineError::Field(format!(
+            "at most six decimal places: '{s}'"
+        )));
     }
     let whole_part = if whole_str.is_empty() { "0" } else { whole_str };
     let whole: i64 = whole_part
@@ -1207,8 +1308,14 @@ impl BuyForm {
     /// code) back into the typed form, so the live submit composes the OWNER'S edits.
     /// A bad/empty/oversized numeric field returns an `InlineError::Field` beside
     /// that field index. (TUI-ENTRY-ACT-001; TUI-ENTRY-FLOW-008)
-    pub fn apply_fields(&mut self, fields: &[crate::form::Field]) -> Result<(), (usize, InlineError)> {
-        self.symbol = fields.first().map(|f| f.value.trim().to_string()).unwrap_or_default();
+    pub fn apply_fields(
+        &mut self,
+        fields: &[crate::form::Field],
+    ) -> Result<(), (usize, InlineError)> {
+        self.symbol = fields
+            .first()
+            .map(|f| f.value.trim().to_string())
+            .unwrap_or_default();
         self.qty = parse_shares(field_at(fields, 1)).map_err(|e| (1, e))?;
         self.unit_price = parse_money(field_at(fields, 2)).map_err(|e| (2, e))?;
         self.date = parse_date(field_at(fields, 3)).map_err(|e| (3, e))?;
@@ -1222,8 +1329,14 @@ impl BuyForm {
 impl VestForm {
     /// Re-parse the `for_vest` fields (symbol, qty, FMV/share, date, platform,
     /// tracking code) back into the typed form. (TUI-ENTRY-ACT-002; TUI-ENTRY-FLOW-008)
-    pub fn apply_fields(&mut self, fields: &[crate::form::Field]) -> Result<(), (usize, InlineError)> {
-        self.symbol = fields.first().map(|f| f.value.trim().to_string()).unwrap_or_default();
+    pub fn apply_fields(
+        &mut self,
+        fields: &[crate::form::Field],
+    ) -> Result<(), (usize, InlineError)> {
+        self.symbol = fields
+            .first()
+            .map(|f| f.value.trim().to_string())
+            .unwrap_or_default();
         self.qty = parse_shares(field_at(fields, 1)).map_err(|e| (1, e))?;
         self.fmv_per_share = parse_money(field_at(fields, 2)).map_err(|e| (2, e))?;
         self.date = parse_date(field_at(fields, 3)).map_err(|e| (3, e))?;
@@ -1236,8 +1349,14 @@ impl VestForm {
 impl SplitForm {
     /// Re-parse the `for_split` fields (symbol, ratio num:den, date). (TUI-ENTRY-ACT-004;
     /// TUI-ENTRY-FLOW-008)
-    pub fn apply_fields(&mut self, fields: &[crate::form::Field]) -> Result<(), (usize, InlineError)> {
-        self.symbol = fields.first().map(|f| f.value.trim().to_string()).unwrap_or_default();
+    pub fn apply_fields(
+        &mut self,
+        fields: &[crate::form::Field],
+    ) -> Result<(), (usize, InlineError)> {
+        self.symbol = fields
+            .first()
+            .map(|f| f.value.trim().to_string())
+            .unwrap_or_default();
         let (num, den) = parse_ratio(field_at(fields, 1)).map_err(|e| (1, e))?;
         self.ratio_num = num;
         self.ratio_den = den;
@@ -1252,8 +1371,14 @@ impl SellForm {
     /// **resets the lot-picker allocation** (TUI-ENTRY-LOT-003) so a stale ✓ can never
     /// reach submit; the picker allocation itself is edited through the picker
     /// context. (TUI-ENTRY-ACT-003; TUI-ENTRY-FLOW-008)
-    pub fn apply_fields(&mut self, fields: &[crate::form::Field]) -> Result<(), (usize, InlineError)> {
-        self.symbol = fields.first().map(|f| f.value.trim().to_string()).unwrap_or_default();
+    pub fn apply_fields(
+        &mut self,
+        fields: &[crate::form::Field],
+    ) -> Result<(), (usize, InlineError)> {
+        self.symbol = fields
+            .first()
+            .map(|f| f.value.trim().to_string())
+            .unwrap_or_default();
         let qty = parse_shares(field_at(fields, 1)).map_err(|e| (1, e))?;
         if qty != self.qty {
             self.qty = qty;
@@ -1272,7 +1397,10 @@ impl SellForm {
 impl ResidencyForm {
     /// Re-parse the `for_residency` fields (effective date, state). (TUI-ENTRY-CFG-001;
     /// TUI-ENTRY-FLOW-008)
-    pub fn apply_fields(&mut self, fields: &[crate::form::Field]) -> Result<(), (usize, InlineError)> {
+    pub fn apply_fields(
+        &mut self,
+        fields: &[crate::form::Field],
+    ) -> Result<(), (usize, InlineError)> {
         self.effective_date = parse_date(field_at(fields, 0)).map_err(|e| (0, e))?;
         self.state = field_at(fields, 1).trim().to_string();
         Ok(())
@@ -1333,7 +1461,10 @@ impl Composer {
     /// `form::for_*` builders). On a bad/empty/oversized numeric field, returns the
     /// offending field index + the inline error so the shell pins it beneath that
     /// field. (TUI-ENTRY-FLOW-008)
-    pub fn apply_fields(&mut self, fields: &[crate::form::Field]) -> Result<(), (usize, InlineError)> {
+    pub fn apply_fields(
+        &mut self,
+        fields: &[crate::form::Field],
+    ) -> Result<(), (usize, InlineError)> {
         match self {
             Composer::Buy(f) => f.apply_fields(fields),
             Composer::Vest(f) => f.apply_fields(fields),
@@ -1392,6 +1523,9 @@ pub enum LaunchIdentity {
 /// returning the fresh accrual (never the stale rendered values). `None` when the
 /// accrual vanished (its sale was reversed since the view rendered). (entry-design.md
 /// → "Launched with identity"; TUI-VIEW-TAX-002)
-pub fn reresolve_accrual<'a>(key: &AccrualKey, accruals: &'a [tax::Accrual]) -> Option<&'a tax::Accrual> {
+pub fn reresolve_accrual<'a>(
+    key: &AccrualKey,
+    accruals: &'a [tax::Accrual],
+) -> Option<&'a tax::Accrual> {
     accruals.iter().find(|a| &a.key == key)
 }

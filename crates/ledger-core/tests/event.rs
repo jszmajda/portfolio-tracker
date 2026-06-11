@@ -70,12 +70,7 @@ fn buy_meta(
     }
 }
 
-fn vest(
-    lot_id: &str,
-    symbol: &str,
-    qty: i64,
-    fmv_per_share_cents: i64,
-) -> LedgerEventKind {
+fn vest(lot_id: &str, symbol: &str, qty: i64, fmv_per_share_cents: i64) -> LedgerEventKind {
     LedgerEventKind::Vest {
         lot_id: lot_id.to_string(),
         symbol: symbol.to_string(),
@@ -429,8 +424,7 @@ fn buy_records_platform_and_tracking_code_as_inert_metadata() {
         "platform/tracking_code do not affect computed basis"
     );
     assert_eq!(
-        snap_meta.open_lots[0].lot.remaining_qty,
-        snap_plain.open_lots[0].lot.remaining_qty,
+        snap_meta.open_lots[0].lot.remaining_qty, snap_plain.open_lots[0].lot.remaining_qty,
         "platform/tracking_code do not affect quantity"
     );
 }

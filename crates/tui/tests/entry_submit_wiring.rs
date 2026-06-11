@@ -24,7 +24,10 @@ fn ms(n: i64) -> MicroShares {
 
 fn empty_runtime() -> FakeRuntime {
     let snap = ledger_core::Snapshot::default();
-    FakeRuntime::new(ViewBuilder::new(snap).build(), flat_federal_ctx(common::YEAR, 220_000))
+    FakeRuntime::new(
+        ViewBuilder::new(snap).build(),
+        flat_federal_ctx(common::YEAR, 220_000),
+    )
 }
 
 fn platforms() -> config::PlatformList {
@@ -68,7 +71,13 @@ fn open_buy_edit_fields_and_submit_confirms_durable_and_clears_the_context() {
     let mut rt = empty_runtime();
     let mut model = Model::new();
     model.toggle_mode(); // Entry mode
-    model.open_buy(&rt, "L1".to_string(), "AMZN", &platforms(), &aliases_with(&[]));
+    model.open_buy(
+        &rt,
+        "L1".to_string(),
+        "AMZN",
+        &platforms(),
+        &aliases_with(&[]),
+    );
     assert_eq!(model.mode, Mode::Entry);
     assert!(model.entry_top().is_some(), "the composer is open");
 
@@ -91,19 +100,38 @@ fn open_buy_edit_fields_and_submit_confirms_durable_and_clears_the_context() {
         model.entry_phase_confirm_new_symbol(),
         "an unknown symbol holds on the new-symbol guard, nothing written"
     );
-    assert!(rt.ledger_log.is_empty(), "the new-symbol hold writes nothing");
+    assert!(
+        rt.ledger_log.is_empty(),
+        "the new-symbol hold writes nothing"
+    );
 
     // Confirm the new position + re-submit: now it confirms durable and clears.
     model.entry_confirm_new_symbol(&mut rt, &aliases);
-    assert!(model.entry_top().is_none(), "a confirmed-durable submit clears the composer");
-    assert_eq!(model.mode, Mode::Views, "the empty entry stack falls back to Views");
+    assert!(
+        model.entry_top().is_none(),
+        "a confirmed-durable submit clears the composer"
+    );
+    assert_eq!(
+        model.mode,
+        Mode::Views,
+        "the empty entry stack falls back to Views"
+    );
     assert_eq!(rt.ledger_log.len(), 1, "the Buy landed durably");
     // The composed Buy carries the edited values.
     match &rt.ledger_log[0].kind {
-        LedgerEventKind::Buy { symbol, qty, unit_price_cents, .. } => {
+        LedgerEventKind::Buy {
+            symbol,
+            qty,
+            unit_price_cents,
+            ..
+        } => {
             assert_eq!(symbol, "AMZN");
             assert_eq!(*qty, ms(10), "the edited qty composed");
-            assert_eq!(*unit_price_cents, Cents(100_00), "the edited $100 unit price composed");
+            assert_eq!(
+                *unit_price_cents,
+                Cents(100_00),
+                "the edited $100 unit price composed"
+            );
         }
         other => panic!("expected a Buy, got {other:?}"),
     }
@@ -117,16 +145,26 @@ fn open_buy_edit_fields_and_submit_confirms_durable_and_clears_the_context() {
 // @spec TUI-ENTRY-FLOW-002, TUI-ENTRY-FLOW-008
 #[test]
 fn submit_disagreement_rerenders_inline_and_preserves_the_context() {
-    let mut rt = empty_runtime()
-        .with_behavior(SubmitBehavior::SubmitRejectLedger(ledger_core::LedgerError::InsufficientShares));
+    let mut rt = empty_runtime().with_behavior(SubmitBehavior::SubmitRejectLedger(
+        ledger_core::LedgerError::InsufficientShares,
+    ));
     let mut model = Model::new();
     model.toggle_mode();
     // A known symbol (so the new-symbol guard does not intercept): seed a position.
-    let snap = replay(&[buy(1, 18_000, "L0", "AMZN", 5, 10_000, "Robinhood")], &[("AMZN", 26_126)]);
+    let snap = replay(
+        &[buy(1, 18_000, "L0", "AMZN", 5, 10_000, "Robinhood")],
+        &[("AMZN", 26_126)],
+    );
     rt.set_view(ViewBuilder::new(snap).build());
     rt = rt.with_ledger_log(vec![buy(1, 18_000, "L0", "AMZN", 5, 10_000, "Robinhood")]);
 
-    model.open_buy(&rt, "L1".to_string(), "AMZN", &platforms(), &aliases_with(&[]));
+    model.open_buy(
+        &rt,
+        "L1".to_string(),
+        "AMZN",
+        &platforms(),
+        &aliases_with(&[]),
+    );
     model.entry_focus_next();
     type_into_focused(&mut model, "10");
     model.entry_escape();
@@ -135,13 +173,24 @@ fn submit_disagreement_rerenders_inline_and_preserves_the_context() {
     model.entry_escape();
 
     model.entry_submit(&mut rt, &aliases_with(&[]));
-    let ctx = model.entry_top().expect("the context is preserved on a submit-time rejection");
+    let ctx = model
+        .entry_top()
+        .expect("the context is preserved on a submit-time rejection");
     match &ctx.form.phase {
-        Phase::Rejected(e) => assert!(e.text().contains("InsufficientShares"), "the kernel error rides inline"),
+        Phase::Rejected(e) => assert!(
+            e.text().contains("InsufficientShares"),
+            "the kernel error rides inline"
+        ),
         other => panic!("expected a Rejected phase, got {other:?}"),
     }
-    assert!(ctx.form.error.is_some(), "the inline slot carries the kernel error beside a field");
-    assert!(rt.ledger_log.iter().all(|e| e.id != "evt-2"), "nothing new was written");
+    assert!(
+        ctx.form.error.is_some(),
+        "the inline slot carries the kernel error beside a field"
+    );
+    assert!(
+        rt.ledger_log.iter().all(|e| e.id != "evt-2"),
+        "nothing new was written"
+    );
 }
 
 // ===========================================================================
@@ -155,7 +204,13 @@ fn a_malformed_or_empty_numeric_field_surfaces_an_inline_error_not_a_panic() {
     let mut rt = empty_runtime();
     let mut model = Model::new();
     model.toggle_mode();
-    model.open_buy(&rt, "L1".to_string(), "AMZN", &platforms(), &aliases_with(&[]));
+    model.open_buy(
+        &rt,
+        "L1".to_string(),
+        "AMZN",
+        &platforms(),
+        &aliases_with(&[]),
+    );
 
     // Type garbage into the Qty field.
     model.entry_focus_next(); // → Qty
@@ -163,7 +218,9 @@ fn a_malformed_or_empty_numeric_field_surfaces_an_inline_error_not_a_panic() {
     model.entry_escape();
 
     model.entry_submit(&mut rt, &aliases_with(&[]));
-    let ctx = model.entry_top().expect("a parse error preserves the context");
+    let ctx = model
+        .entry_top()
+        .expect("a parse error preserves the context");
     match &ctx.form.phase {
         Phase::Rejected(e) => assert!(
             e.text().contains("share count"),
@@ -195,19 +252,34 @@ fn a_malformed_or_empty_numeric_field_surfaces_an_inline_error_not_a_panic() {
 // @spec CONFIG-RESIDENCY-005, TUI-ENTRY-FLOW-008
 #[test]
 fn a_sell_with_no_residency_default_blocks_submit_with_the_inline_error() {
-    let snap = replay(&[buy(1, 18_000, "L0", "AMZN", 10, 10_000, "Robinhood")], &[("AMZN", 26_126)]);
-    let mut rt = FakeRuntime::new(ViewBuilder::new(snap.clone()).build(), flat_federal_ctx(common::YEAR, 220_000))
-        .with_ledger_log(vec![buy(1, 18_000, "L0", "AMZN", 10, 10_000, "Robinhood")]);
+    let snap = replay(
+        &[buy(1, 18_000, "L0", "AMZN", 10, 10_000, "Robinhood")],
+        &[("AMZN", 26_126)],
+    );
+    let mut rt = FakeRuntime::new(
+        ViewBuilder::new(snap.clone()).build(),
+        flat_federal_ctx(common::YEAR, 220_000),
+    )
+    .with_ledger_log(vec![buy(1, 18_000, "L0", "AMZN", 10, 10_000, "Robinhood")]);
     let mut model = Model::new();
     model.toggle_mode();
     // An EMPTY residency timeline → residency_on returns None → accrues_to_state None.
     let empty_residency = config::ResidencyTimeline::new();
-    model.open_sell(&rt, "S1".to_string(), "AMZN", &empty_residency, &platforms(), &aliases_with(&[]));
+    model.open_sell(
+        &rt,
+        "S1".to_string(),
+        "AMZN",
+        &empty_residency,
+        &platforms(),
+        &aliases_with(&[]),
+    );
 
     // Submit (the picker need not be complete to hit the residency guard, which runs
     // first in submit_sell).
     model.entry_submit(&mut rt, &aliases_with(&[]));
-    let ctx = model.entry_top().expect("the residency block preserves the context");
+    let ctx = model
+        .entry_top()
+        .expect("the residency block preserves the context");
     match &ctx.form.phase {
         Phase::Rejected(e) => assert!(
             e.text().contains("no residency on the sale date"),
@@ -216,7 +288,10 @@ fn a_sell_with_no_residency_default_blocks_submit_with_the_inline_error() {
         ),
         other => panic!("expected a residency-block Rejected, got {other:?}"),
     }
-    assert!(rt.ledger_log.iter().all(|e| e.id != "evt-2"), "the residency block writes nothing");
+    assert!(
+        rt.ledger_log.iter().all(|e| e.id != "evt-2"),
+        "the residency block writes nothing"
+    );
 }
 
 // ===========================================================================
@@ -241,7 +316,13 @@ fn open_sell_two_lots(rt: &FakeRuntime, model: &mut Model, sale_qty: MicroShares
         platform: "Robinhood".to_string(),
         tracking_code: None,
         accrues_to_state: Some("DC".to_string()),
-        picker: tui::entry::LotPicker::build(&snap, &"AMZN".to_string(), "Robinhood", sale_qty, Date(20_000)),
+        picker: tui::entry::LotPicker::build(
+            &snap,
+            &"AMZN".to_string(),
+            "Robinhood",
+            sale_qty,
+            Date(20_000),
+        ),
     };
     let _ = rt;
     model.toggle_mode();
@@ -254,14 +335,21 @@ fn picker_focus_moves_and_fifo_fill_allocates_oldest_first_through_the_model() {
     let rt = empty_runtime();
     let mut model = Model::new();
     open_sell_two_lots(&rt, &mut model, ms(150));
-    assert!(model.entry_has_picker(), "a Sell context has an operable picker");
+    assert!(
+        model.entry_has_picker(),
+        "a Sell context has an operable picker"
+    );
 
     // Focus starts at row 0; move down then back up (capped).
     assert_eq!(model.entry_top().unwrap().picker_focus, 0);
     model.picker_focus_next();
     assert_eq!(model.entry_top().unwrap().picker_focus, 1);
     model.picker_focus_next();
-    assert_eq!(model.entry_top().unwrap().picker_focus, 1, "capped at the last row");
+    assert_eq!(
+        model.entry_top().unwrap().picker_focus,
+        1,
+        "capped at the last row"
+    );
     model.picker_focus_prev();
     assert_eq!(model.entry_top().unwrap().picker_focus, 0);
 
@@ -273,7 +361,10 @@ fn picker_focus_moves_and_fifo_fill_allocates_oldest_first_through_the_model() {
     assert_eq!(old.take, ms(100), "FIFO fills the oldest lot first");
     assert_eq!(new.take, ms(50), "then the next-oldest for the remainder");
     assert_eq!(picker.allocated(), ms(150));
-    assert!(picker.is_complete(), "the allocation sums exactly to the sale qty");
+    assert!(
+        picker.is_complete(),
+        "the allocation sums exactly to the sale qty"
+    );
 }
 
 // @spec TUI-ENTRY-LOT-002
@@ -298,7 +389,16 @@ fn editing_the_sell_qty_resets_the_allocation() {
     open_sell_two_lots(&rt, &mut model, ms(150));
     // FIFO-fill, then change the qty field and re-parse: the allocation resets.
     model.picker_fill_fifo();
-    assert!(model.entry_top().unwrap().picker_ref().unwrap().allocated().0 > 0);
+    assert!(
+        model
+            .entry_top()
+            .unwrap()
+            .picker_ref()
+            .unwrap()
+            .allocated()
+            .0
+            > 0
+    );
 
     // Edit the Qty field (index 1) to 200 and re-parse via a submit attempt; the
     // SellForm::apply_fields resets the allocation when the qty changes. (LOT-003)
@@ -310,8 +410,16 @@ fn editing_the_sell_qty_resets_the_allocation() {
     let mut rt2 = rt;
     model.entry_submit(&mut rt2, &aliases_with(&[]));
     let picker = model.entry_top().unwrap().picker_ref().unwrap();
-    assert_eq!(picker.sale_qty, ms(200), "the sale qty updated from the field");
-    assert_eq!(picker.allocated(), MicroShares(0), "changing the qty reset the allocation");
+    assert_eq!(
+        picker.sale_qty,
+        ms(200),
+        "the sale qty updated from the field"
+    );
+    assert_eq!(
+        picker.allocated(),
+        MicroShares(0),
+        "changing the qty reset the allocation"
+    );
 }
 
 // ===========================================================================
@@ -330,7 +438,10 @@ fn a_live_retry_resubmits_the_frozen_event_without_rederiving_today_or_alias() {
     let mut model = Model::new();
     model.toggle_mode();
     // A known symbol so the new-symbol guard does not intercept: seed AMZN.
-    let snap = replay(&[buy(1, 18_000, "L0", "AMZN", 10, 10_000, "Robinhood")], &[("AMZN", 26_126)]);
+    let snap = replay(
+        &[buy(1, 18_000, "L0", "AMZN", 10, 10_000, "Robinhood")],
+        &[("AMZN", 26_126)],
+    );
     rt.set_view(ViewBuilder::new(snap).build());
     let alias_v1 = aliases_with(&[("AMZN", "AMZN")]);
     model.open_buy(&rt, "L1".to_string(), "AMZN", &platforms(), &alias_v1);
@@ -363,27 +474,44 @@ fn a_live_retry_resubmits_the_frozen_event_without_rederiving_today_or_alias() {
     // Retry (the `[r]` path re-submits the FROZEN event — the binary's EntryEnter on a
     // Retry phase calls entry_submit, which reuses the frozen candidate).
     model.entry_submit(&mut rt, &alias_v2);
-    assert!(model.entry_top().is_none(), "the retry confirmed durable and cleared");
+    assert!(
+        model.entry_top().is_none(),
+        "the retry confirmed durable and cleared"
+    );
     assert_eq!(rt.ledger_log.len(), 1, "the retry landed exactly once");
 
     // The landed event is byte-identical to the frozen one (same date, same symbol) —
     // NOT re-derived from the drifted alias map.
-    let tui::entry::Candidate::Ledger(frozen_ev) = frozen else { panic!("a ledger candidate") };
+    let tui::entry::Candidate::Ledger(frozen_ev) = frozen else {
+        panic!("a ledger candidate")
+    };
     match (&frozen_ev.kind, &rt.ledger_log[0].kind) {
         (
-            LedgerEventKind::Buy { symbol: fs, qty: fq, .. },
-            LedgerEventKind::Buy { symbol: ls, qty: lq, .. },
+            LedgerEventKind::Buy {
+                symbol: fs,
+                qty: fq,
+                ..
+            },
+            LedgerEventKind::Buy {
+                symbol: ls,
+                qty: lq,
+                ..
+            },
         ) => {
             assert_eq!(fs, "AMZN", "the frozen symbol is the original resolution");
-            assert_eq!(ls, fs, "the retry submitted the frozen symbol, not the remapped alias");
+            assert_eq!(
+                ls, fs,
+                "the retry submitted the frozen symbol, not the remapped alias"
+            );
             assert_eq!(lq, fq, "the retry submitted the frozen qty");
         }
         other => panic!("expected Buy events, got {other:?}"),
     }
-    assert_eq!(frozen_ev.date, rt.ledger_log[0].date, "the retry kept the frozen date (no fresh today)");
+    assert_eq!(
+        frozen_ev.date, rt.ledger_log[0].date,
+        "the retry kept the frozen date (no fresh today)"
+    );
 }
-
-
 
 // ===========================================================================
 // TUI-ENTRY-FLOW-010 — an edit after a returned-control submit is a NEW entry: the
@@ -396,9 +524,18 @@ fn an_edit_after_a_returned_control_submit_drops_the_freeze() {
     let mut rt = empty_runtime().with_behavior(SubmitBehavior::Unreachable);
     let mut model = Model::new();
     model.toggle_mode();
-    let snap = replay(&[buy(1, 18_000, "L0", "AMZN", 10, 10_000, "Robinhood")], &[("AMZN", 26_126)]);
+    let snap = replay(
+        &[buy(1, 18_000, "L0", "AMZN", 10, 10_000, "Robinhood")],
+        &[("AMZN", 26_126)],
+    );
     rt.set_view(ViewBuilder::new(snap).build());
-    model.open_buy(&rt, "L1".to_string(), "AMZN", &platforms(), &aliases_with(&[]));
+    model.open_buy(
+        &rt,
+        "L1".to_string(),
+        "AMZN",
+        &platforms(),
+        &aliases_with(&[]),
+    );
     model.entry_focus_next();
     type_into_focused(&mut model, "10");
     model.entry_escape();
@@ -407,7 +544,10 @@ fn an_edit_after_a_returned_control_submit_drops_the_freeze() {
     model.entry_escape();
 
     model.entry_submit(&mut rt, &aliases_with(&[]));
-    assert!(model.entry_top().unwrap().frozen.is_some(), "the unreachable submit froze the event");
+    assert!(
+        model.entry_top().unwrap().frozen.is_some(),
+        "the unreachable submit froze the event"
+    );
 
     // An edit drops the freeze (a new entry, new content, new id). (FLOW-010)
     model.entry_focus_next(); // → Date (or wherever); enter text-input + type.

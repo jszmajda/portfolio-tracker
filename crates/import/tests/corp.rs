@@ -77,7 +77,14 @@ fn a_frame_ambiguous_zero_share_row_is_surfaced_by_the_precondition() {
         ..LegacyWorkbook::default()
     };
     wb.actions.push(vest_row(
-        "Stock Actions", 2, "Z-V1", "AMZN", 0, "2000.00", date(2021, 3, 1), PLATFORM,
+        "Stock Actions",
+        2,
+        "Z-V1",
+        "AMZN",
+        0,
+        "2000.00",
+        date(2021, 3, 1),
+        PLATFORM,
     ));
     match assert_share_frame_precondition(&wb) {
         Err(ImportError::Malformed { coord, .. }) => assert_eq!(coord.row, 2),
@@ -99,9 +106,18 @@ fn split_event_reconstructed_and_inserted_by_date_before_post_split_sales() {
     let wb = amzn_only_workbook();
     let recon = reconstruct(&wb).expect("reconstructs");
 
-    let vest_pos = recon.ledger.iter().position(|e| matches!(e.event.kind, LedgerEventKind::Vest { .. }));
-    let split_pos = recon.ledger.iter().position(|e| matches!(e.event.kind, LedgerEventKind::Split { .. }));
-    let sell_pos = recon.ledger.iter().position(|e| matches!(e.event.kind, LedgerEventKind::Sell { .. }));
+    let vest_pos = recon
+        .ledger
+        .iter()
+        .position(|e| matches!(e.event.kind, LedgerEventKind::Vest { .. }));
+    let split_pos = recon
+        .ledger
+        .iter()
+        .position(|e| matches!(e.event.kind, LedgerEventKind::Split { .. }));
+    let sell_pos = recon
+        .ledger
+        .iter()
+        .position(|e| matches!(e.event.kind, LedgerEventKind::Sell { .. }));
 
     let (v, s, x) = (
         vest_pos.expect("a Vest"),
@@ -114,7 +130,11 @@ fn split_event_reconstructed_and_inserted_by_date_before_post_split_sales() {
     // The Split carries the owner-supplied ratio.
     let split = &recon.ledger[s];
     match &split.event.kind {
-        LedgerEventKind::Split { symbol, ratio_num, ratio_den } => {
+        LedgerEventKind::Split {
+            symbol,
+            ratio_num,
+            ratio_den,
+        } => {
             assert_eq!(symbol, "AMZN");
             assert_eq!((*ratio_num, *ratio_den), (20, 1));
         }
@@ -124,7 +144,10 @@ fn split_event_reconstructed_and_inserted_by_date_before_post_split_sales() {
     let seqs: Vec<u64> = recon.ledger.iter().map(|e| e.event.seq.0).collect();
     let mut sorted = seqs.clone();
     sorted.sort_unstable();
-    assert_eq!(seqs, sorted, "reconstructed events are in ascending Seq order");
+    assert_eq!(
+        seqs, sorted,
+        "reconstructed events are in ascending Seq order"
+    );
 }
 
 // @spec IMPORT-CORP-003
@@ -136,7 +159,14 @@ fn vest_with_zero_blank_or_div0_fmv_source_is_a_hard_error_never_defaults_to_zer
             ..LegacyWorkbook::default()
         };
         wb.actions.push(import::testkit::vest_row(
-            "Stock Actions", 2, "V-BAD", "AMZN", 100, bad, date(2021, 3, 1), PLATFORM,
+            "Stock Actions",
+            2,
+            "V-BAD",
+            "AMZN",
+            100,
+            bad,
+            date(2021, 3, 1),
+            PLATFORM,
         ));
         match reconstruct(&wb) {
             Err(ImportError::UnrecoverableVestFmv { coord }) => {
@@ -151,7 +181,10 @@ fn vest_with_zero_blank_or_div0_fmv_source_is_a_hard_error_never_defaults_to_zer
 #[test]
 fn a_recoverable_nonzero_fmv_does_not_error() {
     let wb = amzn_only_workbook(); // FMV "2000.00"
-    assert!(reconstruct(&wb).is_ok(), "a real FMV is recovered, no error");
+    assert!(
+        reconstruct(&wb).is_ok(),
+        "a real FMV is recovered, no error"
+    );
 }
 
 // @spec IMPORT-CORP-004
@@ -178,7 +211,10 @@ fn kernel_rejection_surfaces_as_import_error_resolvable_by_per_row_correction() 
     let mut corrected = wb.clone();
     corrected.corrections.insert(
         wb.sales[0].coord.clone(),
-        RowCorrection { qty: Some(MicroShares(20_000_000)), ..Default::default() },
+        RowCorrection {
+            qty: Some(MicroShares(20_000_000)),
+            ..Default::default()
+        },
     );
     let recon2 = reconstruct(&corrected).expect("re-run reconstructs");
     validate_reconstruction(&recon2).expect("the corrected re-run is kernel-valid");
@@ -203,7 +239,10 @@ fn already_post_split_frame_override_reorders_a_post_split_qty_after_the_split()
     // Without the override: KernelRejected (proves the escape hatch is load-bearing).
     let rejected = reconstruct(&wb).expect("reconstructs");
     assert!(
-        matches!(validate_reconstruction(&rejected), Err(ImportError::KernelRejected { .. })),
+        matches!(
+            validate_reconstruction(&rejected),
+            Err(ImportError::KernelRejected { .. })
+        ),
         "a pre-split-dated post-split qty is rejected without the frame override"
     );
 
@@ -211,15 +250,29 @@ fn already_post_split_frame_override_reorders_a_post_split_qty_after_the_split()
     let mut corrected = wb.clone();
     corrected.corrections.insert(
         wb.sales[0].coord.clone(),
-        RowCorrection { already_post_split: true, ..Default::default() },
+        RowCorrection {
+            already_post_split: true,
+            ..Default::default()
+        },
     );
     let recon = reconstruct(&corrected).expect("re-run reconstructs with the frame override");
     validate_reconstruction(&recon).expect("the frame-overridden re-run is kernel-valid");
 
     // The split now precedes the sale in the fold order.
-    let split_pos = recon.ledger.iter().position(|e| matches!(e.event.kind, LedgerEventKind::Split { .. })).expect("a Split");
-    let sell_pos = recon.ledger.iter().position(|e| matches!(e.event.kind, LedgerEventKind::Sell { .. })).expect("a Sell");
-    assert!(split_pos < sell_pos, "the frame override orders the post-split sale after the split");
+    let split_pos = recon
+        .ledger
+        .iter()
+        .position(|e| matches!(e.event.kind, LedgerEventKind::Split { .. }))
+        .expect("a Split");
+    let sell_pos = recon
+        .ledger
+        .iter()
+        .position(|e| matches!(e.event.kind, LedgerEventKind::Sell { .. }))
+        .expect("a Sell");
+    assert!(
+        split_pos < sell_pos,
+        "the frame override orders the post-split sale after the split"
+    );
 
     let snap = import::replay_reconstruction(&recon, &Marks::new());
     assert_eq!(

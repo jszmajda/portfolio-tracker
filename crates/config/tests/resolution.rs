@@ -121,8 +121,8 @@ fn active_set_is_federal_plus_residency_states_in_lookback_window() {
     // Residency: NJ effective 2022-01-08, DC effective 2025-01-12.
     // current_year 2025, lookback 1 → window [2024-01-01, 2025-12-31].
     // 19_000 = 2022-01-08, 20_100 = 2025-01-12.
-    let tl = ResidencyTimeline::from_entries(vec![res(19_000, "NJ"), res(20_100, "DC")])
-        .expect("valid");
+    let tl =
+        ResidencyTimeline::from_entries(vec![res(19_000, "NJ"), res(20_100, "DC")]).expect("valid");
     let active = active_jurisdictions(&tl, TaxYear(2025), 1);
 
     // Federal is always active.
@@ -139,8 +139,8 @@ fn active_set_is_federal_plus_residency_states_in_lookback_window() {
 fn active_set_excludes_not_yet_effective_future_entries() {
     // current_year 2025; a future move to NY effective 2029-01-01 is excluded.
     // 20_100 = 2025-01-12, 21_550 = 2029-01-01 (well past the window's end).
-    let tl = ResidencyTimeline::from_entries(vec![res(20_100, "DC"), res(21_550, "NY")])
-        .expect("valid");
+    let tl =
+        ResidencyTimeline::from_entries(vec![res(20_100, "DC"), res(21_550, "NY")]).expect("valid");
     let active = active_jurisdictions(&tl, TaxYear(2025), 1);
     assert!(active.contains(&Jurisdiction::State("DC".to_string())));
     // NY's entry is not yet effective as of end-of-2025 → excluded.
@@ -153,10 +153,10 @@ fn surfaces_one_signal_per_stale_active_jurisdiction_for_current_year() {
     // Federal + DC have 2025 sets verified long ago (stale by age); NJ has none.
     // valid_rules seeds DC and NJ. Use last_verified far in the past (day 0).
     let s = series(&[(2025, 0)]); // verified at epoch → very stale vs as_of.
-    // Residency keeps DC and NJ in the active window (current + prior year).
-    // 20_000 = 2024-10-04, 20_100 = 2025-01-12.
-    let tl = ResidencyTimeline::from_entries(vec![res(20_000, "NJ"), res(20_100, "DC")])
-        .expect("valid");
+                                  // Residency keeps DC and NJ in the active window (current + prior year).
+                                  // 20_000 = 2024-10-04, 20_100 = 2025-01-12.
+    let tl =
+        ResidencyTimeline::from_entries(vec![res(20_000, "NJ"), res(20_100, "DC")]).expect("valid");
 
     let signals = staleness_signals(&s, &tl, TaxYear(2025), Date(20_300), 12, 1);
 

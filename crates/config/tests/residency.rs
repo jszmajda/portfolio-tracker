@@ -53,8 +53,8 @@ fn rejects_consecutive_same_state_no_op() {
 // @spec CONFIG-RESIDENCY-002
 #[test]
 fn residency_on_is_greatest_entry_at_or_before_date_inclusive() {
-    let tl = ResidencyTimeline::from_entries(vec![res(18_000, "DC"), res(19_000, "NJ")])
-        .expect("valid");
+    let tl =
+        ResidencyTimeline::from_entries(vec![res(18_000, "DC"), res(19_000, "NJ")]).expect("valid");
 
     // A date strictly between entries resolves to the earlier entry's state.
     assert_eq!(tl.residency_on(Date(18_500)), Some("DC".to_string()));
@@ -91,8 +91,8 @@ fn future_dated_entry_is_stored_and_resolves_on_or_after_its_date() {
 // @spec CONFIG-RESIDENCY-004
 #[test]
 fn defaults_a_new_sale_accrues_to_state_to_residency_on_sale_date() {
-    let tl = ResidencyTimeline::from_entries(vec![res(18_000, "DC"), res(19_000, "NJ")])
-        .expect("valid");
+    let tl =
+        ResidencyTimeline::from_entries(vec![res(18_000, "DC"), res(19_000, "NJ")]).expect("valid");
     // A sale on the NJ move date defaults to NJ (inclusive).
     assert_eq!(
         config::default_accrues_to_state(&tl, Date(19_000)),

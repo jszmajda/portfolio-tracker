@@ -6,9 +6,7 @@ mod common;
 use std::collections::BTreeMap;
 
 use sheets_view::testkit::{pass, InMemorySheetsView};
-use sheets_view::{
-    price_to_cents, read_marks, DegradeReason, Mark, PriceReading, SettleConfig,
-};
+use sheets_view::{price_to_cents, read_marks, DegradeReason, Mark, PriceReading, SettleConfig};
 
 use pt_core::{Cents, Date};
 
@@ -23,7 +21,13 @@ fn settle_pass_polls_until_numeric_separate_from_write() {
     // Two polls: first AMZN is Loading (transient), then it settles numeric.
     client.set_price_script(vec![
         pass(&[("AMZN", PriceReading::Transient)]),
-        pass(&[("AMZN", PriceReading::Numeric { price_usd: 200.0, quote_date: Date(19_150) })]),
+        pass(&[(
+            "AMZN",
+            PriceReading::Numeric {
+                price_usd: 200.0,
+                quote_date: Date(19_150),
+            },
+        )]),
     ]);
 
     let cfg = SettleConfig { max_polls: 8 };
@@ -32,7 +36,11 @@ fn settle_pass_polls_until_numeric_separate_from_write() {
 
     // It polled more than once (settled on the second pass) — a separate read
     // pass, never inline with the formula write.
-    assert!(client.read_count() >= 2, "must poll until settled, got {}", client.read_count());
+    assert!(
+        client.read_count() >= 2,
+        "must poll until settled, got {}",
+        client.read_count()
+    );
     // The settled numeric mark is recorded.
     let m = produced.marks.get("AMZN").expect("settled mark");
     assert_eq!(m.price_cents, Cents(200_00));
@@ -77,9 +85,18 @@ fn subcent_positive_price_is_degraded_anomaly_not_zero() {
     let client = InMemorySheetsView::new();
     client.set_prices(pass(&[(
         "TINY",
-        PriceReading::Numeric { price_usd: 0.0001, quote_date: Date(19_150) },
+        PriceReading::Numeric {
+            price_usd: 0.0001,
+            quote_date: Date(19_150),
+        },
     )]));
-    let produced = read_marks(&client, &symbols(&["TINY"]), &BTreeMap::new(), SettleConfig::default()).unwrap();
+    let produced = read_marks(
+        &client,
+        &symbols(&["TINY"]),
+        &BTreeMap::new(),
+        SettleConfig::default(),
+    )
+    .unwrap();
     assert!(produced.marks.get("TINY").is_none());
     assert_eq!(produced.degraded.get("TINY"), Some(&DegradeReason::SubCent));
 }
@@ -100,10 +117,18 @@ fn zero_and_negative_price_are_degraded_not_a_zero_or_negative_mark() {
     let client = InMemorySheetsView::new();
     client.set_prices(pass(&[(
         "ZERO",
-        PriceReading::Numeric { price_usd: 0.0, quote_date: Date(19_150) },
+        PriceReading::Numeric {
+            price_usd: 0.0,
+            quote_date: Date(19_150),
+        },
     )]));
-    let produced =
-        read_marks(&client, &symbols(&["ZERO"]), &BTreeMap::new(), SettleConfig::default()).unwrap();
+    let produced = read_marks(
+        &client,
+        &symbols(&["ZERO"]),
+        &BTreeMap::new(),
+        SettleConfig::default(),
+    )
+    .unwrap();
     assert!(produced.marks.get("ZERO").is_none());
     assert_eq!(produced.degraded.get("ZERO"), Some(&DegradeReason::SubCent));
 }
@@ -119,10 +144,24 @@ fn transport_failure_propagates_error_does_not_emit_empty_marks() {
     let client = InMemorySheetsView::new();
     client.set_read_fails(true);
     let mut prior = BTreeMap::new();
-    prior.insert("AMZN".to_string(), Mark { price_cents: Cents(180_00), quote_date: Date(19_100) });
+    prior.insert(
+        "AMZN".to_string(),
+        Mark {
+            price_cents: Cents(180_00),
+            quote_date: Date(19_100),
+        },
+    );
 
-    let result = read_marks(&client, &symbols(&["AMZN"]), &prior, SettleConfig::default());
-    assert!(result.is_err(), "a transport failure must propagate, not emit empty marks");
+    let result = read_marks(
+        &client,
+        &symbols(&["AMZN"]),
+        &prior,
+        SettleConfig::default(),
+    );
+    assert!(
+        result.is_err(),
+        "a transport failure must propagate, not emit empty marks"
+    );
 }
 
 // @spec SHEET-MARK-003
@@ -134,7 +173,13 @@ fn transient_keeps_prior_mark_and_retries_degrades_only_after_window() {
 
     // A prior good cached mark exists.
     let mut prior = BTreeMap::new();
-    prior.insert("AMZN".to_string(), Mark { price_cents: Cents(180_00), quote_date: Date(19_100) });
+    prior.insert(
+        "AMZN".to_string(),
+        Mark {
+            price_cents: Cents(180_00),
+            quote_date: Date(19_100),
+        },
+    );
 
     let cfg = SettleConfig { max_polls: 4 };
     let produced = read_marks(&client, &symbols(&["AMZN"]), &prior, cfg).unwrap();
@@ -144,7 +189,10 @@ fn transient_keeps_prior_mark_and_retries_degrades_only_after_window() {
     assert_eq!(client.read_count(), 4);
     assert_eq!(
         produced.marks.get("AMZN"),
-        Some(&Mark { price_cents: Cents(180_00), quote_date: Date(19_100) })
+        Some(&Mark {
+            price_cents: Cents(180_00),
+            quote_date: Date(19_100)
+        })
     );
     assert!(produced.degraded.get("AMZN").is_none());
 }
@@ -161,7 +209,10 @@ fn no_prior_mark_stays_transient_degrades_after_window() {
 
     // After the bounded window with no prior mark → degraded (TimedOut), no mark.
     assert!(produced.marks.get("AMZN").is_none());
-    assert_eq!(produced.degraded.get("AMZN"), Some(&DegradeReason::TimedOut));
+    assert_eq!(
+        produced.degraded.get("AMZN"),
+        Some(&DegradeReason::TimedOut)
+    );
 }
 
 // @spec SHEET-MARK-003
@@ -172,13 +223,28 @@ fn permanent_error_degrades_immediately_no_prior_carry() {
     client.set_prices(pass(&[("BADX", PriceReading::Permanent)]));
 
     let mut prior = BTreeMap::new();
-    prior.insert("BADX".to_string(), Mark { price_cents: Cents(10_00), quote_date: Date(19_000) });
+    prior.insert(
+        "BADX".to_string(),
+        Mark {
+            price_cents: Cents(10_00),
+            quote_date: Date(19_000),
+        },
+    );
 
-    let produced = read_marks(&client, &symbols(&["BADX"]), &prior, SettleConfig::default()).unwrap();
+    let produced = read_marks(
+        &client,
+        &symbols(&["BADX"]),
+        &prior,
+        SettleConfig::default(),
+    )
+    .unwrap();
     // A permanent error is degraded (Permanent) — NOT carried from prior (it is a
     // terminal error, not a transient).
     assert!(produced.marks.get("BADX").is_none());
-    assert_eq!(produced.degraded.get("BADX"), Some(&DegradeReason::Permanent));
+    assert_eq!(
+        produced.degraded.get("BADX"),
+        Some(&DegradeReason::Permanent)
+    );
     // A permanent error settles the loop without exhausting the poll window.
     assert!(client.read_count() < SettleConfig::default().max_polls);
 }
@@ -191,9 +257,18 @@ fn mark_stamped_with_googlefinance_quote_date_not_wall_clock() {
     // wall-clock read time.
     client.set_prices(pass(&[(
         "AMZN",
-        PriceReading::Numeric { price_usd: 200.0, quote_date: Date(19_100) },
+        PriceReading::Numeric {
+            price_usd: 200.0,
+            quote_date: Date(19_100),
+        },
     )]));
-    let produced = read_marks(&client, &symbols(&["AMZN"]), &BTreeMap::new(), SettleConfig::default()).unwrap();
+    let produced = read_marks(
+        &client,
+        &symbols(&["AMZN"]),
+        &BTreeMap::new(),
+        SettleConfig::default(),
+    )
+    .unwrap();
     let m = produced.marks.get("AMZN").unwrap();
     assert_eq!(m.quote_date, Date(19_100));
 }
@@ -203,7 +278,13 @@ fn mark_stamped_with_googlefinance_quote_date_not_wall_clock() {
 fn degraded_symbol_absent_from_ledger_marks_for_per_symbol_degradation() {
     let client = InMemorySheetsView::new();
     client.set_prices(pass(&[
-        ("AMZN", PriceReading::Numeric { price_usd: 200.0, quote_date: Date(19_150) }),
+        (
+            "AMZN",
+            PriceReading::Numeric {
+                price_usd: 200.0,
+                quote_date: Date(19_150),
+            },
+        ),
         ("BADX", PriceReading::Permanent),
     ]));
     let produced = read_marks(
@@ -228,6 +309,16 @@ fn degraded_symbol_absent_from_ledger_marks_for_per_symbol_degradation() {
         common::buy(2, 19_010, "lot-badx", "BADX", 1_000_000, 50_00),
     ];
     let snap = common::replay(&events, &ledger_marks);
-    assert!(snap.positions.get("AMZN").unwrap().unrealized_cents.is_some());
-    assert!(snap.positions.get("BADX").unwrap().unrealized_cents.is_none());
+    assert!(snap
+        .positions
+        .get("AMZN")
+        .unwrap()
+        .unrealized_cents
+        .is_some());
+    assert!(snap
+        .positions
+        .get("BADX")
+        .unwrap()
+        .unrealized_cents
+        .is_none());
 }

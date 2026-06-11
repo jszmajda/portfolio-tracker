@@ -11,9 +11,7 @@
 //!   LEDGER-SPLIT-002 — leave remaining_basis and acquire_date unchanged
 //!   LEDGER-SPLIT-003 — affect only OPEN lots of the split's symbol
 
-use ledger_core::{
-    replay, LedgerEvent, LedgerEventKind, LotRef, Marks, OpenLot,
-};
+use ledger_core::{replay, LedgerEvent, LedgerEventKind, LotRef, Marks, OpenLot};
 use pt_core::{Cents, Date, MicroShares, Seq};
 
 // ---------------------------------------------------------------------------

@@ -14,9 +14,7 @@
 //!   LEDGER-LOT-005 — FIFO fallback in ascending (acquire_date, open_seq), same platform
 //!   LEDGER-LOT-006 — every lot gets a stable, log-unique LotId a later Sell can name
 
-use ledger_core::{
-    replay, LedgerEvent, LedgerEventKind, LotRef, Marks, OpenLot, Snapshot,
-};
+use ledger_core::{replay, LedgerEvent, LedgerEventKind, LotRef, Marks, OpenLot, Snapshot};
 use pt_core::{Cents, Date, MicroShares, Seq};
 
 // ---------------------------------------------------------------------------
@@ -116,7 +114,15 @@ fn open_lot_tracks_remaining_qty_and_basis_non_negative() {
     // Buy 10 whole shares @ 500 cents + 30 cents fees.
     // total_basis = scale(10e6 × 500 / 1e6) + 30 = 5000 + 30 = 5030 cents.
     let log = vec![buy(
-        "e1", 1, 100, "lotA", "AMZN", shares(10), 500, 30, "fidelity",
+        "e1",
+        1,
+        100,
+        "lotA",
+        "AMZN",
+        shares(10),
+        500,
+        30,
+        "fidelity",
     )];
 
     let snap = replay(&log, &no_marks());
@@ -133,7 +139,10 @@ fn open_lot_tracks_remaining_qty_and_basis_non_negative() {
         "remaining_basis_cents = scale(qty × price) + fees"
     );
     // Non-negativity invariant (LEDGER-LOT-001).
-    assert!(ol.lot.remaining_qty.0 >= 0, "remaining_qty must be non-negative");
+    assert!(
+        ol.lot.remaining_qty.0 >= 0,
+        "remaining_qty must be non-negative"
+    );
     assert!(
         ol.lot.remaining_basis_cents.0 >= 0,
         "remaining_basis_cents must be non-negative"
@@ -220,7 +229,16 @@ fn partial_consume_uses_banker_rounding_for_consumed_basis() {
     let log = vec![
         buy("e1", 1, 100, "lotA", "AMZN", shares(2), 250, 1, "fidelity"),
         sell(
-            "e2", 2, 150, "s1", "AMZN", shares(1), 300, 0, vec![], "fidelity",
+            "e2",
+            2,
+            150,
+            "s1",
+            "AMZN",
+            shares(1),
+            300,
+            0,
+            vec![],
+            "fidelity",
         ),
     ];
 
@@ -264,11 +282,29 @@ fn final_share_consume_sweeps_entire_basis_and_closes_lot() {
         // Partial sell of 1 share -> consumed_basis = round(103×1/3) = round(34.33) = 34.
         // remaining_basis = 103 - 34 = 69, remaining_qty = 2.
         sell(
-            "e2", 2, 150, "s1", "AMZN", shares(1), 200, 0, vec![], "fidelity",
+            "e2",
+            2,
+            150,
+            "s1",
+            "AMZN",
+            shares(1),
+            200,
+            0,
+            vec![],
+            "fidelity",
         ),
         // Final sell of the remaining 2 shares -> c == remaining_qty -> sweep.
         sell(
-            "e3", 3, 160, "s2", "AMZN", shares(2), 200, 0, vec![], "fidelity",
+            "e3",
+            3,
+            160,
+            "s2",
+            "AMZN",
+            shares(2),
+            200,
+            0,
+            vec![],
+            "fidelity",
         ),
     ];
 
@@ -428,11 +464,50 @@ fn fifo_consumes_in_ascending_acquire_date_then_open_seq() {
     // shares must drain lotEarly (5) fully, then lotMidA (3 of 5), leaving
     // lotMidB wholly untouched.
     let log = vec![
-        buy("e1", 1, 100, "lotEarly", "AMZN", shares(5), 1000, 0, "fidelity"),
-        buy("e2", 2, 110, "lotMidA", "AMZN", shares(5), 1000, 0, "fidelity"),
-        buy("e3", 3, 110, "lotMidB", "AMZN", shares(5), 1000, 0, "fidelity"),
+        buy(
+            "e1",
+            1,
+            100,
+            "lotEarly",
+            "AMZN",
+            shares(5),
+            1000,
+            0,
+            "fidelity",
+        ),
+        buy(
+            "e2",
+            2,
+            110,
+            "lotMidA",
+            "AMZN",
+            shares(5),
+            1000,
+            0,
+            "fidelity",
+        ),
+        buy(
+            "e3",
+            3,
+            110,
+            "lotMidB",
+            "AMZN",
+            shares(5),
+            1000,
+            0,
+            "fidelity",
+        ),
         sell(
-            "e4", 4, 200, "s1", "AMZN", shares(8), 1500, 0, vec![], "fidelity",
+            "e4",
+            4,
+            200,
+            "s1",
+            "AMZN",
+            shares(8),
+            1500,
+            0,
+            vec![],
+            "fidelity",
         ),
     ];
 
@@ -466,10 +541,29 @@ fn fifo_selects_only_lots_on_the_sales_platform() {
     // consume only the schwab lot, leaving the (FIFO-earlier) fidelity lot
     // untouched — platform binds lot selection.
     let log = vec![
-        buy("e1", 1, 100, "lotFid", "AMZN", shares(5), 1000, 0, "fidelity"),
+        buy(
+            "e1",
+            1,
+            100,
+            "lotFid",
+            "AMZN",
+            shares(5),
+            1000,
+            0,
+            "fidelity",
+        ),
         buy("e2", 2, 110, "lotSch", "AMZN", shares(5), 1000, 0, "schwab"),
         sell(
-            "e3", 3, 200, "s1", "AMZN", shares(2), 1500, 0, vec![], "schwab",
+            "e3",
+            3,
+            200,
+            "s1",
+            "AMZN",
+            shares(2),
+            1500,
+            0,
+            vec![],
+            "schwab",
         ),
     ];
 
@@ -522,8 +616,7 @@ fn lots_carry_stable_log_unique_ids_designatable_by_later_sell() {
     let snap = replay(&log, &no_marks());
 
     // Open lot ids are exactly the opened ids and are log-unique.
-    let mut ids: Vec<String> =
-        snap.open_lots.iter().map(|ol| ol.lot.id.clone()).collect();
+    let mut ids: Vec<String> = snap.open_lots.iter().map(|ol| ol.lot.id.clone()).collect();
     ids.sort();
     assert_eq!(
         ids,

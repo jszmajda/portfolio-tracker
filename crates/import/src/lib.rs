@@ -58,7 +58,10 @@ pub struct RowCoord {
 
 impl RowCoord {
     pub fn new(tab: impl Into<String>, row: u32) -> Self {
-        RowCoord { tab: tab.into(), row }
+        RowCoord {
+            tab: tab.into(),
+            row,
+        }
     }
 }
 
@@ -290,7 +293,10 @@ pub enum ImportError {
     /// A store failure while appending a SPECIFIC event during commit — carries
     /// the event id so a live failure names which append tripped (a resume
     /// investigates that exact row/event rather than guessing).
-    StoreAt { event_id: String, error: store::StoreError },
+    StoreAt {
+        event_id: String,
+        error: store::StoreError,
+    },
     /// A `Stock Sales` row references a tranche id with no matching `Stock Actions`
     /// row (referential-integrity break). (IMPORT-RUN-002)
     MissingReferencedTranche { coord: RowCoord, tranche_id: String },
@@ -464,7 +470,10 @@ impl DryRunReport {
     ///
     // @spec IMPORT-RECON-005
     pub fn accept(&self) -> AcceptedReport<'_> {
-        AcceptedReport { report: self, accepted: true }
+        AcceptedReport {
+            report: self,
+            accepted: true,
+        }
     }
 
     /// Produce the `AcceptedReport` token in its UN-ACCEPTED (under-review) state:
@@ -475,7 +484,10 @@ impl DryRunReport {
     ///
     // @spec IMPORT-RECON-005
     pub fn review(&self) -> AcceptedReport<'_> {
-        AcceptedReport { report: self, accepted: false }
+        AcceptedReport {
+            report: self,
+            accepted: false,
+        }
     }
 }
 
@@ -566,7 +578,11 @@ pub fn parse_dollars_to_cents(s: &str) -> Option<Cents> {
     if whole_str.is_empty() && frac_str.is_empty() {
         return None;
     }
-    let whole: i64 = if whole_str.is_empty() { 0 } else { whole_str.parse().ok()? };
+    let whole: i64 = if whole_str.is_empty() {
+        0
+    } else {
+        whole_str.parse().ok()?
+    };
     // At most two fractional digits are significant; more than two non-zero
     // fractional digits cannot be represented exactly in cents → malformed, not a
     // silent truncation. Pad/normalize to exactly two cents digits.
@@ -693,7 +709,11 @@ pub fn assert_share_frame_precondition(wb: &LegacyWorkbook) -> Result<(), Import
     // Every quantity used is the row's own-frame qty (post-correction). A zero-share
     // open/sale has no own-frame count to interpret in any frame → frame-ambiguous.
     for a in &wb.actions {
-        let qty = wb.corrections.get(&a.coord).and_then(|c| c.qty).unwrap_or(a.qty);
+        let qty = wb
+            .corrections
+            .get(&a.coord)
+            .and_then(|c| c.qty)
+            .unwrap_or(a.qty);
         if qty.0 == 0 {
             return Err(ImportError::Malformed {
                 coord: a.coord.clone(),
@@ -703,7 +723,11 @@ pub fn assert_share_frame_precondition(wb: &LegacyWorkbook) -> Result<(), Import
         }
     }
     for s in &wb.sales {
-        let qty = wb.corrections.get(&s.coord).and_then(|c| c.qty).unwrap_or(s.qty);
+        let qty = wb
+            .corrections
+            .get(&s.coord)
+            .and_then(|c| c.qty)
+            .unwrap_or(s.qty);
         if qty.0 == 0 {
             return Err(ImportError::Malformed {
                 coord: s.coord.clone(),
@@ -836,7 +860,11 @@ pub fn reconstruct(wb: &LegacyWorkbook) -> Result<Reconstruction, ImportError> {
                 // default to $0. (IMPORT-MAP-002, IMPORT-CORP-003)
                 let fmv = match parse_dollars_to_cents(&a.dollars_per_share) {
                     Some(c) if c.0 > 0 => c,
-                    _ => return Err(ImportError::UnrecoverableVestFmv { coord: a.coord.clone() }),
+                    _ => {
+                        return Err(ImportError::UnrecoverableVestFmv {
+                            coord: a.coord.clone(),
+                        })
+                    }
                 };
                 vest_fmv.insert(a.tranche_id.clone(), fmv);
                 items.push(Item {
@@ -868,8 +896,10 @@ pub fn reconstruct(wb: &LegacyWorkbook) -> Result<Reconstruction, ImportError> {
         // duplicate (symbol, date, ratio), so the key is provably unique. The
         // internal synthetic coord is never surfaced as provenance (`source: None`).
         let coord = RowCoord::new("Corporate Actions", i as u32 + 1);
-        let action_key =
-            format!("split-{}-{}-{}:{}", ca.symbol, ca.date.0, ca.ratio_num, ca.ratio_den);
+        let action_key = format!(
+            "split-{}-{}-{}:{}",
+            ca.symbol, ca.date.0, ca.ratio_num, ca.ratio_den
+        );
         items.push(Item {
             date: ca.date,
             rank: 1,
@@ -910,7 +940,10 @@ pub fn reconstruct(wb: &LegacyWorkbook) -> Result<Reconstruction, ImportError> {
             None => {
                 malformed.push(MalformedRow {
                     coord: s.coord.clone(),
-                    reason: format!("unparseable $/share {:?} on a Sell row", s.dollars_per_share),
+                    reason: format!(
+                        "unparseable $/share {:?} on a Sell row",
+                        s.dollars_per_share
+                    ),
                 });
                 continue;
             }
@@ -954,9 +987,7 @@ pub fn reconstruct(wb: &LegacyWorkbook) -> Result<Reconstruction, ImportError> {
     }
 
     // 3. Order by (date, kind-rank, coord) — date then the deterministic tie-break.
-    items.sort_by(|a, b| {
-        (a.date.0, a.rank, &a.coord_key).cmp(&(b.date.0, b.rank, &b.coord_key))
-    });
+    items.sort_by(|a, b| (a.date.0, a.rank, &a.coord_key).cmp(&(b.date.0, b.rank, &b.coord_key)));
 
     // 4. A `Positions`-only symbol (present in Positions, absent from every source
     //    row) cannot have its stream fabricated. (IMPORT-RUN-004)
@@ -994,7 +1025,12 @@ pub fn reconstruct(wb: &LegacyWorkbook) -> Result<Reconstruction, ImportError> {
     // 6. The closed-year migration tax lifecycle. (IMPORT-TAX-002)
     let tax = build_migration_tax_events(&wb.closed_years);
 
-    Ok(Reconstruction { ledger, tax, malformed, stc_fmv_value_cents })
+    Ok(Reconstruction {
+        ledger,
+        tax,
+        malformed,
+        stc_fmv_value_cents,
+    })
 }
 
 /// The effective ordering date for a sale the owner has flagged `already_post_split`
@@ -1022,7 +1058,12 @@ fn post_split_frame_date(wb: &LegacyWorkbook, symbol: &Symbol, date: Date) -> Op
 fn earliest_sale_date(wb: &LegacyWorkbook) -> Option<Date> {
     wb.sales
         .iter()
-        .map(|s| wb.corrections.get(&s.coord).and_then(|c| c.date).unwrap_or(s.date))
+        .map(|s| {
+            wb.corrections
+                .get(&s.coord)
+                .and_then(|c| c.date)
+                .unwrap_or(s.date)
+        })
         .min_by_key(|d| d.0)
 }
 
@@ -1041,7 +1082,10 @@ fn build_migration_tax_events(closed_years: &[ClosedYear]) -> Vec<TaxEvent> {
     let mut seq = 0u64;
     let mut next = |kind: TaxEventKind| -> TaxEvent {
         seq += 1;
-        TaxEvent { seq: Seq(seq), kind }
+        TaxEvent {
+            seq: Seq(seq),
+            kind,
+        }
     };
 
     for cy in closed_years {
@@ -1209,7 +1253,13 @@ pub fn predict_intended_delta_cents(recon: &Reconstruction, symbol: &Symbol) -> 
     // the corporate actions — NEVER back-labelled from the reconciliation residual.
     let mut fmv_value: i128 = 0;
     for re in &recon.ledger {
-        if let LedgerEventKind::Vest { symbol: s, qty, fmv_per_share_cents, .. } = &re.event.kind {
+        if let LedgerEventKind::Vest {
+            symbol: s,
+            qty,
+            fmv_per_share_cents,
+            ..
+        } = &re.event.kind
+        {
             if s == symbol {
                 // The single scale site: scale(qty_micro × price) → Cents.
                 let scaled = pt_core::scale((qty.0 as i128) * (fmv_per_share_cents.0 as i128));
@@ -1298,8 +1348,11 @@ pub fn dry_run(wb: &LegacyWorkbook, marks: &Marks) -> Result<DryRunReport, Impor
 
     // Index the legacy Positions (reconcile target) and the per-lot source so the
     // realized-only predicted delta can attribute vest-lot basis.
-    let legacy_by_symbol: BTreeMap<&str, &LegacyPositionRow> =
-        wb.positions.iter().map(|p| (p.symbol.as_str(), p)).collect();
+    let legacy_by_symbol: BTreeMap<&str, &LegacyPositionRow> = wb
+        .positions
+        .iter()
+        .map(|p| (p.symbol.as_str(), p))
+        .collect();
     let mut lot_source: BTreeMap<String, LotSource> = BTreeMap::new();
     for re in &recon.ledger {
         match &re.event.kind {
@@ -1450,8 +1503,7 @@ pub fn dry_run(wb: &LegacyWorkbook, marks: &Marks) -> Result<DryRunReport, Impor
     // surfaced is an intent gap on the import EARS — see ears_gaps_reported.)
     //
     // @spec IMPORT-RUN-006
-    let positioned: std::collections::BTreeSet<&str> =
-        legacy_by_symbol.keys().copied().collect();
+    let positioned: std::collections::BTreeSet<&str> = legacy_by_symbol.keys().copied().collect();
     for (symbol, pos) in &snapshot.positions {
         if positioned.contains(symbol.as_str()) {
             continue;
@@ -1476,7 +1528,11 @@ pub fn dry_run(wb: &LegacyWorkbook, marks: &Marks) -> Result<DryRunReport, Impor
         });
     }
 
-    Ok(DryRunReport { reconstruction: recon, symbols, commit_allowed })
+    Ok(DryRunReport {
+        reconstruction: recon,
+        symbols,
+        commit_allowed,
+    })
 }
 
 // ===========================================================================
@@ -1645,7 +1701,10 @@ pub fn commit<S: SheetsClient, L: Lock, C: Cache>(
     for re in ordered {
         let outcome = store
             .append_ledger(&re.event)
-            .map_err(|e| ImportError::StoreAt { event_id: re.event_id.clone(), error: e })?;
+            .map_err(|e| ImportError::StoreAt {
+                event_id: re.event_id.clone(),
+                error: e,
+            })?;
         if outcome.idempotent_skip {
             out.skipped.push(outcome.event_id);
         } else {
@@ -1692,10 +1751,7 @@ pub struct CommitReport {
 /// Replay the reconstructed ledger events into a `ledger_core::Snapshot`, in the
 /// importer's intended `Seq` order, with `marks` for the unrealized valuation. The
 /// reconciliation compares this against the legacy `Positions`. (IMPORT-RECON-001)
-pub fn replay_reconstruction(
-    recon: &Reconstruction,
-    marks: &Marks,
-) -> ledger_core::Snapshot {
+pub fn replay_reconstruction(recon: &Reconstruction, marks: &Marks) -> ledger_core::Snapshot {
     let events: Vec<LedgerEvent> = recon.ledger.iter().map(|e| e.event.clone()).collect();
     ledger_core::replay(&events, marks)
 }
@@ -1711,10 +1767,7 @@ pub fn replay_reconstruction(
 /// this out of `residency_on`'s undefined pre-history region. (IMPORT-TAX-001)
 ///
 // @spec IMPORT-TAX-001
-pub fn stamp_residency(
-    timeline: &ResidencyTimeline,
-    sale_date: Date,
-) -> Option<StateCode> {
+pub fn stamp_residency(timeline: &ResidencyTimeline, sale_date: Date) -> Option<StateCode> {
     timeline.residency_on(sale_date)
 }
 

@@ -14,9 +14,7 @@
 
 use pt_core::{Cents, Date, MicroShares, Seq, MONEY_CAP, SHARE_SCALE};
 
-use ledger_core::{
-    validate, LedgerError, LedgerEvent, LedgerEventKind, LotRef,
-};
+use ledger_core::{validate, LedgerError, LedgerEvent, LedgerEventKind, LotRef};
 
 // ---------------------------------------------------------------------------
 // Event constructors. Keep them total and explicit so each test reads as a
@@ -475,7 +473,16 @@ fn err_008_fifo_cannot_cover_sale_qty() {
         5000,
         "fidelity",
     )];
-    let candidate = sell("s1", 2, 101, "AMZN", 5 * ONE_SHARE, 6000, vec![], "fidelity");
+    let candidate = sell(
+        "s1",
+        2,
+        101,
+        "AMZN",
+        5 * ONE_SHARE,
+        6000,
+        vec![],
+        "fidelity",
+    );
 
     assert_eq!(
         validate(&accepted, &candidate),

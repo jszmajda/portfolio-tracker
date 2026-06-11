@@ -522,9 +522,7 @@ pub fn resolve_state(ctx: &TaxContext, accrues_to_state: &Option<StateCode>) -> 
         // flagged. Absent a default, the state portion is left unresolved as the
         // (typically NoBracketsAvailable) default code "" — flagged either way.
         _ => StateResolution {
-            jurisdiction: Jurisdiction::State(
-                ctx.residency_default.clone().unwrap_or_default(),
-            ),
+            jurisdiction: Jurisdiction::State(ctx.residency_default.clone().unwrap_or_default()),
             fell_back_to_residency: true,
         },
     }
@@ -660,9 +658,7 @@ fn computed_accruals(gains: &[RealizedGain], ctx: &TaxContext) -> Vec<ComputedAc
             t_j(&ctx.federal, before.st, before.lt),
             t_j(&ctx.federal, after.st, after.lt),
         ) {
-            (Some(tb), Some(ta)) => {
-                Some(kernel::marginal_increment(tb, ta, gain.max(0)) as i64)
-            }
+            (Some(tb), Some(ta)) => Some(kernel::marginal_increment(tb, ta, gain.max(0)) as i64),
             _ => None,
         };
         out.push(ComputedAccrual {
@@ -754,7 +750,10 @@ fn fold_lifecycle(
     let mut map: BTreeMap<AccrualKey, Lifecycle> = BTreeMap::new();
     for e in ordered {
         match &e.kind {
-            TaxEventKind::Allocate { accrual_key, account_label } => {
+            TaxEventKind::Allocate {
+                accrual_key,
+                account_label,
+            } => {
                 if !real_keys.contains(accrual_key) {
                     continue; // orphan → no-op
                 }
@@ -764,7 +763,11 @@ fn fold_lifecycle(
                     account_label: account_label.clone(),
                 });
             }
-            TaxEventKind::Move { accrual_key, amount_cents, date } => {
+            TaxEventKind::Move {
+                accrual_key,
+                amount_cents,
+                date,
+            } => {
                 if !real_keys.contains(accrual_key) {
                     continue;
                 }
@@ -777,7 +780,13 @@ fn fold_lifecycle(
                     date: *date,
                 });
             }
-            TaxEventKind::Pay { amount_cents, date, period, covers, .. } => {
+            TaxEventKind::Pay {
+                amount_cents,
+                date,
+                period,
+                covers,
+                ..
+            } => {
                 for key in covers {
                     if !real_keys.contains(key) {
                         continue;
@@ -792,7 +801,11 @@ fn fold_lifecycle(
                     });
                 }
             }
-            TaxEventKind::AmountOverride { accrual_key, applied_amount_cents, .. } => {
+            TaxEventKind::AmountOverride {
+                accrual_key,
+                applied_amount_cents,
+                ..
+            } => {
                 if !real_keys.contains(accrual_key) {
                     continue;
                 }
@@ -878,8 +891,7 @@ pub fn compute_accruals(
         // (the migration figure reconciles the year). Kept DISTINCT from the
         // de-minimis flag (a genuinely tiny accrual) so the two exclusions are
         // independently observable. (TAX-ACCRUAL-007)
-        let superseded =
-            migrations.contains_key(&(c.key.jurisdiction.clone(), c.key.tax_year));
+        let superseded = migrations.contains_key(&(c.key.jurisdiction.clone(), c.key.tax_year));
         // De-minimis: strictly `|applied| < threshold` (auto-settled). (TAX-ACCRUAL-005)
         let dm = applied_cents
             .map(|a| a.0.abs() < de_minimis)
@@ -956,7 +968,12 @@ fn real_key_set(
         .map(|c| c.key.clone())
         .collect();
     for e in events {
-        if let TaxEventKind::SeedMigration { jurisdiction, tax_year, .. } = &e.kind {
+        if let TaxEventKind::SeedMigration {
+            jurisdiction,
+            tax_year,
+            ..
+        } = &e.kind
+        {
             keys.insert(AccrualKey {
                 sale_id: String::new(),
                 lot_id: String::new(),
@@ -1079,7 +1096,10 @@ fn replay_states(
     gains: &[RealizedGain],
     accepted: &[TaxEvent],
     ctx: &TaxContext,
-) -> (BTreeMap<AccrualKey, AccrualState>, std::collections::BTreeSet<AccrualKey>) {
+) -> (
+    BTreeMap<AccrualKey, AccrualState>,
+    std::collections::BTreeSet<AccrualKey>,
+) {
     let computed = computed_accruals(gains, ctx);
     let mut real_keys: std::collections::BTreeSet<AccrualKey> =
         computed.iter().map(|c| c.key.clone()).collect();
@@ -1120,12 +1140,10 @@ pub fn validate_event(
     match &candidate.kind {
         // Move requires the accrual be Allocated. (TAX-ERR-002) An orphan key
         // (no real accrual) is also "not Allocated" → rejected before mutation.
-        TaxEventKind::Move { accrual_key, .. } => {
-            match states.get(accrual_key) {
-                Some(AccrualState::Allocated { .. }) => Ok(()),
-                _ => Err(TaxError::MoveOnUnallocated),
-            }
-        }
+        TaxEventKind::Move { accrual_key, .. } => match states.get(accrual_key) {
+            Some(AccrualState::Allocated { .. }) => Ok(()),
+            _ => Err(TaxError::MoveOnUnallocated),
+        },
         // Pay requires every covered accrual be Moved and not already Paid, and
         // every covered key match the Pay's jurisdiction and tax_year.
         // (TAX-ERR-003/004)
@@ -1224,14 +1242,24 @@ pub fn reserves(gains: &[RealizedGain], events: &[TaxEvent], ctx: &TaxContext) -
         std::collections::BTreeSet::new();
     for e in events {
         match &e.kind {
-            TaxEventKind::Move { accrual_key, amount_cents, .. } => {
+            TaxEventKind::Move {
+                accrual_key,
+                amount_cents,
+                ..
+            } => {
                 let key = (accrual_key.jurisdiction.clone(), accrual_key.tax_year);
                 *balances.entry(key.clone()).or_insert(0) += amount_cents.0;
                 if !real_keys.contains(accrual_key) {
                     backless.insert(key);
                 }
             }
-            TaxEventKind::Pay { jurisdiction, tax_year, amount_cents, covers, .. } => {
+            TaxEventKind::Pay {
+                jurisdiction,
+                tax_year,
+                amount_cents,
+                covers,
+                ..
+            } => {
                 let key = (jurisdiction.clone(), *tax_year);
                 *balances.entry(key.clone()).or_insert(0) -= amount_cents.0;
                 if covers.iter().any(|k| !real_keys.contains(k)) {
@@ -1246,8 +1274,7 @@ pub fn reserves(gains: &[RealizedGain], events: &[TaxEvent], ctx: &TaxContext) -
         .into_iter()
         .map(|((jurisdiction, tax_year), balance)| {
             let bracket_state = bracket_state_for(ctx, &jurisdiction);
-            let has_backless_entry =
-                backless.contains(&(jurisdiction.clone(), tax_year));
+            let has_backless_entry = backless.contains(&(jurisdiction.clone(), tax_year));
             Reserve {
                 jurisdiction,
                 tax_year,
@@ -1382,9 +1409,8 @@ pub fn unrealized_estimate(
         Some(Cents(bounded as i64))
     };
 
-    let effective_rate_ppm = estimated_tax.map(|tax| {
-        config::Ppm(kernel::effective_rate_ppm(tax.0 as i128, pretax) as i64)
-    });
+    let effective_rate_ppm = estimated_tax
+        .map(|tax| config::Ppm(kernel::effective_rate_ppm(tax.0 as i128, pretax) as i64));
 
     UnrealizedEstimate {
         symbol: symbol.clone(),
@@ -1422,10 +1448,10 @@ fn most_degraded(a: BracketState, b: BracketState) -> BracketState {
 pub fn quarter_of(sale_date: Date) -> Quarter {
     let (_, m, _) = civil_from_days(sale_date.0);
     match m {
-        1..=3 => Quarter::Q1,  // Jan 1 – Mar 31
-        4..=5 => Quarter::Q2,  // Apr 1 – May 31
-        6..=8 => Quarter::Q3,  // Jun 1 – Aug 31
-        _ => Quarter::Q4,      // Sep 1 – Dec 31
+        1..=3 => Quarter::Q1, // Jan 1 – Mar 31
+        4..=5 => Quarter::Q2, // Apr 1 – May 31
+        6..=8 => Quarter::Q3, // Jun 1 – Aug 31
+        _ => Quarter::Q4,     // Sep 1 – Dec 31
     }
 }
 
@@ -1469,9 +1495,7 @@ pub fn quarterly_report(
 
     for a in &accruals {
         // Migration accruals (no backing gain) are not a quarterly-period figure.
-        let Some(sale_date) =
-            sale_dates.get(&(a.key.sale_id.clone(), a.key.lot_id.clone()))
-        else {
+        let Some(sale_date) = sale_dates.get(&(a.key.sale_id.clone(), a.key.lot_id.clone())) else {
             continue;
         };
         let period = quarter_of(*sale_date);
@@ -1558,15 +1582,22 @@ pub fn annual_report(
     let mut paid: BTreeMap<(Jurisdiction, TaxYear), i64> = BTreeMap::new();
     for e in events {
         match &e.kind {
-            TaxEventKind::Move { accrual_key, amount_cents, .. } => {
+            TaxEventKind::Move {
+                accrual_key,
+                amount_cents,
+                ..
+            } => {
                 *moved
                     .entry((accrual_key.jurisdiction.clone(), accrual_key.tax_year))
                     .or_insert(0) += amount_cents.0;
             }
-            TaxEventKind::Pay { jurisdiction, tax_year, amount_cents, .. } => {
-                *paid
-                    .entry((jurisdiction.clone(), *tax_year))
-                    .or_insert(0) += amount_cents.0;
+            TaxEventKind::Pay {
+                jurisdiction,
+                tax_year,
+                amount_cents,
+                ..
+            } => {
+                *paid.entry((jurisdiction.clone(), *tax_year)).or_insert(0) += amount_cents.0;
             }
             _ => {}
         }

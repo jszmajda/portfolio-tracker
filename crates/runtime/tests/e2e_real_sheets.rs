@@ -50,7 +50,9 @@ fn e2e_config() -> Option<(String, String)> {
     if std::env::var("PT_E2E").ok().as_deref() != Some("1") {
         return None;
     }
-    let wb = std::env::var("PT_WORKBOOK_ID").ok().filter(|s| !s.is_empty())?;
+    let wb = std::env::var("PT_WORKBOOK_ID")
+        .ok()
+        .filter(|s| !s.is_empty())?;
     let creds = std::env::var("GOOGLE_APPLICATION_CREDENTIALS")
         .ok()
         .filter(|s| !s.is_empty())?;
@@ -72,7 +74,14 @@ const FAMILY_PREFIX: &str = "pt_e2e_";
 // Two opens so the replayed Snapshot has two priced positions to project + value.
 // ---------------------------------------------------------------------------
 
-fn buy(seq: u64, date: i32, lot: &str, symbol: &str, qty_micro: i64, unit_cents: i64) -> LedgerEvent {
+fn buy(
+    seq: u64,
+    date: i32,
+    lot: &str,
+    symbol: &str,
+    qty_micro: i64,
+    unit_cents: i64,
+) -> LedgerEvent {
     LedgerEvent {
         id: format!("pt-e2e-{seq}"),
         seq: Seq(seq),
@@ -110,8 +119,10 @@ fn real_sheets_round_trip_reconciles() {
     // Best-effort sweep of any stale prior-run tabs (a crashed earlier run), then
     // create THIS run's dedicated tabs. RAII-ish: we delete in a guard at the end.
     sweep_stale_tabs(&api);
-    api.ensure_sheet(&ledger_tab).expect("ensure the dedicated test ledger tab");
-    api.ensure_sheet(&positions_tab).expect("ensure the dedicated test positions tab");
+    api.ensure_sheet(&ledger_tab)
+        .expect("ensure the dedicated test ledger tab");
+    api.ensure_sheet(&positions_tab)
+        .expect("ensure the dedicated test positions tab");
 
     // Run the body, ALWAYS cleaning up the tabs afterward (even on a panic), so a
     // re-run is safe regardless of outcome.
@@ -157,7 +168,11 @@ fn round_trip(api: &GoogleSheetsApi, ledger_tab: &str, positions_tab: &str) {
     let grid = api
         .read_range(&format!("'{ledger_tab}'!A1:Z"))
         .expect("read the ledger tab back");
-    assert!(grid.len() >= 3, "header + two appended rows came back, got {}", grid.len());
+    assert!(
+        grid.len() >= 3,
+        "header + two appended rows came back, got {}",
+        grid.len()
+    );
     let mut loaded: Vec<LedgerEvent> = Vec::new();
     for cells in grid.iter().skip(1) {
         if cells.iter().all(|c| c.is_empty()) {
@@ -180,18 +195,23 @@ fn round_trip(api: &GoogleSheetsApi, ledger_tab: &str, positions_tab: &str) {
     let aliases = config::AliasMap::default();
     let effective_rates: BTreeMap<String, config::Ppm> = BTreeMap::new();
     let structural = ledger_core::replay(&loaded, &BTreeMap::new());
-    assert_eq!(structural.positions.len(), 2, "two positions replayed (AMZN + GOOG)");
+    assert_eq!(
+        structural.positions.len(),
+        2,
+        "two positions replayed (AMZN + GOOG)"
+    );
     assert_eq!(
         structural.positions["AMZN"].total_qty,
         MicroShares(3_000_000),
         "the AMZN open round-tripped to 3 shares"
     );
 
-    let positions_view =
-        sheets_view::render_positions(&structural, &effective_rates, &aliases)
-            .expect("project the Positions view tab");
-    let header_cells: Vec<String> =
-        sheets_view::POSITIONS_HEADER.iter().map(|h| h.to_string()).collect();
+    let positions_view = sheets_view::render_positions(&structural, &effective_rates, &aliases)
+        .expect("project the Positions view tab");
+    let header_cells: Vec<String> = sheets_view::POSITIONS_HEADER
+        .iter()
+        .map(|h| h.to_string())
+        .collect();
     api.update_range(&format!("'{positions_tab}'!A1"), &vec![header_cells])
         .expect("write the positions header");
     let data_grid: Vec<Vec<String>> = positions_view
@@ -214,7 +234,11 @@ fn round_trip(api: &GoogleSheetsApi, ledger_tab: &str, positions_tab: &str) {
         "both symbols' GOOGLEFINANCE prices settled to live marks: got {recovered:?}"
     );
     for (sym, c) in &recovered {
-        assert!(c.0 > 0, "{sym} settled to a positive live price ({} cents)", c.0);
+        assert!(
+            c.0 > 0,
+            "{sym} settled to a positive live price ({} cents)",
+            c.0
+        );
     }
 
     // 5. REPLAY again WITH the live recovered marks so the Snapshot is valued at the
@@ -227,7 +251,14 @@ fn round_trip(api: &GoogleSheetsApi, ledger_tab: &str, positions_tab: &str) {
     let estimates: BTreeMap<String, tax::UnrealizedEstimate> = BTreeMap::new();
     let key = TradingDayKey(Date(19_180));
     let priced: PricedMarks = marks_priced(&recovered);
-    let point = build_series_point(&snapshot, &priced, &estimates, key, 1_700_000_000, Date(20_000));
+    let point = build_series_point(
+        &snapshot,
+        &priced,
+        &estimates,
+        key,
+        1_700_000_000,
+        Date(20_000),
+    );
 
     // Independent recomputation from the round-tripped live marks + the replayed
     // shares: value = scale(mark_cents × qty_micro) (the split-neutral per-symbol
@@ -238,7 +269,9 @@ fn round_trip(api: &GoogleSheetsApi, ledger_tab: &str, positions_tab: &str) {
         if pos.total_qty.0 == 0 {
             continue;
         }
-        let mark = recovered.get(sym).expect("every priced position recovered a live mark");
+        let mark = recovered
+            .get(sym)
+            .expect("every priced position recovered a live mark");
         let value = pt_core::scale((mark.0 as i128) * (pos.total_qty.0 as i128)) as i64;
         expected_total += value;
     }
@@ -277,7 +310,10 @@ fn marks_priced(marks: &BTreeMap<String, Cents>) -> PricedMarks {
         .map(|(s, c)| {
             (
                 s.clone(),
-                PricedMark { price_cents: *c, quote_epoch: Date(19_180) },
+                PricedMark {
+                    price_cents: *c,
+                    quote_epoch: Date(19_180),
+                },
             )
         })
         .collect()
@@ -312,7 +348,11 @@ fn summary_inputs(
 /// (SHEET-MARK-001/003). Column 0 is the Symbol; a still-`Loading...`/`#N/A` cell
 /// is retried; a numeric cell is folded to `Cents` via the project's one rounding
 /// rule (`sheets_view::price_to_cents`). Reads run through the REAL client.
-fn settle_marks(api: &GoogleSheetsApi, positions_tab: &str, symbols: &[&str]) -> BTreeMap<String, Cents> {
+fn settle_marks(
+    api: &GoogleSheetsApi,
+    positions_tab: &str,
+    symbols: &[&str],
+) -> BTreeMap<String, Cents> {
     const SYMBOL_COL: usize = 0;
     const PRICE_COL: usize = 4;
     const MAX_POLLS: u32 = 12;
@@ -332,7 +372,9 @@ fn settle_marks(api: &GoogleSheetsApi, positions_tab: &str, symbols: &[&str]) ->
             if out.contains_key(sym) {
                 continue;
             }
-            let Some(price) = row.get(PRICE_COL).map(|s| s.trim()) else { continue };
+            let Some(price) = row.get(PRICE_COL).map(|s| s.trim()) else {
+                continue;
+            };
             // Skip the transient states GOOGLEFINANCE returns while recalculating.
             if price.is_empty()
                 || price.eq_ignore_ascii_case("Loading...")
@@ -340,7 +382,11 @@ fn settle_marks(api: &GoogleSheetsApi, positions_tab: &str, symbols: &[&str]) ->
             {
                 continue;
             }
-            if let Ok(usd) = price.trim_start_matches('$').replace(',', "").parse::<f64>() {
+            if let Ok(usd) = price
+                .trim_start_matches('$')
+                .replace(',', "")
+                .parse::<f64>()
+            {
                 if let Ok(cents) = sheets_view::price_to_cents(usd) {
                     out.insert(sym.clone(), cents);
                 }

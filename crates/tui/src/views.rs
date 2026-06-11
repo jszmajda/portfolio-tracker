@@ -222,8 +222,15 @@ impl FilterHeader {
             None => String::new(),
         };
         let scope = self.scope.breadcrumb();
-        let scope_prefix = if scope.is_empty() { String::new() } else { format!("{scope} ") };
-        format!("{scope_prefix}showing {} of {}{share_seg}", self.shown, self.total)
+        let scope_prefix = if scope.is_empty() {
+            String::new()
+        } else {
+            format!("{scope} ")
+        };
+        format!(
+            "{scope_prefix}showing {} of {}{share_seg}",
+            self.shown, self.total
+        )
     }
 }
 
@@ -349,7 +356,10 @@ pub fn composition_caveat(comp: &Composition) -> CompositionCaveat {
 /// caveat, and the filter-state header. `views` filter is **visibility-only**:
 /// totals + share % stay over the whole priced portfolio; the header states the
 /// subset. (TUI-VIEW-POS-001/002/003, TUI-VIEW-NAV-001/002)
-pub fn positions_rows(view: &ViewState, nav: &NavState) -> (Vec<PositionRow>, CompositionCaveat, FilterHeader) {
+pub fn positions_rows(
+    view: &ViewState,
+    nav: &NavState,
+) -> (Vec<PositionRow>, CompositionCaveat, FilterHeader) {
     let comp = composition(view);
     let caveat = composition_caveat(&comp);
     let day_deltas = per_symbol_day_deltas(view);
@@ -429,7 +439,10 @@ pub fn positions_rows(view: &ViewState, nav: &NavState) -> (Vec<PositionRow>, Co
                 day_delta: day_change.and_then(|d| d.delta_value_cents),
                 day_delta_ppm: day_change.and_then(|d| d.delta_pct_ppm).map(|p| p.0),
                 share_ppm: r.share_ppm.map(|p| p.0),
-                sparkline: trends.get(&r.label).map(|(s, _)| s.clone()).unwrap_or_default(),
+                sparkline: trends
+                    .get(&r.label)
+                    .map(|(s, _)| s.clone())
+                    .unwrap_or_default(),
                 sparkline_role: trends
                     .get(&r.label)
                     .map(|(_, role)| *role)
@@ -489,10 +502,14 @@ fn position_visible(row: &PositionRow, filter: &Filter, scope: &Scope, grouping:
     match (grouping, filter) {
         (_, Filter::None) => true,
         // By symbol: the row label is a symbol — only a symbol filter narrows it.
-        (Grouping::BySymbol, Filter::Symbol(s)) => row.label.to_uppercase().contains(&s.to_uppercase()),
+        (Grouping::BySymbol, Filter::Symbol(s)) => {
+            row.label.to_uppercase().contains(&s.to_uppercase())
+        }
         // By platform: the row label is a platform — only a platform filter narrows
         // it; the whole-group subtotal stays whole either way.
-        (Grouping::ByPlatform, Filter::Platform(p)) => row.label.to_uppercase().contains(&p.to_uppercase()),
+        (Grouping::ByPlatform, Filter::Platform(p)) => {
+            row.label.to_uppercase().contains(&p.to_uppercase())
+        }
         // Any facet inapplicable to the active pivot keeps the group visible (the
         // subtotal stays whole rather than rebasing or garbage-matching).
         _ => true,
@@ -759,9 +776,7 @@ impl HistoryState {
                 "no history yet — captures begin on the first priced run".to_string()
             }
             HistoryState::SinglePoint => "single point — no trend yet".to_string(),
-            HistoryState::AllIncomplete => {
-                "all captures incomplete — chart suppressed".to_string()
-            }
+            HistoryState::AllIncomplete => "all captures incomplete — chart suppressed".to_string(),
         }
     }
 }
@@ -813,7 +828,11 @@ pub fn history_view(view: &ViewState, _nav: &NavState) -> HistoryView {
         theme::sparkline(&complete_points)
     };
 
-    HistoryView { cells, sparkline, state }
+    HistoryView {
+        cells,
+        sparkline,
+        state,
+    }
 }
 
 // ===========================================================================
@@ -853,7 +872,10 @@ pub const TAX_PROVENANCE: &str =
 /// Whether an accrual is orphaned (its sale was reversed — `TAX-VERIF-007`). An
 /// orphan is flagged via the reserve's `has_backless_entry`, but at the per-accrual
 /// level we detect it as: the accrual key appears in `tax`'s orphan warnings.
-fn accrual_stepper(acc: &Accrual, orphans: &std::collections::BTreeSet<AccrualKey>) -> StepperState {
+fn accrual_stepper(
+    acc: &Accrual,
+    orphans: &std::collections::BTreeSet<AccrualKey>,
+) -> StepperState {
     if orphans.contains(&acc.key) {
         return StepperState::Orphaned;
     }
@@ -871,7 +893,10 @@ fn accrual_stepper(acc: &Accrual, orphans: &std::collections::BTreeSet<AccrualKe
 
 /// Render the Tax & Reserves accrual rows grouped by `(jurisdiction, tax_year)`,
 /// with the lifecycle stepper, plus the reserve balance lines. (TUI-VIEW-TAX-001)
-pub fn tax_rows(view: &ViewState, nav: &NavState) -> (Vec<AccrualRow>, Vec<ReserveLine>, FilterHeader) {
+pub fn tax_rows(
+    view: &ViewState,
+    nav: &NavState,
+) -> (Vec<AccrualRow>, Vec<ReserveLine>, FilterHeader) {
     let orphans = orphan_keys(view);
     let mut all: Vec<AccrualRow> = view
         .accruals
@@ -890,7 +915,12 @@ pub fn tax_rows(view: &ViewState, nav: &NavState) -> (Vec<AccrualRow>, Vec<Reser
         .collect();
     // Group ordering: by (jurisdiction, tax_year), then sale/lot id.
     all.sort_by(|a, b| {
-        (a.key.jurisdiction.clone(), a.key.tax_year, a.key.sale_id.clone(), a.key.lot_id.clone())
+        (
+            a.key.jurisdiction.clone(),
+            a.key.tax_year,
+            a.key.sale_id.clone(),
+            a.key.lot_id.clone(),
+        )
             .cmp(&(
                 b.key.jurisdiction.clone(),
                 b.key.tax_year,
@@ -955,7 +985,10 @@ pub fn reserve_lines(view: &ViewState) -> Vec<ReserveLine> {
 /// The orphan accrual keys (sales reversed after Move/Pay). Computed via `tax`'s
 /// `compute_accruals_with_warnings`. (TUI-VIEW-TAX-001, TAX-VERIF-007)
 fn orphan_keys(view: &ViewState) -> std::collections::BTreeSet<AccrualKey> {
-    view.orphan_warnings.iter().map(|w| w.accrual_key.clone()).collect()
+    view.orphan_warnings
+        .iter()
+        .map(|w| w.accrual_key.clone())
+        .collect()
 }
 
 // ===========================================================================
@@ -1049,9 +1082,7 @@ impl EmptyState {
             EmptyState::NoPositions => {
                 "no positions yet — add activity in Entry, or run import".to_string()
             }
-            EmptyState::NoOpenLots => {
-                "no open lots — every lot has been fully sold".to_string()
-            }
+            EmptyState::NoOpenLots => "no open lots — every lot has been fully sold".to_string(),
             EmptyState::NoAccruals => {
                 "no tax accruals yet — they appear when you record a sale".to_string()
             }
@@ -1112,10 +1143,26 @@ pub fn empty_state(
 /// (TUI-VIEW-NAV-004)
 pub fn screen_identities(view: &ViewState, nav: &NavState) -> Vec<RowIdentity> {
     match nav.screen {
-        Screen::Positions => positions_rows(view, nav).0.iter().map(|r| r.identity.clone()).collect(),
-        Screen::OpenLots => lot_rows(view, nav).0.iter().map(|r| r.identity.clone()).collect(),
-        Screen::TaxReserves => tax_rows(view, nav).0.iter().map(|r| r.identity.clone()).collect(),
-        Screen::Realized => realized_rows(view, nav).0.iter().map(|r| r.identity.clone()).collect(),
+        Screen::Positions => positions_rows(view, nav)
+            .0
+            .iter()
+            .map(|r| r.identity.clone())
+            .collect(),
+        Screen::OpenLots => lot_rows(view, nav)
+            .0
+            .iter()
+            .map(|r| r.identity.clone())
+            .collect(),
+        Screen::TaxReserves => tax_rows(view, nav)
+            .0
+            .iter()
+            .map(|r| r.identity.clone())
+            .collect(),
+        Screen::Realized => realized_rows(view, nav)
+            .0
+            .iter()
+            .map(|r| r.identity.clone())
+            .collect(),
         // History has no per-row identity focus (it is a chart + table of days).
         Screen::History => Vec::new(),
     }
@@ -1155,9 +1202,7 @@ pub fn drill_target(from: &Screen, identity: &RowIdentity) -> Option<(Screen, Sc
         (Screen::Positions, RowIdentity::Symbol(s)) => {
             Some((Screen::OpenLots, Scope::Symbol(s.clone())))
         }
-        (Screen::OpenLots, RowIdentity::Lot(l)) => {
-            Some((Screen::Realized, Scope::Lot(l.clone())))
-        }
+        (Screen::OpenLots, RowIdentity::Lot(l)) => Some((Screen::Realized, Scope::Lot(l.clone()))),
         (Screen::TaxReserves, RowIdentity::Accrual(k)) => {
             Some((Screen::Realized, Scope::Accrual(k.clone())))
         }
@@ -1177,7 +1222,12 @@ pub fn drill_target(from: &Screen, identity: &RowIdentity) -> Option<(Screen, Sc
 pub fn scope_resolves(scope: &Scope, view: &ViewState) -> bool {
     match scope {
         Scope::All => true,
-        Scope::Symbol(s) => view.snapshot.positions.get(s).map(|p| p.total_qty.0 != 0).unwrap_or(false),
+        Scope::Symbol(s) => view
+            .snapshot
+            .positions
+            .get(s)
+            .map(|p| p.total_qty.0 != 0)
+            .unwrap_or(false),
         Scope::Lot(l) => view.snapshot.open_lots.iter().any(|ol| &ol.lot.id == l),
         Scope::Accrual(k) => view.accruals.iter().any(|a| &a.key == k),
     }

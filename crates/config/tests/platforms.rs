@@ -17,7 +17,9 @@ use config::{AliasMap, ConfigStore, InMemoryConfig, PlatformList};
 fn platform_list_suggests_without_constraining_entry() {
     let mut store = InMemoryConfig::cold_start();
     let list = PlatformList::new(vec!["schwab".to_string(), "fidelity".to_string()]);
-    store.put_platforms(list, &pt_core::NoopLock::new()).expect("platforms write");
+    store
+        .put_platforms(list, &pt_core::NoopLock::new())
+        .expect("platforms write");
 
     let data = store.load().expect("load");
     // The list offers suggestions...
@@ -55,7 +57,9 @@ fn alias_map_round_trips_through_store() {
     let mut store = InMemoryConfig::cold_start();
     let mut m: BTreeMap<String, String> = BTreeMap::new();
     m.insert("GOOG".to_string(), "NASDAQ:GOOG".to_string());
-    store.put_aliases(AliasMap::new(m), &pt_core::NoopLock::new()).expect("aliases write");
+    store
+        .put_aliases(AliasMap::new(m), &pt_core::NoopLock::new())
+        .expect("aliases write");
 
     let data = store.load().expect("load");
     assert_eq!(data.aliases.resolve("GOOG"), "NASDAQ:GOOG".to_string());

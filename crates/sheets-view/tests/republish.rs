@@ -6,9 +6,7 @@ mod common;
 use std::collections::BTreeMap;
 
 use sheets_view::testkit::{pass, InMemorySheetsView, SeamCall};
-use sheets_view::{
-    Cell, PriceReading, Publisher, SettleConfig, ViewTab, POSITIONS_TAB,
-};
+use sheets_view::{Cell, PriceReading, Publisher, SettleConfig, ViewTab, POSITIONS_TAB};
 
 use pt_core::{Cents, Date, NoopLock};
 
@@ -33,7 +31,10 @@ fn republish_then_settle_is_one_serialized_loop_settle_after_write() {
     let client = InMemorySheetsView::new();
     client.set_prices(pass(&[(
         "AMZN",
-        PriceReading::Numeric { price_usd: 200.0, quote_date: Date(19_150) },
+        PriceReading::Numeric {
+            price_usd: 200.0,
+            quote_date: Date(19_150),
+        },
     )]));
     let mut pub_ = Publisher::new(client);
 
@@ -52,7 +53,10 @@ fn republish_then_settle_is_one_serialized_loop_settle_after_write() {
     // The publish landed and the settle pass ran AFTER it (one serialized loop).
     assert!(outcome.published);
     assert!(pub_.client().published(POSITIONS_TAB).is_some());
-    assert_eq!(marks.marks.get("AMZN").map(|m| m.price_cents), Some(Cents(200_00)));
+    assert_eq!(
+        marks.marks.get("AMZN").map(|m| m.price_cents),
+        Some(Cents(200_00))
+    );
     // The settle pass read the price cells (a separate pass after the write).
     assert!(pub_.client().read_count() >= 1);
 }
@@ -68,7 +72,13 @@ fn every_settle_read_happens_after_all_writes_in_a_cycle() {
     // Two polls: transient first, then numeric — forces > 1 settle read.
     client.set_price_script(vec![
         pass(&[("AMZN", PriceReading::Transient)]),
-        pass(&[("AMZN", PriceReading::Numeric { price_usd: 200.0, quote_date: Date(19_150) })]),
+        pass(&[(
+            "AMZN",
+            PriceReading::Numeric {
+                price_usd: 200.0,
+                quote_date: Date(19_150),
+            },
+        )]),
     ]);
     let mut pub_ = Publisher::new(client);
 
@@ -88,7 +98,10 @@ fn every_settle_read_happens_after_all_writes_in_a_cycle() {
             "2022-09-01",
         )
         .unwrap();
-    assert_eq!(marks.marks.get("AMZN").map(|m| m.price_cents), Some(Cents(200_00)));
+    assert_eq!(
+        marks.marks.get("AMZN").map(|m| m.price_cents),
+        Some(Cents(200_00))
+    );
 
     let log = pub_.client().call_log();
     // There are both writes and reads, and more than one read (it polled to settle).
@@ -120,10 +133,16 @@ fn republish_is_atomic_batchupdate_with_tail_truncate() {
     let mut pub_ = Publisher::new(InMemorySheetsView::new());
 
     // First publish: 3 rows.
-    let t1 = tab(POSITIONS_TAB, rows(&[("AMZN", "3"), ("GOOG", "2"), ("MSFT", "1")]));
+    let t1 = tab(
+        POSITIONS_TAB,
+        rows(&[("AMZN", "3"), ("GOOG", "2"), ("MSFT", "1")]),
+    );
     let o1 = pub_.republish(&[t1], &NoopLock::new(), "2022-09-01");
     assert!(o1.published);
-    assert_eq!(pub_.client().published(POSITIONS_TAB).unwrap().rows.len(), 3);
+    assert_eq!(
+        pub_.client().published(POSITIONS_TAB).unwrap().rows.len(),
+        3
+    );
 
     // Republish with FEWER rows (a sold-out symbol): the tail is truncated to the
     // exact new row count — no leftover stale rows, no half-written window.
@@ -151,10 +170,16 @@ fn failed_republish_marks_stale_writes_banner_and_retries() {
     // unaffected — there is no store interaction here at all).
     assert!(!outcome.published);
     assert!(outcome.stale_tabs.contains(&POSITIONS_TAB.to_string()));
-    assert!(pub_.client().published(POSITIONS_TAB).is_none(), "failed publish lands nothing");
+    assert!(
+        pub_.client().published(POSITIONS_TAB).is_none(),
+        "failed publish lands nothing"
+    );
     let banner = pub_.client().banner(POSITIONS_TAB).expect("stale banner");
     assert!(banner.contains("STALE"), "banner: {banner}");
-    assert!(banner.contains("2022-09-01"), "banner carries the last-sync ts: {banner}");
+    assert!(
+        banner.contains("2022-09-01"),
+        "banner carries the last-sync ts: {banner}"
+    );
 
     // Retry on the next sync: the failure clears and the tab publishes, clearing
     // the stale flag.
@@ -209,7 +234,11 @@ fn republish_acquires_the_lock_before_mutating() {
     let outcome = pub_.republish(&[t], &lock, "2022-09-01");
 
     assert!(outcome.published);
-    assert_eq!(lock.acquire_count(), 1, "republish acquires the advisory lock once");
+    assert_eq!(
+        lock.acquire_count(),
+        1,
+        "republish acquires the advisory lock once"
+    );
     assert!(pub_.client().published(POSITIONS_TAB).is_some());
 }
 

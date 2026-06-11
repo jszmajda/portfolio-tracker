@@ -30,10 +30,15 @@ fn a_pending_ledger_event_valid_against_the_refreshed_log_is_accepted_and_hands_
     // A new Buy of a fresh lot is independent of the existing rows — still valid.
     let candidate = buy(2, 19_050, "lot-msft", "MSFT", 1_000_000, 300_00);
 
-    let view = revalidate_ledger(&refreshed, &candidate).expect("still valid against the refreshed log");
+    let view =
+        revalidate_ledger(&refreshed, &candidate).expect("still valid against the refreshed log");
     // The hand-back is the refreshed view itself (same rows), so the writer proceeds
     // against exactly what was re-validated.
-    assert_eq!(view.ledger.len(), 1, "the refreshed view is handed back to the writer");
+    assert_eq!(
+        view.ledger.len(),
+        1,
+        "the refreshed view is handed back to the writer"
+    );
     assert_eq!(view.ledger[0].id, "e1");
 }
 
@@ -80,7 +85,9 @@ fn a_pending_buy_reusing_an_out_of_band_lot_id_is_rejected_against_the_refreshed
 
     match revalidate_ledger(&refreshed, &pending) {
         Err(RevalidateError::Ledger(LedgerError::DuplicateLotId)) => {}
-        other => panic!("a pending Buy reusing an out-of-band lot id must be rejected, got {other:?}"),
+        other => {
+            panic!("a pending Buy reusing an out-of-band lot id must be rejected, got {other:?}")
+        }
     }
 }
 
@@ -92,8 +99,8 @@ fn a_pending_tax_move_conflicting_with_the_refreshed_state_is_rejected() {
     // against the refreshed realized-gains + tax log rejects the Move
     // (MoveOnUnallocated) rather than appending it on stale assumptions.
     // (RUNTIME-REVALIDATE-001)
-    use pt_core::{Cents, Date, Seq};
     use config::{Jurisdiction, TaxYear};
+    use pt_core::{Cents, Date, Seq};
     use tax::{AccrualKey, TaxEvent, TaxEventKind};
 
     let ctx = ctx(2022);

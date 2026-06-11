@@ -60,7 +60,9 @@ struct OwnerSeed {
 fn parse_owner_seed(json: &str, what: &str) -> OwnerSeed {
     let v: serde_json::Value =
         serde_json::from_str(json).unwrap_or_else(|e| panic!("{what}: invalid JSON: {e}"));
-    let obj = v.as_object().unwrap_or_else(|| panic!("{what}: must be a JSON object"));
+    let obj = v
+        .as_object()
+        .unwrap_or_else(|| panic!("{what}: must be a JSON object"));
     let str_field = |name: &str| -> &str {
         obj.get(name)
             .and_then(|x| x.as_str())
@@ -115,7 +117,9 @@ fn parse_owner_seed(json: &str, what: &str) -> OwnerSeed {
 
 fn load_owner_seed(file_name: &str) -> OwnerSeed {
     // Repo root, two levels above this crate's manifest dir.
-    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..").join(file_name);
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .join(file_name);
     let json = std::fs::read_to_string(&path).unwrap_or_else(|e| {
         panic!(
             "{}: {e} — the owner seed file is required (copy owner.local.example.json \
@@ -172,7 +176,11 @@ mod tables {
     }
 
     fn set(pairs: &[(i64, i64)], source_note: &str) -> BracketSet {
-        BracketSet { rows: rows(pairs), last_verified: VERIFIED, source_note: source_note.to_string() }
+        BracketSet {
+            rows: rows(pairs),
+            last_verified: VERIFIED,
+            source_note: source_note.to_string(),
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -578,8 +586,8 @@ mod tables {
 /// owner's state (transcribe it per the runbook, then re-run).
 fn tax_rules_2026(owner: &OwnerSeed) -> TaxRules {
     let (federal_ordinary, federal_long_term, niit) = tables::federal_2026(owner.filing_status);
-    let state_set = tables::state_2026(&owner.residency_state, owner.filing_status)
-        .unwrap_or_else(|| {
+    let state_set =
+        tables::state_2026(&owner.residency_state, owner.filing_status).unwrap_or_else(|| {
             panic!(
                 "no 2026 bracket table transcribed for state `{}` — add it to the library in \
                  this file per docs/runbooks/refresh-tax-brackets.md",
@@ -610,12 +618,14 @@ fn tax_rules_2026(owner: &OwnerSeed) -> TaxRules {
 #[ignore]
 fn seed_2026_tax_rules_into_the_live_workbook() {
     if std::env::var("PT_SEED_TAXRULES").as_deref() != Ok("1") {
-        eprintln!("SKIP: set PT_SEED_TAXRULES=1 (+ PT_WORKBOOK_ID, GOOGLE_APPLICATION_CREDENTIALS)");
+        eprintln!(
+            "SKIP: set PT_SEED_TAXRULES=1 (+ PT_WORKBOOK_ID, GOOGLE_APPLICATION_CREDENTIALS)"
+        );
         return;
     }
     let workbook = std::env::var("PT_WORKBOOK_ID").expect("PT_WORKBOOK_ID");
-    let creds = std::env::var("GOOGLE_APPLICATION_CREDENTIALS")
-        .expect("GOOGLE_APPLICATION_CREDENTIALS");
+    let creds =
+        std::env::var("GOOGLE_APPLICATION_CREDENTIALS").expect("GOOGLE_APPLICATION_CREDENTIALS");
     let owner = load_owner_seed("owner.local.json");
 
     let api = GoogleSheetsApi::from_credentials_file(workbook, &creds).expect("auth");
@@ -626,9 +636,13 @@ fn seed_2026_tax_rules_into_the_live_workbook() {
     let lock = NoopLock::new();
 
     let rules_to_seed = tax_rules_2026(&owner);
-    let expected_state_rows = rules_to_seed.state_ordinary[&owner.residency_state].rows.len();
-    cfg.put_tax_rules(rules_to_seed, &lock).expect("2026 rules validate + persist");
-    cfg.put_de_minimis(DeMinimis(owner.de_minimis_cents), &lock).expect("de-minimis");
+    let expected_state_rows = rules_to_seed.state_ordinary[&owner.residency_state]
+        .rows
+        .len();
+    cfg.put_tax_rules(rules_to_seed, &lock)
+        .expect("2026 rules validate + persist");
+    cfg.put_de_minimis(DeMinimis(owner.de_minimis_cents), &lock)
+        .expect("de-minimis");
     cfg.put_residency(
         ResidencyTimeline::from_entries(vec![ResidencyEntry {
             effective_date: Date(0),
@@ -640,19 +654,29 @@ fn seed_2026_tax_rules_into_the_live_workbook() {
     .expect("residency: founding entry");
     cfg.put_platforms(PlatformList::new(owner.platforms.clone()), &lock)
         .expect("platform suggestions");
-    cfg.put_aliases(AliasMap::new(BTreeMap::new()), &lock).expect("aliases");
+    cfg.put_aliases(AliasMap::new(BTreeMap::new()), &lock)
+        .expect("aliases");
     cfg.put_display_names(owner.display_names.clone(), &lock)
         .expect("display names (the owner seed's symbol→name map)");
 
     // Read back through the same adapter: the rules round-trip.
     let data = cfg.load().expect("load back");
-    let rules = data.rules_by_year.get(&TaxYear(2026)).expect("2026 present");
+    let rules = data
+        .rules_by_year
+        .get(&TaxYear(2026))
+        .expect("2026 present");
     assert_eq!(rules.filing_status, owner.filing_status);
     assert_eq!(rules.federal_ordinary.rows.len(), 7);
     assert_eq!(rules.federal_long_term.rows.len(), 3);
-    assert_eq!(rules.state_ordinary[&owner.residency_state].rows.len(), expected_state_rows);
+    assert_eq!(
+        rules.state_ordinary[&owner.residency_state].rows.len(),
+        expected_state_rows
+    );
     assert_eq!(rules.ordinary_income_cents, owner.ordinary_income_cents);
-    assert_eq!(data.display_names, owner.display_names, "the names round-trip");
+    assert_eq!(
+        data.display_names, owner.display_names,
+        "the names round-trip"
+    );
     eprintln!(
         "SEEDED: 2026 rules (fed 7, LT 3, {} {}) + de-minimis + residency + platforms + {} display names",
         owner.residency_state,
@@ -678,7 +702,8 @@ fn the_owner_seed_display_names_round_trip_through_the_config_adapter() {
         Some(config::Settings::default()),
     );
     let lock = NoopLock::new();
-    cfg.put_display_names(owner.display_names.clone(), &lock).expect("names persist");
+    cfg.put_display_names(owner.display_names.clone(), &lock)
+        .expect("names persist");
     let data = cfg.load().expect("load back");
     assert_eq!(data.display_names, owner.display_names);
     // The example's both-Alphabet share classes and the private holding are covered.
@@ -745,14 +770,20 @@ fn the_library_carries_provenance_and_the_status_distinctions() {
     for &status in &tables::ALL_STATUSES {
         let (ord, lt, _) = tables::federal_2026(status);
         for s in [&ord, &lt] {
-            assert!(!s.source_note.is_empty(), "federal {status:?}: empty source note");
+            assert!(
+                !s.source_note.is_empty(),
+                "federal {status:?}: empty source note"
+            );
             assert_eq!(s.last_verified, tables::VERIFIED);
         }
         assert_eq!(ord.rows.len(), 7, "federal ordinary {status:?}");
         assert_eq!(lt.rows.len(), 3, "federal LT {status:?}");
         for &state in &tables::STATES_2026 {
             let set = tables::state_2026(state, status).unwrap();
-            assert!(!set.source_note.is_empty(), "{state} {status:?}: empty source note");
+            assert!(
+                !set.source_note.is_empty(),
+                "{state} {status:?}: empty source note"
+            );
             assert_eq!(set.last_verified, tables::VERIFIED, "{state} {status:?}");
         }
     }
@@ -762,9 +793,15 @@ fn the_library_carries_provenance_and_the_status_distinctions() {
     let (mfs, mfs_lt, mfs_niit) = tables::federal_2026(F::MarriedFilingSeparately);
     let (single, single_lt, single_niit) = tables::federal_2026(F::Single);
     let (hoh, _, hoh_niit) = tables::federal_2026(F::HeadOfHousehold);
-    assert_eq!(mfs.rows.last().unwrap().lower_threshold_cents.0 * 2, mfj.rows.last().unwrap().lower_threshold_cents.0);
+    assert_eq!(
+        mfs.rows.last().unwrap().lower_threshold_cents.0 * 2,
+        mfj.rows.last().unwrap().lower_threshold_cents.0
+    );
     // LT zero-rate amounts: MFS is half of MFJ; Single tops out at $545,500 vs HoH/MFJ.
-    assert_eq!(mfs_lt.rows[1].lower_threshold_cents.0 * 2, mfj_lt.rows[1].lower_threshold_cents.0);
+    assert_eq!(
+        mfs_lt.rows[1].lower_threshold_cents.0 * 2,
+        mfj_lt.rows[1].lower_threshold_cents.0
+    );
     assert_eq!(single_lt.rows[2].lower_threshold_cents, Cents(54_550_000));
     // NIIT MAGI thresholds: 250k MFJ / 125k MFS / 200k Single+HoH.
     assert_eq!(mfj_niit.magi_threshold_cents, Cents(25_000_000));

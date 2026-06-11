@@ -81,8 +81,7 @@ pub fn run_headless_summary(
         .as_ref()
         .map(|d| pt::wiring::bracket_state_for(d, tax_year))
         .unwrap_or(config::BracketState::NoBracketsAvailable);
-    let aliases =
-        cfg.as_ref().map(|d| d.aliases.clone()).unwrap_or_default();
+    let aliases = cfg.as_ref().map(|d| d.aliases.clone()).unwrap_or_default();
 
     let outcome = run_live_cycle(&boot, &ctx, today_date(), &aliases)?;
 
@@ -221,9 +220,7 @@ fn event_loop(
             let target = f.buffer_mut();
             for y in 0..area.height.min(buf.area.height) {
                 for x in 0..area.width.min(buf.area.width) {
-                    if let (Some(src), Some(dst)) =
-                        (buf.cell((x, y)), target.cell_mut((x, y)))
-                    {
+                    if let (Some(src), Some(dst)) = (buf.cell((x, y)), target.cell_mut((x, y))) {
                         *dst = src.clone();
                     }
                 }
@@ -235,9 +232,7 @@ fn event_loop(
                 if key.kind != KeyEventKind::Press {
                     continue;
                 }
-                if dispatch_key(&mut model, &mut port, key, &mut last_refresh)
-                    == KeyResult::Quit
-                {
+                if dispatch_key(&mut model, &mut port, key, &mut last_refresh) == KeyResult::Quit {
                     break;
                 }
             }
@@ -397,9 +392,14 @@ fn open_flow(model: &mut Model, port: &LivePort, flow: LaunchFlow) {
     match flow {
         LaunchFlow::Buy => model.open_buy(port, id, "", &port.platforms, &port.aliases),
         LaunchFlow::Vest => model.open_vest(port, id, "", &port.platforms, &port.aliases),
-        LaunchFlow::Sell => {
-            model.open_sell(port, id, "", &port.residency, &port.platforms, &port.aliases)
-        }
+        LaunchFlow::Sell => model.open_sell(
+            port,
+            id,
+            "",
+            &port.residency,
+            &port.platforms,
+            &port.aliases,
+        ),
         LaunchFlow::Split => model.open_split("", port.today()),
     }
 }
@@ -424,7 +424,10 @@ fn picker_take_from_digit(model: &Model, digit: i64) -> pt_core::MicroShares {
     let current_whole = model
         .entry_top()
         .and_then(|c| c.picker_ref())
-        .and_then(|p| p.lots.get(model.entry_top().map(|c| c.picker_focus).unwrap_or(0)))
+        .and_then(|p| {
+            p.lots
+                .get(model.entry_top().map(|c| c.picker_focus).unwrap_or(0))
+        })
         .map(|l| l.take.0 / pt_core::SHARE_SCALE)
         .unwrap_or(0);
     pt_core::MicroShares((current_whole * 10 + digit) * pt_core::SHARE_SCALE)
@@ -515,7 +518,11 @@ impl LivePort {
             None => context_for_year(tax_year),
         };
         let (platforms, aliases, residency) = match &cfg {
-            Some(data) => (data.platforms.clone(), data.aliases.clone(), data.residency.clone()),
+            Some(data) => (
+                data.platforms.clone(),
+                data.aliases.clone(),
+                data.residency.clone(),
+            ),
             None => (
                 config::PlatformList::default(),
                 config::AliasMap::default(),
@@ -549,7 +556,10 @@ impl LivePort {
                 tax_year,
                 bracket_state,
                 Connection::Live,
-                Some(pt::wiring::hhmm_in_reporting_tz(now_secs(), &reporting_timezone)),
+                Some(pt::wiring::hhmm_in_reporting_tz(
+                    now_secs(),
+                    &reporting_timezone,
+                )),
                 display_names.clone(),
             ),
             Err(_) => blocked_view(tax_year, IntegrityError::BadCredentials),
@@ -585,7 +595,10 @@ impl RuntimePort for LivePort {
                 Connection::Live,
                 // The refresh wall-clock the status line's `updated HH:MM`
                 // renders. (TUI-VIEW-NAV-013)
-                Some(pt::wiring::hhmm_in_reporting_tz(now_secs(), &self.reporting_timezone)),
+                Some(pt::wiring::hhmm_in_reporting_tz(
+                    now_secs(),
+                    &self.reporting_timezone,
+                )),
                 self.display_names.clone(),
             ),
             // Offline: keep rendering, marked stale (the prior view survives, but

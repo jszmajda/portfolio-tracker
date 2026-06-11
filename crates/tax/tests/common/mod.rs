@@ -11,14 +11,10 @@
 
 use std::collections::BTreeMap;
 
-use config::{
-    BracketRow, BracketSet, BracketState, Jurisdiction, Niit, Ppm, StateCode, TaxYear,
-};
+use config::{BracketRow, BracketSet, BracketState, Jurisdiction, Niit, Ppm, StateCode, TaxYear};
 use ledger_core::{Lot, LotSource, OpenLot, RealizedGain, SaleId, Symbol};
 use pt_core::{Cents, Date, MicroShares, Seq};
-use tax::{
-    AccrualKey, ResolvedJurisdiction, TaxContext, TaxEvent, TaxEventKind,
-};
+use tax::{AccrualKey, ResolvedJurisdiction, TaxContext, TaxEvent, TaxEventKind};
 
 /// Days since 1970-01-01 for civil `(y, m, d)` (proleptic Gregorian) — the same
 /// algorithm `config` and the kernel's date math use.
@@ -90,7 +86,12 @@ pub fn federal(
 }
 
 /// A state `ResolvedJurisdiction` taxing all gains at its ordinary set.
-pub fn state(code: &str, ordinary: BracketSet, income_cents: i64, st: BracketState) -> ResolvedJurisdiction {
+pub fn state(
+    code: &str,
+    ordinary: BracketSet,
+    income_cents: i64,
+    st: BracketState,
+) -> ResolvedJurisdiction {
     ResolvedJurisdiction {
         jurisdiction: Jurisdiction::State(code.to_string()),
         ordinary: Some(ordinary),
@@ -142,7 +143,13 @@ pub fn context(
 pub fn simple_federal_context(tax_year: i32) -> TaxContext {
     context(
         tax_year,
-        federal(flat(200_000), flat(150_000), niit(0, 0), 0, BracketState::Verified),
+        federal(
+            flat(200_000),
+            flat(150_000),
+            niit(0, 0),
+            0,
+            BracketState::Verified,
+        ),
         &[],
         0,
         None,
@@ -313,9 +320,7 @@ pub fn find_accrual<'a>(
     jurisdiction: &Jurisdiction,
 ) -> Option<&'a tax::Accrual> {
     accruals.iter().find(|a| {
-        a.key.sale_id == sale_id
-            && a.key.lot_id == lot_id
-            && a.key.jurisdiction == *jurisdiction
+        a.key.sale_id == sale_id && a.key.lot_id == lot_id && a.key.jurisdiction == *jurisdiction
     })
 }
 

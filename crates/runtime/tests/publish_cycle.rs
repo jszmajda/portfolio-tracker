@@ -39,7 +39,10 @@ fn buy(seq: u64, id: &str, symbol: &str) -> LedgerEvent {
 fn the_publishing_cycle_publishes_all_five_bands_then_settles() {
     // A workbook seeded with one buy but NO view tabs yet (fresh on the view side).
     let sheets = InMemorySheets::new();
-    sheets.push_raw(Tab::Ledger, serde_rows::ledger_to_row(&buy(1, "b1", "AMZN")));
+    sheets.push_raw(
+        Tab::Ledger,
+        serde_rows::ledger_to_row(&buy(1, "b1", "AMZN")),
+    );
     let mut store = Store::new(sheets, store::NoopLock::new(), InMemoryCache::new());
 
     let api = FakeSheetsApi::new();
@@ -68,8 +71,15 @@ fn the_publishing_cycle_publishes_all_five_bands_then_settles() {
     )
     .expect("the publishing cycle runs");
 
-    assert!(published.republish.published, "all bands published: {:?}", published.republish.stale_tabs);
-    assert!(published.outcome.snapshot.positions.contains_key("AMZN"), "the cycle still replays");
+    assert!(
+        published.republish.published,
+        "all bands published: {:?}",
+        published.republish.stale_tabs
+    );
+    assert!(
+        published.outcome.snapshot.positions.contains_key("AMZN"),
+        "the cycle still replays"
+    );
 
     // Every band exists on the workbook with its frozen header and (for
     // Positions) the data row beneath it.
@@ -79,14 +89,23 @@ fn the_publishing_cycle_publishes_all_five_bands_then_settles() {
         (sheets_view::OPEN_LOTS_TAB, sheets_view::OPEN_LOTS_HEADER[0]),
         (sheets_view::REALIZED_TAB, sheets_view::REALIZED_HEADER[0]),
         (sheets_view::TAX_TAB, sheets_view::TAX_HEADER[0]),
-        (sheets_view::TAX_RESERVE_TAB, sheets_view::TAX_RESERVE_HEADER[0]),
+        (
+            sheets_view::TAX_RESERVE_TAB,
+            sheets_view::TAX_RESERVE_HEADER[0],
+        ),
     ] {
         assert!(!api.sheet_missing(tab), "{tab} was bootstrapped");
         let grid = api.rows_at(tab);
-        assert_eq!(grid[0][0], first_col, "{tab} row 1 is its frozen typed header");
+        assert_eq!(
+            grid[0][0], first_col,
+            "{tab} row 1 is its frozen typed header"
+        );
     }
     let positions = api.rows_at(sheets_view::POSITIONS_TAB);
-    assert_eq!(positions[1][0], "AMZN", "the Positions data row landed beneath the header");
+    assert_eq!(
+        positions[1][0], "AMZN",
+        "the Positions data row landed beneath the header"
+    );
     assert!(
         positions[1].iter().any(|c| c.contains("GOOGLEFINANCE")),
         "the live-price oracle formula was published"
@@ -122,6 +141,13 @@ fn an_empty_book_still_publishes_the_empty_bands() {
 
     assert!(published.republish.published);
     let api = publisher.client().api();
-    assert!(!api.sheet_missing(sheets_view::POSITIONS_TAB), "Positions exists, empty");
-    assert_eq!(api.rows_at(sheets_view::POSITIONS_TAB).len(), 1, "header only — no data rows");
+    assert!(
+        !api.sheet_missing(sheets_view::POSITIONS_TAB),
+        "Positions exists, empty"
+    );
+    assert_eq!(
+        api.rows_at(sheets_view::POSITIONS_TAB).len(),
+        1,
+        "header only — no data rows"
+    );
 }

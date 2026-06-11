@@ -95,14 +95,22 @@ where
                 if !policy.may_retry(attempts) {
                     // The budget is exhausted: surface the point as uncaptured/
                     // flagged rather than dropping a non-reconstructable point.
-                    return CaptureOutcome::Uncaptured { key: point.key, attempts };
+                    return CaptureOutcome::Uncaptured {
+                        key: point.key,
+                        attempts,
+                    };
                 }
                 sleep_fn(policy.delay_for(attempts + 1));
             }
             // An integrity flag means the durable series is already corrupt; a retry
             // cannot heal it (recovery is via Sheets version history). Surface
             // uncaptured immediately rather than spin. (RUNTIME-REPORTS-001)
-            Err(_) => return CaptureOutcome::Uncaptured { key: point.key, attempts },
+            Err(_) => {
+                return CaptureOutcome::Uncaptured {
+                    key: point.key,
+                    attempts,
+                }
+            }
         }
     }
 }

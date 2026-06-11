@@ -80,7 +80,11 @@ pub struct Field {
 impl Field {
     /// A clean field with a label + seeded value.
     pub fn new(label: impl Into<String>, value: impl Into<String>) -> Self {
-        Field { label: label.into(), value: value.into(), dirty: false }
+        Field {
+            label: label.into(),
+            value: value.into(),
+            dirty: false,
+        }
     }
 }
 
@@ -259,14 +263,22 @@ impl FormModel {
     /// by inline validation (`TUI-ENTRY-FLOW-001`) and a submit-time disagreement
     /// (`TUI-ENTRY-FLOW-002`). (TUI-ENTRY-FLOW-009)
     pub fn set_error(&mut self, field: usize, err: &InlineError) {
-        self.error = Some(FieldError { field, message: err.text(), advisory: false });
+        self.error = Some(FieldError {
+            field,
+            message: err.text(),
+            advisory: false,
+        });
     }
 
     /// Place a `warn`-role advisory beneath a field (a Move shortfall, a Pay
     /// jurisdiction/year mismatch) — the same single slot, never blocking.
     /// (TUI-ENTRY-TAX-002/003; TUI-ENTRY-FLOW-009)
     pub fn set_advisory(&mut self, field: usize, message: impl Into<String>) {
-        self.error = Some(FieldError { field, message: message.into(), advisory: true });
+        self.error = Some(FieldError {
+            field,
+            message: message.into(),
+            advisory: true,
+        });
     }
 
     /// Clear the inline slot (a clean re-validation). (TUI-ENTRY-FLOW-001)
@@ -376,13 +388,22 @@ pub fn picker_footer(
     let state = picker.state();
     match &state {
         PickerState::NoOpenLots | PickerState::Insufficient { .. } => {
-            lines.push((state.message(&picker.symbol, &picker.platform), theme::Role::Warn));
+            lines.push((
+                state.message(&picker.symbol, &picker.platform),
+                theme::Role::Warn,
+            ));
         }
         PickerState::Complete => {
-            lines.push((state.message(&picker.symbol, &picker.platform), theme::Role::Accent));
+            lines.push((
+                state.message(&picker.symbol, &picker.platform),
+                theme::Role::Accent,
+            ));
         }
         PickerState::UnderAllocated { .. } => {
-            lines.push((state.message(&picker.symbol, &picker.platform), theme::Role::Fg));
+            lines.push((
+                state.message(&picker.symbol, &picker.platform),
+                theme::Role::Fg,
+            ));
         }
     }
 
@@ -406,7 +427,11 @@ pub fn picker_footer(
 pub fn preview_line(p: &crate::entry::GainTaxPreview) -> (String, theme::Role) {
     if p.degraded {
         return (
-            format!("est. gain {0} · est. tax {0}  {1} degraded", theme::GLYPH_DASH, theme::GLYPH_DEGRADED),
+            format!(
+                "est. gain {0} · est. tax {0}  {1} degraded",
+                theme::GLYPH_DASH,
+                theme::GLYPH_DEGRADED
+            ),
             theme::Role::Degraded,
         );
     }
@@ -419,7 +444,10 @@ pub fn preview_line(p: &crate::entry::GainTaxPreview) -> (String, theme::Role) {
         // No tax estimate under cold-start brackets — the convention wording.
         None => theme::estimate_qualifier(config::BracketState::NoBracketsAvailable).marker(),
     };
-    (format!("est. gain {gain} · est. tax {tax}"), theme::Role::Estimate)
+    (
+        format!("est. gain {gain} · est. tax {tax}"),
+        theme::Role::Estimate,
+    )
 }
 
 // ===========================================================================
