@@ -13,7 +13,10 @@
 # cfg(verus_only)/cfg(kani), and NO rust-toolchain.toml.
 #
 # The Verus toolchain (tools/verus-arm64-macos) is .gitignored and provisioned
-# per-machine (here: symlinked to the a vendored Verus toolchain).
+# per-machine: a symlink to a vendored copy, or the pinned GitHub release
+# verus-lang/verus 0.2026.05.13.fae8859 (arm64-macos; runs on rustup 1.95.0) —
+# the build matching the crates' vstd =0.0.0-2026-05-10-0145 pin. CI fetches it
+# in .github/workflows/ci.yml; bump the release and the vstd pin together.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"

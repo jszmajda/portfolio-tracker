@@ -35,12 +35,12 @@ TIMEOUT_DUR="${PT_CI_TIMEOUT_DUR:-300s}"
 TIMEOUT_KILL="${PT_CI_TIMEOUT_KILL:-20s}"
 
 # ---------------------------------------------------------------------------
-# fmt / clippy — ADVISORY, not gating. A blanket `cargo fmt` would rewrite the
-# Verus-verified cores (crates/ledger-core's + crates/tax's verus!{} modules), so
-# fmt is surfaced without blocking; clippy findings are surfaced without blocking.
+# fmt — GATING. The workspace is rustfmt-formatted; rustfmt cannot parse Verus
+# syntax and leaves the verus!{} macro bodies byte-untouched, so formatting
+# never disturbs the verified cores. clippy stays advisory.
 # ---------------------------------------------------------------------------
-echo "== fmt check (advisory) =="
-cargo fmt --all --check || echo "ADVISORY: workspace not fmt-clean (do NOT blanket-fmt the verus!{} cores)"
+echo "== fmt check =="
+cargo fmt --all --check
 
 echo "== clippy (advisory) =="
 cargo clippy --workspace --all-targets 2>&1 | tail -3 || echo "ADVISORY: clippy findings present"
