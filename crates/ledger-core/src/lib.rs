@@ -10,10 +10,6 @@
 //! `cargo verus verify`); the public API surface is plain Rust the verified
 //! fold backs. `#[cfg(kani)]` bounded harnesses live in `kani_proofs`.
 //!
-//! TDD scaffold: the entry-point bodies (`replay`, `validate`) and the verus
-//! fold are stubbed with `unimplemented!()`/`todo!()` so the suite fails RED
-//! rather than fail-to-compile. Signatures are complete.
-//!
 //! TRUST BOUNDARY: this crate takes an already-deserialized `Vec<LedgerEvent>`
 //! and returns a `Snapshot`. Serde and all I/O sit OUTSIDE this boundary (the
 //! `store` segment), exactly as in the prior verified project.

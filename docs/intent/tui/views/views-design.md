@@ -254,7 +254,7 @@ and the `updated HH:MM` stamp is its visible trace.
 as a **calendar date** (`as-of 2026-06-09`) and the status line carries **`updated HH:MM`** —
 the wall-clock time of the run/refresh that produced the view. Both are formatted strings
 threaded into the view bundle by the binary (the key→calendar conversion and the wall clock are
-the binary's, per the existing allocation; `views` renders, it does not derive). A book with no
+the binary's; `views` renders, it does not derive). A book with no
 priced trading day (no key, or a zero key) reads **`no priced day yet`** — a raw trading-day key
 integer never reaches the screen — and a view with no run time omits the `updated` segment
 rather than fabricating one.
@@ -291,8 +291,7 @@ Six calm, distinct empty states — none using the `✗` integrity treatment:
 - **No accruals** — `no tax accruals yet — they appear when you record a sale`.
 - **No history** — `no history yet — captures begin on the first priced run`.
 - **No realized gains** — `no realized gains yet — they appear when you sell a lot` (the Realized
-  screen with nothing closed; distinct from No positions, which the Realized screen previously
-  reused).
+  screen with nothing closed; distinct from No positions, the whole-book pre-import state).
 - **Filter matched zero** — `no rows match — [clear filter]`.
 
 ## The views ↔ entry Boundary
@@ -348,27 +347,6 @@ offline/lock state so it is not a surprise. On return, `views` re-renders. The b
 | Freshness stamp seam | The binary threads formatted `as-of` calendar / `updated HH:MM` strings through the view bundle | `views` derives calendar dates / wall-clock itself | The key→calendar conversion and the clock already live in the binary's wiring; `views` computes nothing, and one formatter keeps the TUI and headline stamps identical. |
 
 ## Open Questions & Future Decisions
-
-### Resolved
-1. ✅ Read-only screens (Positions/Composition, Lots, History, Tax & Reserves, Realized) over a shared nav model.
-2. ✅ Filter = visibility-only (% over the priced whole); grouping re-pivots with subtotals.
-3. ✅ Degraded rows sort last; drill-down retains per-screen filter/sort; integrity error blocks the screen.
-4. ✅ Views are read-only; actions launch the matching `entry` flow.
-5. ✅ Filter-state header; group subtotals reflect the full group; degraded sorts last only on a degraded sort key.
-6. ✅ Drill contextual-scope vs retained user filter; focus anchored to identity; refresh re-resolves stacked anchors (dangle → calm notice).
-7. ✅ Composition `n/a` rendering; provenance caveats on Tax & Realized; History degenerate states + in-band gap/incomplete glyphs.
-8. ✅ Six calm empty states (added No-open-lots and No-realized-gains); launch passes identity (entry re-resolves) and is allowed offline.
-9. ✅ Reserve summary + next-period stay whole-book (ignore the active filter); next-period enters the bundle from `runtime` (`tax::quarterly_report` + `quarter_of(today)`).
-10. ✅ Colour-depth degrade ladder truecolor→256→16→none (nearest-index map, glyph/word always kept).
-11. ✅ Refresh lifecycle ordering: re-read marks → re-resolve stacked anchors → re-anchor focus → re-render.
-12. ✅ Spans-based line rendering + data-driven column widths (decimal-aligned, clamped, ellipsize only when forced).
-13. ✅ Status-line key hints follow the active context (suppressed in text-input); `?` opens the modal help overlay.
-14. ✅ Positions basis + gain-%-of-basis columns; per-symbol day change ($/%) from the prior complete History point vs current; the summary band's `REALIZED <year> YTD` line; the History multi-row block chart (min/max axis labels, date span, today tick).
-15. ✅ Column title rows on every columnar screen (titles participate in the data-driven widths); gain/loss roles on the unrealized / gain-% / day-change / realized figures and the estimate role on `[est]`-marked figures; the company-name column (Positions + Open Lots) off `config`'s display-name map.
-16. ✅ Screen-switch keys `1`–`5` with per-screen retained nav; the `[1-5] screens` hint; the help overlay's screens section + the `lot picker (inside a Sell)` group label; calendar-date as-of + `updated HH:MM` threaded by the binary (`no priced day yet` for a key-less book).
-17. ✅ Whole-dollar view money with magnitude-compact glance cells (band + tax money exact, per-share money keeps cents); per-symbol day-change honesty against the latest prior capture (zero-key points excluded from the series); the estimate qualifier sourced from the binary-threaded current-year bracket state.
-18. ✅ Row `Net` = post-tax value (market value − estimated unrealized tax), exact whole dollars; the fixed 12-cell trend strip with dim-dot padding for not-yet-captured days.
-19. ✅ Ambient hourly auto-refresh: shell-owned clock over the input-poll tick (the Model reads no clocks), measured from the last successful refresh; suppressed only by an open entry context (not the help overlay), runs on the first tick after return; a failed attempt degrades like a failed manual refresh and retries each tick; no hint — the `updated HH:MM` stamp is the trace.
 
 ### Deferred
 1. **Multi-series chart overlay.** Overlaying per-symbol value series on the History chart — a

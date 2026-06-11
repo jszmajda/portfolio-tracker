@@ -25,10 +25,6 @@
 //! values, validated by the kernel — so the imported log is valid by construction
 //! (IMPORT-RUN-003). `import` is one-time tooling, NOT a `verus!{}` crate;
 //! `cargo test` is the gate, with the reconciliation as its correctness proof.
-//!
-//! TDD scaffold: the reconstruction / reconciliation / commit bodies are stubbed
-//! with `todo!()`/`unimplemented!()` so the suite fails RED rather than
-//! fail-to-compile. The data types and signatures are complete.
 
 use std::collections::BTreeMap;
 

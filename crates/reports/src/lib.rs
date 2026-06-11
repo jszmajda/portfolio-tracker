@@ -22,10 +22,6 @@
 //! `reports` is aggregation, not money-conservation, so it is **unit-tested**, not
 //! Verus-proven (CLAUDE.md "cargo test is the gate"). Money is integer
 //! `pt_core::Cents`; no float ever enters past the input boundary.
-//!
-//! TDD scaffold: the analytic / persistence bodies are stubbed with `todo!()` so
-//! the suite fails RED at runtime rather than fail-to-compile. The types and
-//! signatures are complete.
 
 use std::collections::BTreeMap;
 

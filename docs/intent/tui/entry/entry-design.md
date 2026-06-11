@@ -92,9 +92,9 @@ so the loop's dispatch is uniform:
   when there are no allocatable lots. The inline error sits in the footer band, never over a data
   row.
 
-The concrete map (above) replaces the earlier deferral; it is intentionally arrow/tab-first (not
-modal-vim) so the muscle memory matches the read-side `views` nav, and the loop can route a key to
-the active context without per-flow special-casing.
+The keymap is intentionally arrow/tab-first (not modal-vim) so the muscle memory matches the
+read-side `views` nav, and the loop can route a key to the active context without per-flow
+special-casing.
 
 ## Activity Entry (`TUI-ENTRY-ACT`)
 
@@ -244,22 +244,6 @@ A confirm step restates what will be written before it is.
 | Sale-qty change | Resets the allocation | Rescale; leave stale | A reset is unambiguous; a stale ✓ must never reach submit. |
 
 ## Open Questions & Future Decisions
-
-### Resolved
-1. ✅ Shared composer + write-loop; inline kernel-error rendering; defaults from `config`.
-2. ✅ Lot picker with running allocation + live gain/tax preview + FIFO shortcut.
-3. ✅ Reversal-by-pick with inline dependency-block reasons.
-4. ✅ Accrual actions (allocate/move/pay/override) as batch-capable `TaxEvent` flows; confirm scope fixed.
-5. ✅ Inline advisory / submit authoritative; submit order confirm→lock→append→verify; lock-held fails non-destructively.
-6. ✅ New-symbol warn-guard; reversal list greys reversed/Reversal targets; preview stacks at `sale_date`.
-7. ✅ Pay amount/covered independent (✓ advisory); batch snapshots + re-validates at submit.
-8. ✅ Config edits surface retroactive accrual reprice + residency future-only/founding-entry inline.
-9. ✅ Arrow/tab-driven keymap with single-key accelerators; one form-layout pattern with a single
-   inline error/advisory slot; lot picker as a `Table` with footer running-total/preview.
-10. ✅ Move-time shortfall surfaced on the Move form (advisory); Pay pre-submit jurisdiction/year
-    advisory inline before the `PayCoverMismatch` submit gate.
-11. ✅ Stable-`EventId` retry contract: composer freezes event content at first submit and re-submits
-    byte-identical on retry (id is `store`'s content hash; `runtime` owns global uniqueness).
 
 ### Deferred
 1. **Bulk / CSV-style entry.** Fast multi-row entry beyond one composer at a time (overlaps `import`).

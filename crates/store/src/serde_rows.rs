@@ -101,7 +101,6 @@ pub const TAX_HEADER: &[&str] = &[
 
 // ===========================================================================
 // Ledger row <-> event (STORE-GUARD-001/002). Exhaustive, wildcard-free.
-// STUBBED for TDD.
 // ===========================================================================
 
 /// `LedgerEvent → Row`: a total, wildcard-free structural match over every
@@ -249,7 +248,7 @@ pub fn row_to_ledger(row: &Row) -> Result<LedgerEvent, StoreError> {
 // ===========================================================================
 // Tax row <-> event (STORE-GUARD-001/002). `tax::TaxEvent` has no `id` field;
 // the store-assigned `EventId` rides on the row as a universal column, so a tax
-// row round-trips as `(event, EventId)`. STUBBED for TDD.
+// row round-trips as `(event, EventId)`.
 // ===========================================================================
 
 /// `(TaxEvent, EventId) → Row`: total, wildcard-free structural match over every
@@ -370,11 +369,7 @@ pub fn row_to_tax(row: &Row) -> Result<(TaxEvent, EventId), StoreError> {
 
 // ===========================================================================
 // Small structural codecs (no arithmetic — pure string<->scalar). Kept here so
-// the conversions above are one place. STUBBED bodies live alongside the
-// public conversions; these helpers are real (they carry no logic to defer and
-// are needed by the round-trip property's RED panic to come from the right
-// place — but to keep the RED phase honest we leave the public conversions
-// stubbed and let these compile).
+// the conversions above are one place.
 // ===========================================================================
 
 // Field codecs are intentionally simple, total string conversions — no

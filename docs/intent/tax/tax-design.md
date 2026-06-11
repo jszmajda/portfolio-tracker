@@ -161,8 +161,8 @@ accrual twice; a Pay covering a mismatched jurisdiction/year is rejected. A `Tax
 **no-op**, surfaced as an orphan warning — so replay stays total. An accrual still `Accrued`
 when its gain disappears simply drops; if it was already Moved/Paid, its `TaxEvent`s fold as
 no-ops and the now-backless reserve entry is surfaced as an orphan warning for manual unwind —
-`ledger-core` cannot see tax state, so it does not block the reversal (the cross-segment
-detection rule is deferred to the Phase 4 edge audit).
+`ledger-core` cannot see tax state, so it does not block the reversal (a cross-segment
+detection rule remains an open question; see Deferred).
 
 **De-minimis.** An accrual whose `|amount|` is below the configured de-minimis threshold (e.g. a
 sell-to-cover's rounding-epsilon gain) is auto-settled — it needs no lifecycle action and is
@@ -241,21 +241,13 @@ Verus-proven, Kani bounded-checked (facet `TAX-VERIF-*`).
 
 ## Open Questions & Future Decisions
 
-### Resolved
-1. ✅ Federal ST=ordinary, LT=preferential + NIIT (chronological-marginal); state=ordinary (DC, NJ).
-2. ✅ Chronological-`(sale_date, Seq)` cumulative-stacking accrual; calendar LT/ST with Feb-29 → Mar-1.
-3. ✅ Per-`RealizedGain` accrual key; lifecycle accrued → allocated → moved → paid, event-sourced.
-4. ✅ Reserve = Σ moved − Σ paid (may be negative); Move records actuals; shortfall reported.
-5. ✅ `T_J` total over signed inputs via `max(0,·)`; de-minimis auto-settle; orphan-fold no-op.
-6. ✅ IRS uneven estimated-tax quarters; `tax_year = year(sale_date)`.
-
 ### Deferred
 1. **Capital-loss limits & carryover.** The $3,000/yr ordinary-offset cap and loss carryover to
    later years — currently a within-year loss nets against gains down to zero, no further.
 2. **Pay vs accrual granularity.** Whether aggregate quarterly `Pay` coverage needs finer
    per-payment attribution than the `covers` list.
 3. **Reversing a Moved/Paid sale.** The exact unwinding flow (currently an orphan warning +
-   manual unwind; cross-segment detection across the ledger/tax boundary deferred to Phase 4).
+   manual unwind; cross-segment detection across the ledger/tax boundary is undecided).
 4. **State part-year / source rules.** Beyond residency-at-sale stamping.
 
 ### Out of scope

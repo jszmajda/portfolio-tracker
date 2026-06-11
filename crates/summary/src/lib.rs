@@ -25,10 +25,6 @@
 //! `summary` is orchestration + formatting — **unit-tested**, not Verus-proven
 //! (CLAUDE.md "cargo test is the gate"). All money is integer `pt_core::Cents`; no
 //! float past the input boundary.
-//!
-//! TDD scaffold: the orchestration / formatting bodies are stubbed with `todo!()` so
-//! the suite fails RED at runtime rather than fail-to-compile. The types and
-//! signatures are complete.
 
 use std::collections::BTreeMap;
 

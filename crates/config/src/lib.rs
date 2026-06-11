@@ -18,10 +18,6 @@
 //! (`TAX-VERIF-002`): the stacked-rate `< 100%` ceiling is enforced here, so a
 //! malformed or rate-excessive bracket set is rejected before `tax` sees it.
 //!
-//! TDD scaffold: the resolution / staleness / validation helper bodies are
-//! stubbed with `unimplemented!()`/`todo!()` so the suite fails RED rather than
-//! fail-to-compile. The data types and signatures are complete.
-//!
 //! Persistence sits behind the thin [`ConfigStore`] trait with an in-memory
 //! fake ([`InMemoryConfig`]); real workbook-tab / local-file persistence is
 //! wired later by `runtime`. No serde, no I/O in this crate (the HLD trust
@@ -463,9 +459,6 @@ impl From<pt_core::LockError> for ConfigError {
 // ===========================================================================
 // Validation gate (config-design.md → "Validation"; CONFIG-VALID-001..004).
 // The first gate behind `tax`'s bounded-tax invariant. Pure helpers, unit-tested.
-//
-// STUBBED for TDD: bodies are `unimplemented!()` so the RED phase fails at
-// runtime, not at compile time.
 // ===========================================================================
 
 /// Validate one bracket set: non-empty, strictly-ascending unique

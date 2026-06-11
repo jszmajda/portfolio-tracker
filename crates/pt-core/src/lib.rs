@@ -4,10 +4,6 @@
 //! (`round_half_to_even`), and the `MONEY_CAP` totality bound, as specified in
 //! `docs/intent/ledger-core/ledger-core-design.md` ("Money & Quantity Types").
 //!
-//! TDD scaffold: the rounding/scale helpers are stubbed with `todo!()` so tests
-//! that target them fail RED rather than fail-to-compile. The newtypes and
-//! constants are real (they carry no logic to defer).
-//!
 //! No serde, no I/O: floating point and serialization stay outside this and the
 //! verified boundary (HLD "Verify the money math; trust the I/O").
 
@@ -50,10 +46,8 @@ pub const MONEY_CAP: i64 = 1 << 40;
 
 // ---------------------------------------------------------------------------
 // The single rounding site (ledger-core-design.md → "The scale rule").
-//
-// STUBBED for TDD: bodies are `todo!()` so the RED phase fails at runtime, not
-// at compile time. `ledger-core` is the only place rounding enters monetary
-// amounts; these helpers are that one site.
+// `ledger-core` is the only place rounding enters monetary amounts; these
+// helpers are that one site.
 // ---------------------------------------------------------------------------
 
 /// Banker's rounding of `numerator / denominator` (round half to even),

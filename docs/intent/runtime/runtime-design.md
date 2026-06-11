@@ -8,8 +8,8 @@ prefix: RUNTIME
 ## Context and Design Philosophy
 
 `runtime` is the **shared host** that wires the leaves together and closes the loops they each
-assume someone else owns. The cross-segment audit found three concerns named by many segments and
-owned by none — and this is their home:
+assume someone else owns. Three concerns are consumed by many segments and belong to none of
+them — this is their home:
 
 1. the low-level **Sheets-access layer** (every segment does workbook I/O "via the shared access
    layer"),
@@ -57,8 +57,8 @@ before mutating" clause that refers back here:
 
 - **store** event-append,
 - **reports** History-append (looped under the History-append retry loop below),
-- **sheets-view** `republish` — newly threaded a `Lock`,
-- **config** `put_*` — newly threaded a `Lock`,
+- **sheets-view** `republish`,
+- **config** `put_*`,
 - **import** commit — holds the lock across the *whole* commit.
 
 **Acquisition is atomic and exclusive**: the lockfile is opened with `O_EXCL`
@@ -192,16 +192,6 @@ note pointing back:
 
 ## Open Questions & Future Decisions
 
-### Resolved
-1. ✅ `runtime` owns the Sheets-access layer, the cross-process advisory lock, and the replay/marks cycle.
-2. ✅ Lock is non-blocking `try_acquire`, acquired inside write primitives; per-writer held policies defined.
-3. ✅ `runtime` is the replay caller and marks-cache injector; owns the per-symbol → trading-day reduction.
-4. ✅ Lock acquisition is atomic/exclusive, reentrant for a same holder, with stale-TTL/corrupt/initializing/unwritable recovery outcomes defined.
-5. ✅ The OAuth token is lazily minted, cached, refreshed at a 60s expiry margin with per-retry re-check and coalesced refresh.
-6. ✅ `runtime` owns the composition root (`load_and_run_cycle`); `pt` is the process entrypoint.
-7. ✅ `runtime` owns the four cross-cutting allocations: cache detection/rebuild, post-rebuild re-validation, global EventId assignment, and the History-append retry loop.
-8. ✅ Closed (qty-0) positions are excluded from the marks request and freshness; the History capture is triggered after a priced cycle, feeding `trading_day_key` + `to_priced_marks` to `reports::append_snapshot` under the lock.
-
 ### Deferred
 1. **Rate-limit / backoff parameters.** The concrete Sheets API throttling/retry *tuning* (attempt
    counts, backoff schedule); the policy shape (and its token-refresh
@@ -209,6 +199,6 @@ note pointing back:
 
 ## References
 
-- HLD: `docs/high-level-design.md` (the `runtime` row; the cross-segment audit that surfaced it).
+- HLD: `docs/high-level-design.md` (the `runtime` row).
 - Wires: `store` (event log, write discipline), `sheets-view` (marks, republish), `ledger-core` +
   `tax` (replay), `config` (creds). Consumed by `tui`, `summary`, `import`.

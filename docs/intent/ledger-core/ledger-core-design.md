@@ -202,8 +202,7 @@ sale_seq)` (its accrual stacking depends on it).
 ## Conservation & Verification Invariants
 
 Properties Verus proves and Kani bounded-checks, mirroring the prior project's verification family.
-(EARS IDs assigned in Phase 3 — anticipated facet `LEDGER-VERIF-*`.) **Basis is the
-cross-split-invariant monetary quantity** (splits never touch basis); share counts are
+**Basis is the cross-split-invariant monetary quantity** (splits never touch basis); share counts are
 conserved only within a split epoch and rescaled explicitly by splits.
 
 1. **Basis conservation (headline).** For each symbol, `Σ remaining_basis` (open lots) + `Σ
@@ -261,19 +260,6 @@ conserved only within a split epoch and rescaled explicitly by splits.
 
 ## Open Questions & Future Decisions
 
-### Resolved
-1. ✅ Event taxonomy: Buy / Vest / Sell / Split / Reversal, folded in `Seq` order.
-2. ✅ FMV-at-vest basis; sell-to-cover is an ordinary Sell (gain ≈ 0 ± epsilon, not exactly 0).
-3. ✅ Specific-identification lot selection with `(acquire_date, open_seq)` FIFO fallback; no
-   short sales.
-4. ✅ Per-lot `remaining_basis` model with exact conservation, residual sweep at closure, and
-   basis as the cross-split invariant.
-5. ✅ `SHARE_SCALE = 1e6` conversion with one round-half-even site; `MONEY_CAP`-bounded `i128`
-   arithmetic checked on the final scaled result.
-6. ✅ `LedgerError` enum; append-time validation against the filtered prefix; total replay.
-7. ✅ Reversal = re-fold with target filtered; backward-looking dependency rejection.
-8. ✅ Largest-remainder allocation defined for signed totals with a deterministic tie-break.
-
 ### Deferred
 1. **Cash-in-lieu / fractional-share remainder.** When a split (or merger) leaves a whole
    fractional *share* the broker pays cash for, and the exact rounding at that boundary.
@@ -286,6 +272,6 @@ conserved only within a split epoch and rescaled explicitly by splits.
 ## References
 
 - HLD: `docs/high-level-design.md` (event taxonomy, RSU basis, corporate-actions decisions).
-- Mirrored idioms: `a prior private project's verified engine core` (Verus kernel), `portfolio-engine`
-  `#[cfg(kani)]` harnesses, and the trust-boundary drift guard.
+- Mirrored idioms: the prior private project's `portfolio-engine-core` (Verus kernel,
+  `#[cfg(kani)]` harnesses) and its trust-boundary drift guard.
 - Legacy model: Stock Actions / Stock Sales tabs (tranche IDs, vest `-a`/`-b` children).

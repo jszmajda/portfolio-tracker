@@ -58,8 +58,8 @@ by the **drift guard** (below).
 
 On a TUI submit, for the event(s) the kernel has validated and accepted:
 
-1. **Confirm currency.** Run the cheap currency probe (per-tab row count + max `Seq`, below)
-   against the cache. On a change, rebuild from the workbook and have the event re-validated, so
+1. **Confirm currency.** Run the cheap currency probe (the per-tab fingerprint block — count,
+   max `Seq`, checksum; see Local Cache) against the cache. On a change, rebuild from the workbook and have the event re-validated, so
    validation and append share one consistent view (guards the single-writer assumption against a
    stale cache).
 2. **Assign Seq from the live workbook.** Read the tab's current max `Seq` **from the live
@@ -108,8 +108,7 @@ Currency is checked in **two tiers**, so the cache keeps its value (no full read
   content hash — fail loud, never silently served. Offline, reads serve from the cache; current
   valuation falls back to `sheets-view`'s last cached marks.
 
-This settles the cache-authority question deferred from `config`: **the workbook is
-authoritative for all persisted data; the cache is a derived projection.**
+**The workbook is authoritative for all persisted data; the cache is a derived projection.**
 
 ## Replay Loading & Integrity
 
@@ -143,7 +142,7 @@ corrupt log to the kernels (failing loud, not folding silently):
 ## Trust Boundary & Drift Guard
 
 The row ↔ event conversion is the project's one unverified seam. A **drift-guard test** (the
-the prior project's trust-boundary drift guard) locks it:
+prior project's trust-boundary drift-guard idiom) locks it:
 
 - a wildcard-free exhaustive match over every `LedgerEvent` and `TaxEvent` `Kind` (a new kind
   fails compilation until its mapping is added), and
@@ -191,13 +190,6 @@ So a schema or kind change cannot silently drop or corrupt data; the guard fails
 
 ## Open Questions & Future Decisions
 
-### Resolved
-1. ✅ Two typed-column append-only tabs; dense per-tab `Seq`; globally-unique, retry-stable `EventId`.
-2. ✅ Seq from the live workbook; contiguous batch assignment; read-back equality; idempotency-with-equality.
-3. ✅ Two-tier currency: a sheet-side formula fingerprint (count + maxSeq + checksum) read in one call on the hot path; full content hash on full reads only; workbook authoritative; SQLite cache rebuilt on change.
-4. ✅ Dense-Seq integrity (gap = fail loud, recover via Sheets history) + structural Reversal checks; cross-tab refs handled by the tax kernel's orphan rule.
-5. ✅ Marks caching belongs to `sheets-view`, not `store`.
-
 ### Deferred
 1. **Sheets row limits / archival.** Behavior as a log grows large (tab row caps, year-partitioned
    tabs, archival) — not a near-term concern at personal scale.
@@ -211,5 +203,5 @@ So a schema or kind change cannot silently drop or corrupt data; the guard fails
 - HLD: `docs/high-level-design.md` (event-log tabs vs view tabs; write-through with read-back).
 - Kernels fed by `store`: `docs/intent/ledger-core/ledger-core-design.md`,
   `docs/intent/tax/tax-design.md` (orphan-no-op rule).
-- Mark caching: `docs/intent/sheets-view/` (owns `GOOGLEFINANCE` marks) — to be drafted.
+- Mark caching: `docs/intent/sheets-view/sheets-view-design.md` (owns `GOOGLEFINANCE` marks).
 - Mirrored idiom: the prior project's trust-boundary drift guard.

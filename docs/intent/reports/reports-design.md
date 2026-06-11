@@ -161,12 +161,6 @@ Properties worth asserting:
 
 ## Open Questions & Future Decisions
 
-### Resolved
-1. ✅ `reports` owns composition + value-over-time + realized history + the durable History tab; `tax` owns tax reports.
-2. ✅ Value series keyed by quote-epoch trading day (no fabricated flats); realized history from the log, calendar-grouped.
-3. ✅ History durably persisted with integrity check + store-style append discipline (non-reconstructable).
-4. ✅ Per-symbol value (split-neutral) is the cross-time axis; composition degraded-set consistent pre/post-tax + coverage fraction.
-
 ### Deferred
 1. **Historical value backfill.** `GOOGLEFINANCE`-historical reconstruction of pre-capture daily
    values (interacts with the live-only marks model).
@@ -180,4 +174,4 @@ Properties worth asserting:
   `docs/intent/sheets-view/sheets-view-design.md` (marks + quote-epoch),
   `docs/intent/tax/tax-design.md` (unrealized estimate; tax-owned reports),
   `docs/intent/config/config-design.md` (reporting TZ).
-- Consumer/driver: `docs/intent/summary/` (daily append + delta; honors incomplete flags) — to be drafted.
+- Consumer/driver: `docs/intent/summary/summary-design.md` (daily append + delta; honors incomplete flags).

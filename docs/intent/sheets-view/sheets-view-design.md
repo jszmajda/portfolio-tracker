@@ -203,22 +203,13 @@ HLD's "live view with filtering").
 | Mark read-back | Separate settle pass, poll until numeric-or-errored, bounded timeout | Read inline after writing the formula | A freshly-written formula is transiently `Loading...`/`#N/A`; inline read caches garbage. |
 | Transient `#N/A` | Retry + keep prior mark; degrade only after a bounded window | Collapse `#N/A` → degraded immediately | Loading and unpriceable both show `#N/A`; immediate degrade falsely nulls a loading position. |
 | Mark timestamp | `GOOGLEFINANCE` quote date | Wall-clock read time | Read time overstates freshness after the sheet sat closed; staleness must be honest. |
-| Symbol→ticker | Identity + config alias table; read-back by row identity; assert 1-row-per-symbol | Build/parse formula straight from `Symbol` | Class shares / exchange prefixes else silently false-degrade; this was wrongly deferred. |
+| Symbol→ticker | Identity + config alias table; read-back by row identity; assert 1-row-per-symbol | Build/parse formula straight from `Symbol` | Class shares / exchange prefixes else silently false-degrade. |
 | Republish atomicity | Single `batchUpdate`: write + truncate tail | Clear-then-write; overwrite-in-place | No half-write window; no phantom trailing rows when positions shrink. |
 | Stale handling | Retry + best-effort in-tab banner + TUI surfacing | Log-only flag | A stale structure with live prices is the worst failure; the flag must be where the owner looks. |
 | Sub-cent / currency | USD assumed; positive price → 0¢ is a degraded anomaly | Accept 0; multi-currency | A silent 0 mark understates value; multi-currency is out of scope for now. |
 | View editability | Read-only, regenerated; only saved Filter Views survive | Bidirectional edit; preserve basic filters | Entry is TUI-only (HLD); a view edit is overwritten on republish by design. |
 
 ## Open Questions & Future Decisions
-
-### Resolved
-1. ✅ Four view tabs; one row per entity; filterable; live-price columns are row-anchored formulas.
-2. ✅ Symbol→ticker mapping (identity + alias) in scope; read-back by row identity, 1-per-symbol.
-3. ✅ Settle-then-read marks; transient `#N/A` retried; quote-epoch timestamp; USD; sub-cent → degraded.
-4. ✅ Atomic `batchUpdate` republish with tail truncation; serialized with mark-refresh.
-5. ✅ Stale republish → retry + in-tab banner + TUI surfacing; log never affected.
-6. ✅ Positions shows pre-tax **and** a live post-tax estimate (via `tax`'s per-position effective rate); exact stacked post-tax in the Tax tab/TUI.
-7. ✅ Workbook tab order owned by `sheets-view`: views → config → event logs, `Positions` landing.
 
 ### Deferred
 1. **Mark-refresh cadence.** How often the periodic refresh re-reads marks, and how prominently

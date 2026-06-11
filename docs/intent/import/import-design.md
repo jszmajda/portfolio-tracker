@@ -199,15 +199,6 @@ the gate.
 
 ## Open Questions & Future Decisions
 
-### Resolved
-1. ✅ Dry-run → reconcile (matched / intended-divergence / unexplained-blocks) → explicit commit.
-2. ✅ Vest FMV recovered from legacy `$/share`; explicit `Split` events for known corporate actions.
-3. ✅ Sells map specific-ID to legacy tranche ids; sell-to-cover children → ordinary Sells.
-4. ✅ Share-frame rule; per-row correction-override input; unrecoverable vest FMV is a hard error.
-5. ✅ Reconcile classifies via *predicted* intended-delta (RSU = Σ vest FMV, split = $0); residual beyond predicted ± tolerance blocks commit; share + dollar tolerances defined.
-6. ✅ EventId from row-coordinate+id; unique-id/referential pre-pass; resumable into own-events-only target; reconstruct only from surviving rows; view-hidden symbols imported.
-7. ✅ Closed-year tax via `AmountOverride`-to-legacy + bulk `Pay` (outstanding = 0), annual granularity.
-
 ### Needs user input
 1. **Historical residency timeline.** Where the owner lived during past sales (to stamp
    `accrues_to_state`) — at minimum the founding entry (a best-guess founding state is allowed,

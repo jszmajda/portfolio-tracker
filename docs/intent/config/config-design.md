@@ -122,6 +122,12 @@ tabs / local file): add a year's brackets, update income, record a residency cha
 platforms, set the de-minimis. On every write `config` runs the validation below and refuses an
 invalid set. The refresh runbook is the human procedure that feeds this interface.
 
+**Seeding.** Initial values come from a seeding harness that reads the owner's facts — filing
+status, income estimate, residency state, de-minimis, platforms, display names — from a
+gitignored owner seed file and pairs them with the matching transcribed federal ordinary + LT
+brackets, NIIT MAGI threshold, and the owner's state brackets. Filing status is recorded per
+year and may change in a future year.
+
 ## Validation
 
 - **Each bracket set** must be **non-empty**, with **strictly ascending, unique**
@@ -183,34 +189,19 @@ invalid set. The refresh runbook is the human procedure that feeds this interfac
 | Platform list | Suggestions, not a constraint | Enforced enum | Platforms are free-text by HLD non-goal; the list only aids entry. |
 | Symbol→ticker aliases | A small config map (identity default), consumed by `sheets-view` | Hardcode in `sheets-view`; per-event ticker | Reference data the owner edits, alongside platforms; keeps `sheets-view` free of stored config. |
 | Symbol→display names | A sibling config map (ticker fallback), consumed by the TUI's name columns | Live `GOOGLEFINANCE` name lookups; hardcode in the TUI | Names are static owner-edited reference data exactly like aliases; a live lookup adds an oracle dependency, and the ticker fallback degrades honestly. |
-| Refresh procedure | A you-and-me runbook + a coded staleness reminder | Build a bracket scraper | Brackets change yearly and need human judgment from primary sources; only the *nudge* is worth coding. |
+| Refresh procedure | A human-run runbook + a coded staleness reminder | Build a bracket scraper | Brackets change yearly and need human judgment from primary sources; only the *nudge* is worth coding. |
 | Tab persistence shape | The whole domain config persists as one validated JSON cell (`'Tax Rules'!A1`) through the runtime adapter, for now | Per-tab human-readable schemas across the three named tabs (Tax Rules / Residency / Platforms & Aliases) | One serde round-trip at a single seam keeps validation whole-config and atomic; the human-readable per-tab schema is deferred until the owner actually edits config in-sheet. |
 
 ## Open Questions & Future Decisions
-
-### Resolved
-1. ✅ Reference data, not event-sourced; domain in workbook tabs, secrets local; `ppm`/`Cents` units.
-2. ✅ Strictly-ascending non-empty brackets + stacked-rate ceiling gate `tax`'s bound.
-3. ✅ Effective-dated residency (inclusive boundary, future-dated allowed); import gated on a founding entry.
-4. ✅ Per-jurisdiction degradation; `NoBracketsAvailable` cold-start signal; staleness from residency + lookback.
-5. ✅ De-minimis compared to `|accrual|`; read-contract for missing tabs / bad creds / cache divergence.
 
 ### Deferred
 1. **Staleness threshold & cadence.** Confirm 12 months and the lookback width; whether the
    reminder also fires on a new tax year regardless of age.
 2. **Multi-state / multi-status mid-year.** A residency or filing-status change mid-year (both
-   currently one-per-year) — revisit with `tax` in Phase 4 if it matters.
-3. **Local vs cloud cache authority** for domain config — settled in the `store` LLD.
-
-### Resolved (seed values)
-1. ✅ **Filing status: owner-configured** — the seeding harness reads the owner's filing status
-   (with the income estimate, residency state, de-minimis, platforms, and display names) from a
-   gitignored owner seed file and pairs it with the matching transcribed federal ordinary + LT
-   brackets, NIIT MAGI threshold, and the owner's state brackets. Recorded per year; may change
-   in a future year.
+   currently one-per-year) — revisit with `tax` if it matters.
 
 ## References
 
 - HLD: `docs/high-level-design.md` (config holds brackets/income/residency/platforms/settings).
 - Downstream consumer: `docs/intent/tax/tax-design.md` (`T_J` inputs, de-minimis, residency).
-- Refresh procedure: `docs/runbooks/refresh-tax-brackets.md` (the you-and-me maintenance task).
+- Refresh procedure: `docs/runbooks/refresh-tax-brackets.md` (the human-run maintenance task).

@@ -18,10 +18,6 @@
 //! OUTSIDE that boundary (covered by `#[test]`s; CBMC cannot fold heap
 //! collections tractably). `#[cfg(kani)]` harnesses target the kernel only.
 //!
-//! TDD scaffold: the entry-point bodies and the verus arithmetic are stubbed
-//! with `unimplemented!()`/`todo!()` so the suite fails RED rather than
-//! fail-to-compile. Signatures and types are complete.
-//!
 //! TRUST BOUNDARY: serde and all I/O sit OUTSIDE this crate (the `store`
 //! segment). `tax` takes already-deserialized `RealizedGain`s, `config` data,
 //! and a `Vec<TaxEvent>`, and returns computed accruals / reserves / reports.

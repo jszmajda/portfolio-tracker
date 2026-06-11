@@ -169,18 +169,6 @@ flagged delta; offline degrades to a stale exit-0 print; integrity/creds failure
 
 ## Open Questions & Future Decisions
 
-### Resolved
-1. ✅ Point-to-point delta (current = appended today-point, baseline = most recent strictly-prior); flagged otherwise.
-2. ✅ Exit 0 (produced, stale-marked) vs exit 2 (no trustworthy summary); append-fail is non-fatal.
-3. ✅ Headline = trading day; suppressed-delta rendering; versioned `--json`; advisory write-lock.
-4. ✅ Net/tax-line degrade with `config` bracket state (stale-marked / `n/a` on cold-start).
-5. ✅ Advisory write-lock is owned by `runtime` (cross-process); `summary` acquires it via `runtime` and runs read-only if held.
-6. ✅ Next estimated-payment period is a real feature: `summary` computes it from `tax::quarterly_report` + `quarter_of(today)` and surfaces it on the tax line and as the `--json` `tax.next_period` key.
-7. ✅ Reserve figures follow `tax`'s canonical definitions (`outstanding = accrued − paid`; `shortfall = accrued − moved`); the line surfaces `accrued`, `moved`, `outstanding`.
-8. ✅ Headline trading-day-key → calendar-date formatting is owned by `runtime`; the model and `--json` carry the opaque key.
-9. ✅ `pt` binary owns the headless `pt summary` argv→stdout→`ExitCode` contract; `runtime` owns the composition root.
-10. ✅ Uncaptured-run note distinguishes lock-held from offline / append-failed.
-
 ### Deferred
 1. **Focus / short-term section.** The legacy "focus positions" block — whether to carry it
    forward and how to designate focus (a tranche tag? a `config` watchlist) — is not modelled.

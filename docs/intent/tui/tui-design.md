@@ -297,7 +297,7 @@ interactive session and a cron `summary` never append concurrently.
 
 ## References
 
-- Root HLD: `docs/high-level-design.md` (tui flagged for promotion; tenets it inherits).
+- Root HLD: `docs/high-level-design.md` (`tui` as a sub-HLD in the design tree; tenets it inherits).
 - Children: `docs/intent/tui/entry/entry-design.md`, `docs/intent/tui/views/views-design.md`.
 - Conventions mirror: `summary` (stale/est/exit-2 wording), `store` (write discipline, lock),
   `sheets-view` (degraded marks), `config` (bracket state).
