@@ -83,3 +83,9 @@ in one pass.
   `tax` arrow docs.
 - `crates/pt` is the binary glue crate; its files are referenced from the segments whose
   behavior they host (`runtime`, `import`, `tui-entry`, `tui-views`).
+- **The `CONTRACT:` clause in specs.** Some specs end with a `CONTRACT:` clause. It marks a
+  cross-segment ownership seam: the text before it states the obligation this segment's code
+  carries locally; the clause names the segment that owns the mechanism and points at its
+  canonical spec. When auditing, verify the local obligation here and follow the named spec
+  for the mechanism — a `CONTRACT:` clause is linkage, not a second requirement to implement
+  in this segment.

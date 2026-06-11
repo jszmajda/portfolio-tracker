@@ -13,7 +13,7 @@ into and out of `verus!{}`-verified code, the **append + read-back-verify** writ
 **rebuildable local cache**. Everything `store` does is I/O and structural conversion — it
 contains **no accounting or tax math**. That is the point: by concentrating serialization here
 and proving the kernels pure, the unverified surface is one small, totally-structural conversion,
-locked by a drift-guard test exactly as in the prior verified project.
+locked by a drift-guard test.
 
 Principles:
 
@@ -141,8 +141,8 @@ corrupt log to the kernels (failing loud, not folding silently):
 
 ## Trust Boundary & Drift Guard
 
-The row ↔ event conversion is the project's one unverified seam. A **drift-guard test** (the
-prior project's trust-boundary drift-guard idiom) locks it:
+The row ↔ event conversion is the project's one unverified seam. A **drift-guard test** locks
+it:
 
 - a wildcard-free exhaustive match over every `LedgerEvent` and `TaxEvent` `Kind` (a new kind
   fails compilation until its mapping is added), and

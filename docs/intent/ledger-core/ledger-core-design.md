@@ -11,9 +11,8 @@ prefix: LEDGER
 model, **deterministic replay**, and the **realized/unrealized P&L** math — and nothing else.
 Tax calculation, the accrual lifecycle, persistence, Sheets, and the TUI all live outside it.
 
-It mirrors the prior verified project's engine core: the executable code lives inside a `verus!{}`
-module that erases under stable `cargo build` and is proven under the pinned Verus toolchain,
-with `#[cfg(kani)]` bounded harnesses alongside. Serde and all I/O sit *outside* the verified
+The executable code lives inside a `verus!{}` module that erases under stable `cargo build` and
+is proven under the pinned Verus toolchain, with `#[cfg(kani)]` bounded harnesses alongside. Serde and all I/O sit *outside* the verified
 boundary — `ledger-core` takes an already-deserialized `Vec<LedgerEvent>` and returns a
 `Snapshot`; it never reads a file, a socket, or a spreadsheet.
 
@@ -201,7 +200,7 @@ sale_seq)` (its accrual stacking depends on it).
 
 ## Conservation & Verification Invariants
 
-Properties Verus proves and Kani bounded-checks, mirroring the prior project's verification family.
+Properties Verus proves and Kani bounded-checks.
 **Basis is the cross-split-invariant monetary quantity** (splits never touch basis); share counts are
 conserved only within a split epoch and rescaled explicitly by splits.
 
@@ -234,8 +233,8 @@ conserved only within a split epoch and rescaled explicitly by splits.
 ## Trust Boundary & Interfaces
 
 - **Inbound (from `store`):** a `Vec<LedgerEvent>` from deserializing Sheets rows. The Sheets-row
-  ↔ `LedgerEvent` conversion is the single unverified seam, locked by a drift-guard test as in
-  the prior verified project (the trust-boundary drift guard analog). Serde derives live *outside* `verus!{}`.
+  ↔ `LedgerEvent` conversion is the single unverified seam, locked by a drift-guard test (see
+  `store-design.md`, Trust Boundary & Drift Guard). Serde derives live *outside* `verus!{}`.
 - **Inbound (from caller):** the optional per-whole-share `marks` map for valuation.
 - **Outbound (to `tax`):** `Snapshot.realized_gains` (with `holding_days` and `accrues_to_state`);
   `tax` classifies LT/ST and computes tax, aggregating per-lot gains.

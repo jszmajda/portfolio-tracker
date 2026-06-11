@@ -3,27 +3,30 @@
 ## Problem
 
 A single owner-operator tracks a personal portfolio of equities and vested RSUs held across
-several trading platforms. Today this lives in a hand-wired Google Sheet with three coupled
-tabs — **Positions** (a per-symbol rollup), **Stock Actions** (the real ledger: one row per
-Buy/Vest/Sell tranche, with cost basis, remaining shares, and sale-side columns), and
-**Stock Sales** (one row per sale, referencing a tranche and computing tax).
+several trading platforms. Before this system, that lived in a hand-wired Google Sheet with
+three coupled tabs — **Positions** (a per-symbol rollup), **Stock Actions** (the real ledger:
+one row per Buy/Vest/Sell tranche, with cost basis, remaining shares, and sale-side columns),
+and **Stock Sales** (one row per sale, referencing a tranche and computing tax).
 
-The spreadsheet works but is tedious and fragile to maintain over time:
+The spreadsheet worked but was tedious and fragile to maintain over time:
 
-- Every position number is a hand-written `SUMIF`/`QUERY` formula over the ledger; adding or
-  correcting activity means editing formulas across tabs.
-- There is no clean entry path — recording a purchase or sale is manual cell editing.
-- Tax is a derived column. Each sale's rate is **manually chosen** (a `UsedTaxRate` override)
-  next to a derived long-term/short-term reference rate, and there is no notion of a tax
+- Every position number was a hand-written `SUMIF`/`QUERY` formula over the ledger; adding or
+  correcting activity meant editing formulas across tabs.
+- There was no clean entry path — recording a purchase or sale was manual cell editing.
+- Tax was a derived column. Each sale's rate was **manually chosen** (a `UsedTaxRate` override)
+  next to a derived long-term/short-term reference rate, and there was no notion of a tax
   accrual that must be set aside, allocated to an account, moved once the sale clears, and
   finally paid to the IRS year by year.
-- State tax is not modeled at all, even though the owner moves between states and what is
+- State tax was not modeled at all, even though the owner moves between states and what is
   owed depends on residency at the time of each sale.
-- A separate shell script (the owner's `portfolio-summary.sh` daily-summary scraper) scrapes
+- A separate shell script (the owner's `portfolio-summary.sh` daily-summary scraper) scraped
   the Sheet's computed cells to print a daily terminal summary — brittle, coupled to cell
   ranges, and duplicating logic that belongs in one place.
 
-The cost is ongoing maintenance friction and a tax model that has outgrown a spreadsheet.
+The cost was ongoing maintenance friction and a tax model that had outgrown a spreadsheet.
+The full legacy history has since been migrated into this system's event log (the `import`
+segment's one-time run); the legacy workbook remains only as the historical source it was
+migrated from.
 
 ## Approach
 
@@ -38,7 +41,7 @@ stock splits — each carrying platform and an optional tracking code for the tr
 applicable. Deterministic replay of the log, combined with configuration, produces the
 current positions, realized/unrealized P&L, tax-lot cost basis, and tax accruals. The pure accounting and tax math is written inside a `verus!{}` module —
 proven under Verus, erased under stable `cargo build` — with `#[cfg(kani)]` bounded harnesses
-alongside, exactly as in a prior private verified-Rust project. The kernel is storage-agnostic: it replays an event
+alongside. The kernel is storage-agnostic: it replays an event
 log regardless of where the log is stored, so serialization and all I/O sit *outside* the
 verified boundary as a single trust seam.
 
@@ -91,8 +94,8 @@ over feature breadth.
 - **Verified money math.** Share/cost conservation, FIFO realized-P&L, tax-calculation bounds,
   and tax-accrual-lifecycle invariants are proven (Verus) and bounded-checked (Kani), gated in
   CI.
-- **Faithful migration.** The full existing history imports such that migrated positions
-  reproduce the old Sheet's realized and unrealized figures within rounding.
+- **Faithful migration.** The full legacy history imported such that migrated positions
+  reproduce the legacy Sheet's realized and unrealized figures within rounding.
 - **Residency-aware, calculated tax.** Each sale's federal and state tax is computed from
   configured income and brackets, the holding period, and the state stamped on the
   transaction; accruals are tracked through to paid; the owner is reminded when bracket tables
@@ -191,7 +194,7 @@ Design tree: one HLD over leaf LLDs, with `tui` a **sub-HLD** (children `entry`,
 
 The verified kernel (`ledger-core` + `tax`) is pure: it replays the event log plus config and
 produces a snapshot. `store` is the only component that serializes — its Sheets-row ↔ event
-conversion is the trust boundary, guarded by a drift test as in the prior verified project. The event-log tabs are
+conversion is the trust boundary, guarded by a drift test. The event-log tabs are
 canonical; the local cache mirrors them for fast/offline reads and is rebuilt from the workbook
 when in doubt. The Sheet's view tabs are regenerated from the snapshot and read back only for
 live marks; the system never persists live prices as truth, only daily snapshots (owned by
@@ -213,7 +216,7 @@ live marks; the system never persists live prices as truth, only daily snapshots
   them as versioned config refreshed on a maintenance cadence with a staleness reminder. A
   manual override remains available as a logged exception.
 - **Verified pure kernel over an append-only log, with the serde trust boundary outside
-  `verus!{}`.** Mirrors the prior verified project directly: the `verus!{}` code is the executable code, erased
+  `verus!{}`.** The `verus!{}` code is the executable code, erased
   under stable Rust; a total structural conversion (Sheets row ↔ event) is the only unproven
   seam, locked by a drift-guard test. Considered verifying nothing (the money math is the whole
   point) and verifying the whole application (Sheets/TUI are not amenable and not worth it).

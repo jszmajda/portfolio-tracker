@@ -20,7 +20,7 @@ Two persistence homes, by sensitivity:
   **workbook tabs** — visible, filterable, backed up like everything else — mirrored into the
   local cache.
 - **Machine/secret settings** (workbook id, service-account credentials path, cache location)
-  live in a **local file** (TOML, à la the prior project's secrets file) and never touch the shared
+  live in a **local file** (TOML) and never touch the shared
   workbook.
 
 `config` is mostly data and I/O and sits outside the `verus!{}` boundary. Its few pure helpers —

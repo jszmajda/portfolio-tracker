@@ -7,7 +7,9 @@ prefix: IMPORT
 
 ## Context and Design Philosophy
 
-`import` is the **one-time migration** from the legacy workbook into the new event-log tabs. It
+`import` is the **one-time migration tool** that seeded the new event-log tabs from the legacy
+workbook; its production run has completed, and the tool remains as the executable record of that
+seeding, re-runnable against a fresh workbook should the migration ever need reproducing. It
 **reconstructs the event stream** (Buy / Vest / Sell / Split) from the legacy `Stock Actions` and
 `Stock Sales` tabs, runs every reconstructed event through the **verified kernel validation** (the
 same path `entry` uses), and **reconciles** the replayed result against the legacy `Positions`
@@ -48,8 +50,8 @@ never defaults to `$0` (which would re-import the double-tax error).
 
 ## Corporate-Action & RSU-Basis Reconstruction
 
-The known-hard case the dry-run must prove out: **AMZN's 20:1 split (2022-06-06)** with an RSU
-vest before it and sales after it.
+The known-hard case for the dry-run: **AMZN's 20:1 split (2022-06-06)** with an RSU vest before
+it and sales after it.
 
 - **Share-frame rule (the load-bearing assumption).** Every legacy quantity is interpreted in the
   **share-frame of its own row date** — a Vest's `qty` is the as-of-vest count, a Sell's `qty` is
