@@ -16,16 +16,19 @@ project's deterministic coverage check (every behavioral spec must be cited by a
 
 ## Files in this directory
 
-- **`index.yaml`** — The dependency graph. Load this first to understand what's available,
-  what's blocked, and what needs work.
-- **`{segment-name}.md`** — One file per arrow segment. Orientation page with References,
-  Spec Coverage, and Key Findings. Pointers only, no duplicated design content.
+- **`index.yaml`** — The design tree and dependency graph (schema v2: `parent`/`children`
+  links; the `tui` sub-HLD is a grouping node whose `detail` points at its design doc). Load
+  this first to understand what's available, what's blocked, and what needs work.
+- **One arrow doc per leaf segment**, at the path mirroring its design doc under
+  `docs/intent/` — flat `{segment-name}.md` for depth-2 leaves, `tui/entry.md` and
+  `tui/views.md` for the sub-HLD's children. Orientation page with References, Spec
+  Coverage, and Key Findings. Pointers only, no duplicated design content.
 
 ## Starting a session
 
 1. Load `index.yaml`.
 2. Query for unblocked segments: `yq '.arrows | to_entries | .[] | select(.value.blockedBy | length == 0) | .key' index.yaml`.
-3. Load the relevant `{segment-name}.md`.
+3. Load the relevant segment's arrow doc (the entry's `detail` path).
 4. Follow its References to the LLD, spec file, tests, or code.
 
 ## Status enum

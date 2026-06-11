@@ -1,4 +1,4 @@
-schema_version: 1
+schema_version: 2
 last_updated: 2026-06-11
 
 # Taxonomy groups segments by domain cluster. Purely organizational.
@@ -19,14 +19,16 @@ taxonomy:
     - tui-views
   migration: import
 
-# The graph of segments. blockedBy mirrors the crate dependency direction
-# (a segment depends on the segments its crate depends on).
+# The design tree of nodes. Leaf nodes are arrow segments (own EARS + an arrow
+# doc); the `tui` sub-HLD groups its children and owns no segment. blockedBy
+# mirrors the crate dependency direction (a segment depends on the segments its
+# crate depends on).
 arrows:
   ledger-core:
     status: OK
     sampled: 2026-06-11
     audited: 2026-06-11
-    audited_sha: 7e5dd0c921e2570873d6dbc9fd85cab59c7cc5bb
+    audited_sha: 2e43e4dd8896b05a75325c9a08fd37846cfb172d
     blocks: [tax, store, sheets-view, reports, summary, runtime, import, tui-entry, tui-views]
     blockedBy: []
     detail: ledger-core.md
@@ -36,7 +38,7 @@ arrows:
     status: OK
     sampled: 2026-06-11
     audited: 2026-06-11
-    audited_sha: 7e5dd0c921e2570873d6dbc9fd85cab59c7cc5bb
+    audited_sha: 2e43e4dd8896b05a75325c9a08fd37846cfb172d
     blocks: [store, sheets-view, reports, summary, runtime, import, tui-entry, tui-views]
     blockedBy: [ledger-core, config]
     detail: tax.md
@@ -46,7 +48,7 @@ arrows:
     status: OK
     sampled: 2026-06-11
     audited: 2026-06-11
-    audited_sha: 7e5dd0c921e2570873d6dbc9fd85cab59c7cc5bb
+    audited_sha: 2e43e4dd8896b05a75325c9a08fd37846cfb172d
     blocks: [tax, store, sheets-view, reports, summary, runtime, import, tui-entry, tui-views]
     blockedBy: []
     detail: config.md
@@ -56,7 +58,7 @@ arrows:
     status: OK
     sampled: 2026-06-11
     audited: 2026-06-11
-    audited_sha: 7e5dd0c921e2570873d6dbc9fd85cab59c7cc5bb
+    audited_sha: 2e43e4dd8896b05a75325c9a08fd37846cfb172d
     blocks: [reports, summary, runtime, import, tui-entry, tui-views]
     blockedBy: [ledger-core, tax, config]
     detail: store.md
@@ -66,7 +68,7 @@ arrows:
     status: OK
     sampled: 2026-06-11
     audited: 2026-06-11
-    audited_sha: 7e5dd0c921e2570873d6dbc9fd85cab59c7cc5bb
+    audited_sha: 2e43e4dd8896b05a75325c9a08fd37846cfb172d
     blocks: [reports, runtime, tui-entry, tui-views]
     blockedBy: [ledger-core, config, tax]
     detail: sheets-view.md
@@ -76,7 +78,7 @@ arrows:
     status: OK
     sampled: 2026-06-11
     audited: 2026-06-11
-    audited_sha: 7e5dd0c921e2570873d6dbc9fd85cab59c7cc5bb
+    audited_sha: 2e43e4dd8896b05a75325c9a08fd37846cfb172d
     blocks: [summary, runtime, tui-entry, tui-views]
     blockedBy: [ledger-core, config, tax, store, sheets-view]
     detail: reports.md
@@ -86,7 +88,7 @@ arrows:
     status: OK
     sampled: 2026-06-11
     audited: 2026-06-11
-    audited_sha: 7e5dd0c921e2570873d6dbc9fd85cab59c7cc5bb
+    audited_sha: 2e43e4dd8896b05a75325c9a08fd37846cfb172d
     blocks: [tui-entry, tui-views]
     blockedBy: [ledger-core, config, tax, store, sheets-view, reports, summary]
     detail: runtime.md
@@ -96,7 +98,7 @@ arrows:
     status: OK
     sampled: 2026-06-11
     audited: 2026-06-11
-    audited_sha: 7e5dd0c921e2570873d6dbc9fd85cab59c7cc5bb
+    audited_sha: 2e43e4dd8896b05a75325c9a08fd37846cfb172d
     blocks: [runtime]
     blockedBy: [ledger-core, config, tax, store, reports]
     detail: summary.md
@@ -106,35 +108,47 @@ arrows:
     status: OK
     sampled: 2026-06-11
     audited: 2026-06-11
-    audited_sha: 7e5dd0c921e2570873d6dbc9fd85cab59c7cc5bb
+    audited_sha: 2e43e4dd8896b05a75325c9a08fd37846cfb172d
     blocks: []
     blockedBy: [ledger-core, config, tax, store]
     detail: import.md
     next: null
     drift: null
-  tui-entry:
+  tui:
     status: OK
+    children: [tui-entry, tui-views]
     sampled: 2026-06-11
     audited: 2026-06-11
-    audited_sha: 7e5dd0c921e2570873d6dbc9fd85cab59c7cc5bb
+    audited_sha: 2e43e4dd8896b05a75325c9a08fd37846cfb172d
+    blocks: []
+    blockedBy: []
+    detail: ../intent/tui/tui-design.md
+    next: null
+    drift: null
+  tui-entry:
+    status: OK
+    parent: tui
+    sampled: 2026-06-11
+    audited: 2026-06-11
+    audited_sha: 2e43e4dd8896b05a75325c9a08fd37846cfb172d
     blocks: []
     blockedBy: [ledger-core, config, tax, store, sheets-view, reports, runtime]
-    detail: tui-entry.md
+    detail: tui/entry.md
     next: null
     drift: null
   tui-views:
     status: OK
+    parent: tui
     sampled: 2026-06-11
     audited: 2026-06-11
-    audited_sha: 7e5dd0c921e2570873d6dbc9fd85cab59c7cc5bb
+    audited_sha: 2e43e4dd8896b05a75325c9a08fd37846cfb172d
     blocks: []
     blockedBy: [ledger-core, config, tax, store, sheets-view, reports, runtime]
-    detail: tui-views.md
+    detail: tui/views.md
     next: null
     drift: null
 
 # Items found during mapping that don't yet belong to a segment.
 unmapped:
   docs:
-    llds: []
-    specs: []
+    intent: []

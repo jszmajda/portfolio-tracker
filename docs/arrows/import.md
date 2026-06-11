@@ -5,7 +5,7 @@ dry-run + reconcile against the legacy Positions, and commit through the verifie
 
 ## Status
 
-**OK** — last audited 2026-06-11 (git SHA `7e5dd0c921e2570873d6dbc9fd85cab59c7cc5bb`). All 33
+**OK** — last audited 2026-06-11 (git SHA `2e43e4dd8896b05a75325c9a08fd37846cfb172d`). All 33
 specs implemented with citing tests (the migration itself was live-proven; the previously
 test-uncovered MAP-007 / RECON-007 / RECON-008 / CORP-007 now have focused citing tests).
 

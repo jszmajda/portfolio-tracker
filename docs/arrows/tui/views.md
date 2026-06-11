@@ -5,7 +5,7 @@ plus navigation, chrome, hints, and autorefresh. Leaf under the `tui` sub-HLD.
 
 ## Status
 
-**OK** — last audited 2026-06-11 (git SHA `7e5dd0c921e2570873d6dbc9fd85cab59c7cc5bb`). All 48
+**OK** — last audited 2026-06-11 (git SHA `2e43e4dd8896b05a75325c9a08fd37846cfb172d`). All 48
 specs implemented with citing tests (including the autorefresh NAV-017..019 set).
 
 ## References
