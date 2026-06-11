@@ -1,5 +1,9 @@
 # portfolio-tracker
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![CI](https://img.shields.io/github/actions/workflow/status/jszmajda/portfolio-tracker/ci.yml?logo=github&label=CI)](https://github.com/jszmajda/portfolio-tracker/actions)
+[![Built with LID](https://img.shields.io/badge/built%20with-LID-8957e5)](https://github.com/jszmajda/lid)
+
 A personal stock-portfolio and tax tracker for a single owner-operator — and a working,
 end-to-end demonstration of **Linked-Intent Development (LID)**, a methodology where every
 line of code traces back through tests and structured requirements to a design document.
@@ -36,20 +40,20 @@ The architecture in one breath:
 The TUI's Positions screen, in its gilt "Ledger" visual language:
 
 ```
-  L E D G E R                                                     as-of 2026-06-09
-╭─ Positions ──────────────────────────────────────────────────────────────────────╮
-│  TOTAL VALUE  $1,284,300   ▲ +$8,420  (+0.66%)                                   │
-│  NET (POST-TAX)  $902,160  [est]                                                 │
-│  REALIZED 2026 YTD  ▲ +$48,210                                                   │
-│  ════════════════════════════════════════════════════════════════════════════   │
-│   SYMBOL NAME          SHARES │   PRICE │   VALUE │   UNREAL │            NET │   │
-│ ▎ AMZN  Amazon.com       620  │ $261.26 │ $162.0k │ +$131.0k │ $126,545 [est] │ ▁▂▃▅▆▇······
-│   GOOGL Alphabet          60  │ $376.37 │  $22.6k │    −$410 │  $21,940 [est] │ ▇▆▅▃▂▁······
-│   PLTR  Palantir           —  │ unpriced│       — │        ‡ │              — │ ············
-╰──────────────────────────────────────────────────────────────────────────────────╯
-  TAX 2026   RSU-GRNT1-a  AMZN  $2,400  ◉◉◉○ Moved      GOOGL  $253  ◉◉◉◉ Paid
-  ● connected · sync as-of 2026-06-09 · updated 16:02 · 🔓 · Positions
-                         [tab] entry  [1-5] screens  [r] refresh  [?] help  [q] quit
+  L E D G E R                                                                    as-of 2026-06-09  
+╭─ Positions ─────────────────────────────────────────────────────────────────────────────────────╮
+│  TOTAL VALUE  $84,310   ▲ +$640 (+0.76%)                                                        │
+│  NET (POST-TAX)  $79,895  [est]                                                                 │
+│  REALIZED 2026 YTD  ▲ +$3,180                                                                   │
+│  ═══════════════════════════════════════════════════════════════════════════════════════════    │
+│   SYMBOL  NAME              SHARES │   PRICE │   VALUE │  UNREAL │           NET │ TREND        │
+│ ▎ KO      Coca-Cola            480 │  $64.10 │  $30.8k │  +$4.1k │ $29,610 [est] │ ▃▄▅▅▆▇······ │
+│   DUK     Duke Energy          120 │ $112.45 │  $13.5k │   −$320 │ $13,494 [est] │ ▇▆▅▅▄▃······ │
+│   PRIVCO  PrivCo (private)   1,250 │       — │       — │       ‡ │             — │ ············ │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────╯
+  TAX 2026   RSU-GRNT1-a  KO  $2,400  ◉◉◉○ Moved        DUK  $253  ◉◉◉◉ Paid
+  ● connected · sync as-of 2026-06-09 · updated 16:02 · Positions
+                          [tab] entry  [1-5] screens  [r] refresh  [?] help  [q] quit
 ```
 
 ## Why this repo is interesting — LID in practice
