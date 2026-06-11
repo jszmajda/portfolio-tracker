@@ -133,7 +133,7 @@ Ordered by precedence — when two conflict, the higher one wins.
 
 ## System Design
 
-Design tree: one HLD over leaf LLDs, with `tui` promoted to a **sub-HLD** (children `entry`,
+Design tree: one HLD over leaf LLDs, with `tui` a **sub-HLD** (children `entry`,
 `views`). Components and their EARS prefixes:
 
 | Segment | Prefix | Role |

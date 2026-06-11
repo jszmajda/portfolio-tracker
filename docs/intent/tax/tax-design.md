@@ -223,7 +223,7 @@ Verus-proven, Kani bounded-checked (facet `TAX-VERIF-*`).
 
 | Decision | Chosen | Alternatives Considered | Rationale |
 |----------|--------|------------------------|-----------|
-| YTD stacking order | Chronological `(sale_date, Seq)` | Raw `Seq` | Reports bucket by `sale_date`; chronological stacking keeps per-period accruals and NIIT attribution reproducible under any entry order. |
+| YTD stacking order | Chronological `(sale_date, sale_seq)` | Raw `Seq` | Reports bucket by `sale_date`; chronological stacking keeps per-period accruals and NIIT attribution reproducible under any entry order. |
 | Per-gain accrual basis | Marginal increment, cumulative chronological stacking | Flat marginal-rate-at-income; annual-difference only | Prices each gain at the bracket it lands in; deterministic and monotonic. |
 | Accrual key | Per-`RealizedGain` `(sale_id, lot_id, J, year)` | `(sale_id, J, year)` | One Sell can mix LT and ST lots; per-gain keying keeps each accrual single-regime and lets the lifecycle/reversal address lots individually. Requires `lot_id` on `RealizedGain`. |
 | Manual override | Absolute `applied_amount_cents` | A "rate" | Under stacking + NIIT there is no single rate; an absolute amount is unambiguous and bounded-checkable. |

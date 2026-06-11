@@ -164,7 +164,7 @@ flagged delta; offline degrades to a stale exit-0 print; integrity/creds failure
 | Exit codes | 0 = produced (fresh/stale, marked); 2 = no trustworthy summary | All exit 0; many codes | dailies must see real failures (corrupt non-reconstructable History) but not alert on routine offline. |
 | Suppressed delta | Render `—‡` with a footer reason; distinct from first-run `—` | Print the raw number; blank | The policy forbids a fabricated move; an undefined rendering would print one anyway. |
 | `--json` | Explicit, `schema_version`-gated object | Ad-hoc "same figures" JSON | An unversioned shape recreates the legacy scraping fragility. |
-| Concurrency | Advisory write-lock; read-only if held | Assume single writer; tolerate races | A cron run plus an open TUI is a real concurrent-writer case the HLD non-goal didn't anticipate. |
+| Concurrency | Advisory write-lock; read-only if held | Assume single writer; tolerate races | A cron run plus an open TUI is a real concurrent-writer case despite the single-user non-goal. |
 | Tax line under stale/cold-start | Mark stale; `n/a (no brackets)` on cold-start | Silently use last/zero | A confident net on expired or absent brackets is exactly the staleness the HLD says to surface. |
 
 ## Open Questions & Future Decisions

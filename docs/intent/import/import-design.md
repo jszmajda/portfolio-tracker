@@ -86,8 +86,8 @@ vest before it and sales after it.
   override-then-Pay alone would be rejected). It leaves `outstanding = 0`; per-lot accruals for that
   closed year are superseded by the combined one and de-minimis auto-settled accruals are excluded.
   Seeding is **annual-granularity** (quarterly report N/A for migrated years). Open-year accruals
-  are left live and per-`RealizedGain`. *(Requires `tax` to accept a combined migration accrual —
-  see `tax`'s migration note.)*
+  are left live and per-`RealizedGain`. *(The combined migration accrual is `tax`'s construct —
+  see `tax-design.md`, "Migration accrual".)*
 
   Every reconstructed tax event runs through the **same append-time tax-kernel gates** an `entry`
   tax append uses. The combined-migration key (empty `sale_id`/`lot_id`, no backing `RealizedGain`)

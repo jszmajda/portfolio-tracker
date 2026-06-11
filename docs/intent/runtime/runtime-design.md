@@ -194,8 +194,8 @@ note pointing back:
 
 ### Deferred
 1. **Rate-limit / backoff parameters.** The concrete Sheets API throttling/retry *tuning* (attempt
-   counts, backoff schedule); the policy shape (and its token-refresh
-   interaction) is now decided, the numeric tuning is not yet pinned.
+   counts, backoff schedule) is not yet pinned; the policy shape and its token-refresh
+   interaction are decided above.
 
 ## References
 
