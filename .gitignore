@@ -19,3 +19,6 @@ secrets.toml
 
 # Vendored Verus toolchain (machine-provisioned; symlink or vendor a Verus build here)
 /tools
+
+# Playwright MCP scratch dir (browser session logs; regenerable, never truth)
+.playwright-mcp/
